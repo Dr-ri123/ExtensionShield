@@ -134,7 +134,6 @@ const ScannerPage = () => {
                 <div
                   key={index}
                   className="recent-item"
-                  onClick={() => loadScanFromHistory(scan.extension_id || scan.extensionId)}
                 >
                   <div className="recent-icon">📦</div>
                   <div className="recent-info">

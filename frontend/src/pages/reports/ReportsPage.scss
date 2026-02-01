@@ -1,97 +1,235 @@
 /* ============================================================================
-   Reports Page - Governance Reports (Streamlined)
+   Reports Page - Governance Reports
+   Matching History page layout with background effects
    ============================================================================ */
 
+/* ============================================================================
+   PAGE LAYOUT
+   ============================================================================ */
 .reports-page {
-  width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 120px 48px 64px;
   min-height: 100vh;
+  padding: 0 64px 64px;
+  background: var(--atlas-bg-primary, #030712);
+  color: var(--atlas-text-primary, #f8fafc);
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  position: relative;
+  overflow-x: hidden;
 }
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   Header
-   ───────────────────────────────────────────────────────────────────────────── */
+/* Background Effects */
+.reports-bg-effects {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+}
 
+.reports-bg-gradient {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(150px);
+  opacity: 0.5;
+}
+
+.reports-gradient-1 {
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(34, 197, 94, 0.08) 0%, transparent 70%);
+  top: -200px;
+  right: -100px;
+  animation: floatOrb 25s ease-in-out infinite;
+}
+
+.reports-gradient-2 {
+  width: 500px;
+  height: 500px;
+  background: radial-gradient(circle, rgba(139, 92, 246, 0.06) 0%, transparent 70%);
+  bottom: -150px;
+  left: -100px;
+  animation: floatOrb 30s ease-in-out infinite reverse;
+}
+
+@keyframes floatOrb {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  25% { transform: translate(20px, -30px) scale(1.05); }
+  50% { transform: translate(-15px, 20px) scale(0.95); }
+  75% { transform: translate(25px, 15px) scale(1.02); }
+}
+
+/* Content Wrapper */
+.reports-content {
+  position: relative;
+  z-index: 1;
+  max-width: 1400px;
+  margin: 0 auto;
+  padding-top: 88px;
+  animation: pageEnter 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+@keyframes pageEnter {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ============================================================================
+   HEADER SECTION
+   ============================================================================ */
 .reports-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 2rem;
+  align-items: flex-start;
+  margin-bottom: 2.5rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid rgba(148, 163, 184, 0.1);
   gap: 1.5rem;
 }
 
-.header-text {
-  h1 {
-    font-size: 1.75rem;
-    font-weight: 600;
-    color: hsl(var(--color-foreground));
-    margin: 0 0 0.25rem;
-    letter-spacing: -0.02em;
-  }
+.reports-header-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
 
-  p {
-    font-size: 0.9rem;
-    color: hsl(var(--color-foreground-muted));
-    margin: 0;
-  }
+.reports-title {
+  font-size: 2rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: #f8fafc;
+  margin: 0;
+}
+
+.title-icon {
+  font-size: 1.5rem;
+}
+
+.reports-subtitle {
+  font-size: 1rem;
+  color: rgba(148, 163, 184, 0.8);
+  margin: 0;
 }
 
 .scan-btn {
   flex-shrink: 0;
 }
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   Stats Bar
-   ───────────────────────────────────────────────────────────────────────────── */
+/* ============================================================================
+   STATS GRID - New Card Design
+   ============================================================================ */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 2.5rem;
+}
 
-.stats-bar {
+.stat-card {
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  border-radius: 12px;
+  padding: 1.25rem;
   display: flex;
   align-items: center;
-  gap: 1.5rem;
-  padding: 1rem 1.5rem;
-  background: hsl(var(--color-surface));
-  border: 1px solid hsl(var(--color-border));
-  border-radius: 12px;
-  margin-bottom: 2rem;
+  gap: 1rem;
+  transition: all 0.2s ease;
+
+  &:hover {
+    border-color: rgba(148, 163, 184, 0.2);
+    background: rgba(15, 23, 42, 0.8);
+  }
 }
 
-.stat-item {
-  display: flex;
-  align-items: baseline;
+.stat-card.stat-total {
+  flex-direction: column;
+  align-items: flex-start;
   gap: 0.5rem;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.05) 100%);
+  border-color: rgba(99, 102, 241, 0.2);
+
+  .stat-value {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #f8fafc;
+    line-height: 1;
+  }
+
+  .stat-label {
+    font-size: 0.85rem;
+    color: rgba(148, 163, 184, 0.8);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
 }
 
-.stat-count {
-  font-size: 1.25rem;
+.stat-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.stat-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.stat-card .stat-value {
+  font-size: 1.5rem;
   font-weight: 600;
-  color: hsl(var(--color-foreground));
+  line-height: 1;
   font-variant-numeric: tabular-nums;
 }
 
-.stat-label {
-  font-size: 0.8rem;
-  color: hsl(var(--color-foreground-muted));
+.stat-card .stat-label {
+  font-size: 0.75rem;
+  color: rgba(148, 163, 184, 0.6);
   text-transform: uppercase;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.05em;
 }
 
-.stat-divider {
-  width: 1px;
-  height: 24px;
-  background: hsl(var(--color-border));
-  margin: 0 0.5rem;
+/* Stat Card Colors */
+.stat-card.stat-allow {
+  .stat-icon {
+    background: rgba(34, 197, 94, 0.15);
+    color: #22c55e;
+  }
+  .stat-value { color: #22c55e; }
 }
 
-.stat-allow .stat-count { color: #22c55e; }
-.stat-review .stat-count { color: #f59e0b; }
-.stat-block .stat-count { color: #ef4444; }
+.stat-card.stat-review {
+  .stat-icon {
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+  }
+  .stat-value { color: #f59e0b; }
+}
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   Reports Section
-   ───────────────────────────────────────────────────────────────────────────── */
+.stat-card.stat-block {
+  .stat-icon {
+    background: rgba(239, 68, 68, 0.15);
+    color: #ef4444;
+  }
+  .stat-value { color: #ef4444; }
+}
 
+/* ============================================================================
+   REPORTS SECTION
+   ============================================================================ */
 .reports-section {
   margin-bottom: 3rem;
 }
@@ -105,8 +243,8 @@
 .loading-spinner {
   width: 32px;
   height: 32px;
-  border: 3px solid hsl(var(--color-border));
-  border-top-color: hsl(var(--color-primary));
+  border: 3px solid rgba(148, 163, 184, 0.2);
+  border-top-color: #22c55e;
   border-radius: 50%;
   margin: 0 auto 1rem;
   animation: spin 0.8s linear infinite;
@@ -117,7 +255,7 @@
 }
 
 .loading-state p {
-  color: hsl(var(--color-foreground-muted));
+  color: rgba(148, 163, 184, 0.8);
   font-size: 0.9rem;
 }
 
@@ -125,8 +263,8 @@
 .empty-state {
   text-align: center;
   padding: 5rem 2rem;
-  background: hsl(var(--color-surface));
-  border: 1px dashed hsl(var(--color-border));
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px dashed rgba(148, 163, 184, 0.2);
   border-radius: 12px;
 }
 
@@ -138,20 +276,19 @@
 
 .empty-state h3 {
   font-size: 1.125rem;
-  color: hsl(var(--color-foreground));
+  color: #f8fafc;
   margin-bottom: 0.5rem;
 }
 
 .empty-state p {
-  color: hsl(var(--color-foreground-muted));
+  color: rgba(148, 163, 184, 0.8);
   margin-bottom: 1.5rem;
   font-size: 0.9rem;
 }
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   Reports List
-   ───────────────────────────────────────────────────────────────────────────── */
-
+/* ============================================================================
+   REPORTS LIST
+   ============================================================================ */
 .reports-list {
   display: flex;
   flex-direction: column;
@@ -159,15 +296,15 @@
 }
 
 .report-card {
-  background: hsl(var(--color-background));
-  border: 1px solid hsl(var(--color-border));
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.1);
   border-radius: 10px;
   padding: 0;
   transition: all 0.15s ease;
 
   &:hover {
-    border-color: hsl(var(--color-primary) / 0.5);
-    background: hsl(var(--color-surface));
+    border-color: rgba(34, 197, 94, 0.3);
+    background: rgba(15, 23, 42, 0.8);
   }
 }
 
@@ -205,8 +342,8 @@
   }
 
   &.verdict-unknown {
-    background: hsl(var(--color-surface));
-    color: hsl(var(--color-foreground-muted));
+    background: rgba(148, 163, 184, 0.1);
+    color: rgba(148, 163, 184, 0.6);
   }
 }
 
@@ -223,7 +360,7 @@
 .extension-name {
   font-size: 0.95rem;
   font-weight: 500;
-  color: hsl(var(--color-foreground));
+  color: #f8fafc;
   margin: 0 0 0.125rem;
   white-space: nowrap;
   overflow: hidden;
@@ -232,7 +369,7 @@
 
 .scan-date {
   font-size: 0.8rem;
-  color: hsl(var(--color-foreground-muted));
+  color: rgba(148, 163, 184, 0.6);
   margin: 0;
 }
 
@@ -281,24 +418,23 @@
 
 .pdf-btn {
   font-size: 0.8rem;
-  color: hsl(var(--color-foreground-muted));
+  color: rgba(148, 163, 184, 0.6);
 
   &:hover {
-    color: hsl(var(--color-foreground));
+    color: #f8fafc;
   }
 }
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   Info Footer
-   ───────────────────────────────────────────────────────────────────────────── */
-
+/* ============================================================================
+   INFO FOOTER
+   ============================================================================ */
 .info-footer {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 1.5rem;
   padding: 1.5rem;
-  background: hsl(var(--color-surface));
-  border: 1px solid hsl(var(--color-border));
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(148, 163, 184, 0.1);
   border-radius: 12px;
 }
 
@@ -318,22 +454,31 @@
   display: block;
   font-size: 0.85rem;
   font-weight: 500;
-  color: hsl(var(--color-foreground));
+  color: #f8fafc;
   margin-bottom: 0.125rem;
 }
 
 .info-item p {
   font-size: 0.8rem;
-  color: hsl(var(--color-foreground-muted));
+  color: rgba(148, 163, 184, 0.6);
   margin: 0;
   line-height: 1.4;
 }
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   Responsive
-   ───────────────────────────────────────────────────────────────────────────── */
+/* ============================================================================
+   RESPONSIVE
+   ============================================================================ */
+@media (max-width: 1024px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
 
 @media (max-width: 900px) {
+  .reports-page {
+    padding: 88px 32px;
+  }
+
   .card-layout {
     grid-template-columns: auto 1fr auto;
     grid-template-rows: auto auto;
@@ -343,7 +488,7 @@
     grid-column: 1 / -1;
     justify-content: flex-end;
     padding-top: 0.75rem;
-    border-top: 1px solid hsl(var(--color-border));
+    border-top: 1px solid rgba(148, 163, 184, 0.1);
     margin-top: 0.5rem;
   }
 
@@ -355,7 +500,7 @@
 
 @media (max-width: 640px) {
   .reports-page {
-    padding: 100px 24px 48px;
+    padding: 88px 24px 48px;
   }
 
   .reports-header {
@@ -363,17 +508,21 @@
     align-items: flex-start;
   }
 
-  .header-text h1 {
+  .reports-title {
     font-size: 1.5rem;
   }
 
-  .stats-bar {
-    flex-wrap: wrap;
-    gap: 1rem;
+  .stats-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
   }
 
-  .stat-divider {
-    display: none;
+  .stat-card {
+    padding: 1rem;
+  }
+
+  .stat-card.stat-total .stat-value {
+    font-size: 2rem;
   }
 
   .card-layout {

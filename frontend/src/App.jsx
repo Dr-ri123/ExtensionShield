@@ -177,6 +177,89 @@ function UserMenu() {
   );
 }
 
+function InsightsMegamenu() {
+  const location = useLocation();
+  const [isOpen, setIsOpen] = React.useState(false);
+  const menuRef = React.useRef(null);
+  const isActive = location.pathname.startsWith("/reports") || location.pathname.startsWith("/history");
+
+  React.useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isOpen]);
+
+  return (
+    <div className="megamenu-container" ref={menuRef}>
+      <button
+        className={`nav-item megamenu-trigger ${isActive ? "active" : ""} ${isOpen ? "open" : ""}`}
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        Insights
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d={isOpen ? "M3 9l3-3 3 3" : "M3 3l3 3 3-3"} />
+        </svg>
+      </button>
+
+      {isOpen && (
+        <div className="megamenu-dropdown">
+          <div className="megamenu-grid">
+            {/* Quick Actions */}
+            <div className="megamenu-section">
+              <h3 className="megamenu-section-title">Quick Access</h3>
+              <NavLink to="/reports" className="megamenu-item" onClick={() => setIsOpen(false)}>
+                <span className="upgrade-badge-top">Upgrade</span>
+                <div className="megamenu-icon">📋</div>
+                <div className="megamenu-content">
+                  <div className="megamenu-label">Security Reports</div>
+                  <div className="megamenu-desc">View governance verdicts</div>
+                </div>
+              </NavLink>
+              <NavLink to="/history" className="megamenu-item" onClick={() => setIsOpen(false)}>
+                <span className="upgrade-badge-top">Upgrade</span>
+                <div className="megamenu-icon">🕐</div>
+                <div className="megamenu-content">
+                  <div className="megamenu-label">Scan History</div>
+                  <div className="megamenu-desc">Browse all past scans</div>
+                </div>
+              </NavLink>
+            </div>
+
+            {/* AI Recommendations */}
+            <div className="megamenu-section">
+              <h3 className="megamenu-section-title">
+                <span className="ai-badge">✨ AI</span> Recommendations
+              </h3>
+              <NavLink to="/reports" className="megamenu-item ai-item" onClick={() => setIsOpen(false)}>
+                <div className="megamenu-icon">👥</div>
+                <div className="megamenu-content">
+                  <div className="megamenu-label">Community Recommended</div>
+                  <div className="megamenu-desc">Extensions trusted by users</div>
+                </div>
+              </NavLink>
+              <div className="megamenu-item ai-item">
+                <div className="megamenu-icon">🌱</div>
+                <div className="megamenu-content">
+                  <div className="megamenu-label">Open Source Impact</div>
+                  <div className="megamenu-desc">20% back to quality software</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function AppHeader() {
   const location = useLocation();
   const { user, isAuthenticated, openSignInModal, isLoading } = useAuth();
@@ -201,18 +284,7 @@ function AppHeader() {
           >
             Scanner
           </NavLink>
-          <NavLink
-            to="/history"
-            className={({ isActive }) => `nav-item ${isActive ? "active" : ""}`}
-          >
-            History
-          </NavLink>
-          <NavLink
-            to="/reports"
-            className={({ isActive }) => `nav-item ${isActive || location.pathname.startsWith("/reports") ? "active" : ""}`}
-          >
-            Reports
-          </NavLink>
+          <InsightsMegamenu />
         </nav>
 
         <div className="header-actions">

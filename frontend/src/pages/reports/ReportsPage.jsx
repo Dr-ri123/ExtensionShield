@@ -72,39 +72,58 @@ const ReportsPage = () => {
 
   return (
     <div className="reports-page">
-      {/* Header */}
-      <header className="reports-header">
-        <div className="header-text">
-          <h1>Security Reports</h1>
-          <p>Extension security verdicts with evidence citations</p>
-        </div>
-        <Button onClick={() => navigate("/scanner")} className="scan-btn">
-          + New Scan
-        </Button>
-      </header>
+      {/* Background Effects */}
+      <div className="reports-bg-effects">
+        <div className="reports-bg-gradient reports-gradient-1" />
+        <div className="reports-bg-gradient reports-gradient-2" />
+      </div>
 
-      {/* Stats Bar */}
-      {reports.length > 0 && (
-        <div className="stats-bar">
-          <div className="stat-item">
-            <span className="stat-count">{stats.total}</span>
-            <span className="stat-label">Total</span>
+      {/* Content */}
+      <div className="reports-content">
+        {/* Header */}
+        <header className="reports-header">
+          <div className="reports-header-content">
+            <h1 className="reports-title">
+              <span className="title-icon">📋</span>
+              Security Reports
+            </h1>
+            <p className="reports-subtitle">Extension security verdicts with evidence citations</p>
           </div>
-          <div className="stat-divider" />
-          <div className="stat-item stat-allow">
-            <span className="stat-count">{stats.allowed}</span>
-            <span className="stat-label">Allowed</span>
+          <Button onClick={() => navigate("/scanner")} className="scan-btn">
+            + New Scan
+          </Button>
+        </header>
+
+        {/* Stats Cards */}
+        {reports.length > 0 && (
+          <div className="stats-grid">
+            <div className="stat-card stat-total">
+              <div className="stat-value">{stats.total}</div>
+              <div className="stat-label">Total Reports</div>
+            </div>
+            <div className="stat-card stat-allow">
+              <div className="stat-icon">✓</div>
+              <div className="stat-info">
+                <div className="stat-value">{stats.allowed}</div>
+                <div className="stat-label">Allowed</div>
+              </div>
+            </div>
+            <div className="stat-card stat-review">
+              <div className="stat-icon">!</div>
+              <div className="stat-info">
+                <div className="stat-value">{stats.review}</div>
+                <div className="stat-label">Review</div>
+              </div>
+            </div>
+            <div className="stat-card stat-block">
+              <div className="stat-icon">✕</div>
+              <div className="stat-info">
+                <div className="stat-value">{stats.blocked}</div>
+                <div className="stat-label">Blocked</div>
+              </div>
+            </div>
           </div>
-          <div className="stat-item stat-review">
-            <span className="stat-count">{stats.review}</span>
-            <span className="stat-label">Review</span>
-          </div>
-          <div className="stat-item stat-block">
-            <span className="stat-count">{stats.blocked}</span>
-            <span className="stat-label">Blocked</span>
-          </div>
-        </div>
-      )}
+        )}
 
       {/* Reports List */}
       <section className="reports-section">
@@ -187,30 +206,31 @@ const ReportsPage = () => {
         )}
       </section>
 
-      {/* Info Footer */}
-      <footer className="info-footer">
-        <div className="info-item">
-          <span className="info-icon">⚖️</span>
-          <div>
-            <strong>Consistent Analysis</strong>
-            <p>Same input → same verdict, every time</p>
+        {/* Info Footer */}
+        <footer className="info-footer">
+          <div className="info-item">
+            <span className="info-icon">⚖️</span>
+            <div>
+              <strong>Consistent Analysis</strong>
+              <p>Same input → same verdict, every time</p>
+            </div>
           </div>
-        </div>
-        <div className="info-item">
-          <span className="info-icon">📎</span>
-          <div>
-            <strong>Evidence Chain</strong>
-            <p>Code citations with file paths and line numbers</p>
+          <div className="info-item">
+            <span className="info-icon">📎</span>
+            <div>
+              <strong>Evidence Chain</strong>
+              <p>Code citations with file paths and line numbers</p>
+            </div>
           </div>
-        </div>
-        <div className="info-item">
-          <span className="info-icon">📦</span>
-          <div>
-            <strong>Export Bundle</strong>
-            <p>Download reports for IT workflows</p>
+          <div className="info-item">
+            <span className="info-icon">📦</span>
+            <div>
+              <strong>Export Bundle</strong>
+              <p>Download reports for IT workflows</p>
+            </div>
           </div>
-        </div>
-      </footer>
+        </footer>
+      </div>
     </div>
   );
 };
