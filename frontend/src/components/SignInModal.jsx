@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../context/AuthContext";
+import ShieldLogo from "./ShieldLogo";
 import "./SignInModal.scss";
 
 const SignInModal = () => {
@@ -110,9 +111,8 @@ const SignInModal = () => {
         {/* Header */}
         <div className="modal-header">
           <div className="modal-logo">
-            <span className="logo-project">PROJECT</span>
-            <span className="logo-diamond">◆</span>
-            <span className="logo-atlas">ATLAS</span>
+            <ShieldLogo size={40} />
+            <span className="logo-text">ExtensionShield</span>
           </div>
           <h2 className="modal-title">
             {mode === "signin" ? "Welcome back" : "Create your account"}

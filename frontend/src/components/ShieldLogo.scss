@@ -1,0 +1,97 @@
+/* ============================================================================
+   Shield Logo Component
+   Minimalist animated shield logo with subtle pulse animation
+   ============================================================================ */
+
+.shield-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.shield-svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Shield main shape - subtle pulse animation */
+.shield-main {
+  transform-origin: center;
+  animation: shieldPulse 3s ease-in-out infinite;
+  transition: all 0.3s ease;
+}
+
+/* Checkmark - subtle fade animation */
+.shield-check {
+  animation: checkFade 3s ease-in-out infinite;
+  transform-origin: center;
+}
+
+/* Inner glow - breathing effect */
+.shield-inner-glow {
+  animation: innerGlow 3s ease-in-out infinite;
+  transform-origin: center;
+}
+
+/* Pulse animation - subtle like Railway */
+@keyframes shieldPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  50% {
+    opacity: 0.95;
+    transform: scale(1.02);
+    filter: brightness(1.1);
+  }
+}
+
+/* Checkmark fade animation */
+@keyframes checkFade {
+  0%, 100% {
+    opacity: 0.95;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+/* Inner glow breathing */
+@keyframes innerGlow {
+  0%, 100% {
+    opacity: 0.1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.15;
+    transform: scale(1.1);
+  }
+}
+
+/* Hover effect - slight scale up */
+.shield-logo:hover .shield-main {
+  transform: scale(1.05);
+  filter: brightness(1.15);
+  transition: all 0.2s ease;
+}
+
+.shield-logo:hover .shield-check {
+  opacity: 1;
+  transform: scale(1.1);
+  transition: all 0.2s ease;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .shield-logo {
+    width: 28px;
+    height: 28px;
+  }
+}
+

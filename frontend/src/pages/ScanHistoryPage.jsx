@@ -19,13 +19,9 @@ const ScanHistoryPage = () => {
 
   useEffect(() => {
     const loadHistory = async () => {
-      if (!isAuthenticated) {
-        setLoading(false);
-        return;
-      }
-
       try {
-        const history = await databaseService.getScanHistory(100);
+        // Always load public scans (recent scans are public)
+        const history = await databaseService.getRecentScans(100);
         const formattedHistory = history.map((item) => ({
           ...item,
           name: item.extension_name || item.extensionId || item.extension_id,
@@ -126,39 +122,8 @@ const ScanHistoryPage = () => {
     }
   };
 
-  // Login Required State
-  if (!isAuthenticated) {
-    return (
-      <div className="history-page">
-        <div className="history-bg-effects">
-          <div className="history-bg-gradient history-gradient-1" />
-          <div className="history-bg-gradient history-gradient-2" />
-        </div>
-
-        <div className="history-content">
-          <header className="history-header">
-            <div className="history-header-content">
-              <h1 className="history-title">
-                <span className="history-title-icon">📋</span>
-                Scan History
-              </h1>
-              <p className="history-subtitle">
-                View and manage your extension security scan history
-              </p>
-            </div>
-          </header>
-
-          <div className="login-required-minimal">
-            <span className="login-lock-icon">🔐</span>
-            <p className="login-minimal-text">Sign in to view your history</p>
-            <button className="login-minimal-btn" onClick={openSignInModal}>
-              Sign In
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // Public view - show public scans, but prompt for login for personal history
+  const isPublicView = !isAuthenticated;
 
   return (
     <div className="history-page">
@@ -176,8 +141,21 @@ const ScanHistoryPage = () => {
               Scan History
             </h1>
             <p className="history-subtitle">
-              View and manage your extension security scan history
+              {isPublicView 
+                ? "Browse all scanned extensions (public)"
+                : "View and manage your extension security scan history"}
             </p>
+            {isPublicView && (
+              <div className="login-prompt-banner">
+                <span className="login-prompt-icon">🔐</span>
+                <span className="login-prompt-text">
+                  Sign in to view your personal scan history
+                </span>
+                <button className="login-prompt-btn" onClick={openSignInModal}>
+                  Sign In
+                </button>
+              </div>
+            )}
           </div>
         </header>
 
@@ -185,7 +163,7 @@ const ScanHistoryPage = () => {
         <div className="history-toolbar">
           <div className="toolbar-left">
             <div className="scan-count-badge">
-              <span>Recent Scans</span>
+              <span>{isPublicView ? "Public Scans" : "Recent Scans"}</span>
               <span className="count-number">{scans.length}</span>
             </div>
           </div>
@@ -201,10 +179,12 @@ const ScanHistoryPage = () => {
                 onChange={(e) => setSearchTerm(e.target.value)}
               />
             </div>
-            <button className="export-btn" onClick={handleExport}>
-              <span className="export-btn-icon">↓</span>
-              Export
-            </button>
+            {isAuthenticated && (
+              <button className="export-btn" onClick={handleExport}>
+                <span className="export-btn-icon">↓</span>
+                Export
+              </button>
+            )}
           </div>
         </div>
 
@@ -280,9 +260,11 @@ const ScanHistoryPage = () => {
             <p className="empty-description">
               {searchTerm
                 ? `No scans match "${searchTerm}". Try a different search term.`
+                : isPublicView
+                ? "No public scans available yet. Check back soon!"
                 : "Start analyzing Chrome extensions to build your security scan history."}
             </p>
-            {!searchTerm && (
+            {!searchTerm && !isPublicView && (
               <button
                 className="empty-action-btn"
                 onClick={() => navigate("/scanner")}

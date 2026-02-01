@@ -303,10 +303,35 @@ const HomePage = () => {
         {/* Hero Headline - Moves to top on mobile */}
         <div className={`hero-headline ${isVisible ? 'visible' : ''}`}>
           <h1 className="hero-title">
-            Scan any extension for <span className="highlight">hidden threats</span>
+            Find <span className="highlight">hidden threats</span> in Chrome extensions
           </h1>
           <p className="hero-subtitle">
-            Don't trust reviews. Trust the code.
+            <span className="honey-logo-small">
+              <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path 
+                  d="M50 5L93.3 27.5V72.5L50 95L6.7 72.5V27.5L50 5Z" 
+                  fill="url(#honeyGradientSmall)" 
+                  stroke="url(#honeyStrokeSmall)"
+                  strokeWidth="1.5"
+                />
+                <path d="M50 30L62 38V54L50 62L38 54V38L50 30Z" fill="rgba(255,255,255,0.15)" />
+                <path d="M35 45L47 53V69L35 77L23 69V53L35 45Z" fill="rgba(255,255,255,0.1)" />
+                <path d="M65 45L77 53V69L65 77L53 69V53L65 45Z" fill="rgba(255,255,255,0.1)" />
+                <text x="50" y="58" textAnchor="middle" fill="white" fontSize="28" fontWeight="bold" fontFamily="Arial">h</text>
+                <defs>
+                  <linearGradient id="honeyGradientSmall" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#FF9500" />
+                    <stop offset="50%" stopColor="#FF6B00" />
+                    <stop offset="100%" stopColor="#E85D04" />
+                  </linearGradient>
+                  <linearGradient id="honeyStrokeSmall" x1="0%" y1="0%" x2="100%" y2="100%">
+                    <stop offset="0%" stopColor="#FFB347" />
+                    <stop offset="100%" stopColor="#FF8C00" />
+                  </linearGradient>
+                </defs>
+              </svg>
+            </span>
+            Honey fooled 17M users. Don't trust reviews—trust the code.
           </p>
         </div>
 
@@ -782,22 +807,26 @@ const HomePage = () => {
       {/* Pricing Section */}
       <section className="pricing-section">
         <div className="pricing-header">
-          <h2>Simple, Transparent Pricing</h2>
-          <p>Start free. Upgrade when you need more. Cancel anytime.</p>
+          <h2>Simple, Credit-Based Pricing</h2>
+          <p>Pay for what you scan. No subscriptions. Credits never expire.</p>
         </div>
 
         <div className="pricing-grid">
-          {/* Free */}
+          {/* Value */}
           <div className="pricing-card">
             <div className="pricing-card-header">
-              <h3>Free</h3>
-              <p>Try it out</p>
+              <h3>Value</h3>
+              <p>Protect yourself</p>
             </div>
             <div className="pricing-amount">
-              <span className="price">$0</span>
-              <span className="credits">2 scans/mo</span>
+              <span className="price">$1.99</span>
+              <span className="credits">5 scans</span>
             </div>
-            <div className="price-per-scan">No credit card required</div>
+            <div className="scan-credit-note">
+              Scan credits are only used for new extension versions (new build hash).
+              If we've already scanned that exact build, it's an instant free lookup.
+            </div>
+            <div className="price-per-scan">~$0.40 per scan</div>
             <ul className="pricing-features">
               <li>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -815,70 +844,29 @@ const HomePage = () => {
             <button className="pricing-btn">Get Started</button>
           </div>
 
-          {/* Starter */}
-          <div className="pricing-card">
-            <div className="pricing-card-header">
-              <h3>Starter</h3>
-              <p>See what we can do</p>
-            </div>
-            <div className="pricing-amount">
-              <span className="price">$3.99</span>
-              <span className="credits">15 scans/mo</span>
-            </div>
-            <div className="price-per-scan">Less than a coffee</div>
-            <ul className="pricing-features">
-              <li>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M20 6L9 17l-5-5" />
-                </svg>
-                <span>AI threat analysis</span>
-              </li>
-              <li>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M20 6L9 17l-5-5" />
-                </svg>
-                <span>Export reports</span>
-              </li>
-              <li>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M20 6L9 17l-5-5" />
-                </svg>
-                <span>Priority scanning</span>
-              </li>
-              <li>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M20 6L9 17l-5-5" />
-                </svg>
-                <span>Email support</span>
-              </li>
-            </ul>
-            <button className="pricing-btn">Get Starter</button>
-          </div>
-
           {/* Pro - Popular */}
           <div className="pricing-card popular">
-            <div className="popular-badge">BEST VALUE</div>
+            <div className="popular-badge">MOST POPULAR</div>
             <div className="pricing-card-header">
               <h3>Pro</h3>
-              <p>Your security partner</p>
+              <p>Protect yourself better</p>
             </div>
             <div className="pricing-amount">
-              <span className="price">$9.99</span>
-              <span className="credits">50 scans/mo</span>
+              <span className="price">$4.99</span>
+              <span className="price-period">/month</span>
+              <span className="credits">30 scans</span>
             </div>
-            <div className="price-per-scan">We grow with you</div>
+            <div className="scan-credit-note">
+              Scan credits are only used for new extension versions (new build hash).
+              If we've already scanned that exact build, it's an instant free lookup.
+            </div>
+            <div className="price-per-scan">~$0.17 per scan</div>
             <ul className="pricing-features">
               <li>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <path d="M20 6L9 17l-5-5" />
                 </svg>
-                <span>Everything in Starter</span>
-              </li>
-              <li>
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M20 6L9 17l-5-5" />
-                </svg>
-                <span>API access</span>
+                <span>Everything in Value</span>
               </li>
               <li>
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -894,6 +882,50 @@ const HomePage = () => {
               </li>
             </ul>
             <button className="pricing-btn popular-btn">Get Pro</button>
+          </div>
+
+          {/* Power */}
+          <div className="pricing-card">
+            <div className="pricing-card-header">
+              <h3>Power</h3>
+              <p>We help you find better extensions</p>
+            </div>
+            <div className="pricing-amount">
+              <span className="price">$7.99</span>
+              <span className="credits">50 scans</span>
+            </div>
+            <div className="scan-credit-note">
+              Scan credits are only used for new extension versions (new build hash).
+              If we've already scanned that exact build, it's an instant free lookup.
+            </div>
+            <div className="price-per-scan">~$0.16 per scan</div>
+            <ul className="pricing-features">
+              <li>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M20 6L9 17l-5-5" />
+                </svg>
+                <span>Everything in Pro</span>
+              </li>
+              <li>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M20 6L9 17l-5-5" />
+                </svg>
+                <span>Suggest safe extensions</span>
+              </li>
+              <li>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M20 6L9 17l-5-5" />
+                </svg>
+                <span>Webhook integrations</span>
+              </li>
+              <li>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M20 6L9 17l-5-5" />
+                </svg>
+                <span>Team sharing</span>
+              </li>
+            </ul>
+            <button className="pricing-btn">Get Power</button>
           </div>
         </div>
 

@@ -173,9 +173,21 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
   margin-bottom: 1.5rem;
 
+  .logo-text {
+    font-size: 1.375rem;
+    font-weight: 600;
+    color: #f8fafc;
+    letter-spacing: -0.01em;
+    background: linear-gradient(135deg, #f8fafc 0%, #94a3b8 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Legacy logo styles (for compatibility) */
   .logo-project {
     font-size: 0.9375rem;
     font-weight: 600;

@@ -98,15 +98,32 @@ body {
 .header-logo {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
   text-decoration: none;
-  transition: opacity 0.2s ease;
+  transition: all 0.2s ease;
 
   &:hover {
-    opacity: 0.85;
+    opacity: 0.9;
+    
+    .shield-logo {
+      transform: scale(1.05);
+    }
   }
 }
 
+.logo-text {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--atlas-text-primary);
+  letter-spacing: -0.01em;
+  background: linear-gradient(135deg, var(--atlas-text-primary) 0%, var(--atlas-text-secondary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  transition: all 0.2s ease;
+}
+
+/* Legacy logo styles (for SignInModal compatibility) */
 .logo-project {
   font-size: 1.0625rem;
   font-weight: 600;
@@ -251,8 +268,9 @@ body {
   border: 1px solid transparent;
   position: relative;
   
-  /* Add extra padding when upgrade badge is present */
-  &:has(.upgrade-badge-top) {
+  /* Add extra padding when upgrade badge or free badge is present */
+  &:has(.upgrade-badge-top),
+  &:has(.free-badge-top) {
     padding-right: 5rem;
   }
   
@@ -296,6 +314,13 @@ body {
   font-weight: 600;
   color: var(--atlas-text-primary);
   margin-bottom: 0.125rem;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+  
+  span {
+    display: block;
+  }
 }
 
 .upgrade-badge-top {
@@ -312,6 +337,26 @@ body {
   background: linear-gradient(135deg, rgba(34, 197, 94, 0.15), rgba(59, 130, 246, 0.15));
   color: #22c55e;
   border: 1px solid rgba(34, 197, 94, 0.25);
+  border-radius: 6px;
+  z-index: 1;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  pointer-events: none;
+}
+
+.free-badge-top {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(139, 92, 246, 0.15));
+  color: #3b82f6;
+  border: 1px solid rgba(59, 130, 246, 0.25);
   border-radius: 6px;
   z-index: 1;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
