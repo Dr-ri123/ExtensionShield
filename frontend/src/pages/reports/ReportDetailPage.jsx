@@ -4,11 +4,16 @@ import { Button } from "../../components/ui/button";
 import { Badge } from "../../components/ui/badge";
 import { Card, CardContent } from "../../components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
-import { Download, X, Clock, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { Download, X, Clock, TrendingUp, TrendingDown, Minus, Copy, ChevronDown, ChevronUp } from "lucide-react";
 import FileViewerModal from "../../components/FileViewerModal";
 import realScanService from "../../services/realScanService";
 import databaseService from "../../services/databaseService";
 import { getRiskLevel } from "../../utils/signalMapper";
+import { 
+  normalizeScanResultSafe, 
+  validateEvidenceIntegrity,
+  isDevelopmentMode 
+} from "../../utils/normalizeScanResult";
 import "./ReportDetailPage.scss";
 
 // Version History Component
@@ -120,6 +125,73 @@ const VersionHistorySection = ({ currentVersion, currentScore, extensionId, scan
   );
 };
 
+// Report Data Unavailable Component - shown when normalization fails
+const ReportDataUnavailable = ({ extensionId, rawData, error }) => {
+  const [showRawJson, setShowRawJson] = useState(false);
+  const isDevMode = isDevelopmentMode();
+  
+  const handleCopyJson = () => {
+    try {
+      const jsonStr = JSON.stringify(rawData, null, 2);
+      navigator.clipboard.writeText(jsonStr);
+      alert("Raw JSON copied to clipboard");
+    } catch (e) {
+      console.error("Failed to copy JSON:", e);
+    }
+  };
+  
+  return (
+    <div className="report-data-unavailable">
+      <div className="unavailable-icon">⚠️</div>
+      <h2>Report Data Unavailable</h2>
+      <p>We couldn't process the scan data for this extension.</p>
+      
+      <div className="extension-id-display">
+        <span className="label">Extension ID:</span>
+        <code>{extensionId || "Unknown"}</code>
+      </div>
+      
+      {error && (
+        <div className="error-message">
+          <span className="label">Error:</span>
+          <span>{error}</span>
+        </div>
+      )}
+      
+      {isDevMode && rawData && (
+        <div className="dev-tools">
+          <div className="dev-tools-header">
+            <span className="dev-label">🛠️ Developer Tools</span>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={handleCopyJson}
+              className="copy-btn"
+            >
+              <Copy size={14} />
+              Copy JSON
+            </Button>
+          </div>
+          
+          <button 
+            className="toggle-raw-json"
+            onClick={() => setShowRawJson(!showRawJson)}
+          >
+            {showRawJson ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            {showRawJson ? "Hide" : "Show"} Raw JSON
+          </button>
+          
+          {showRawJson && (
+            <pre className="raw-json-display">
+              {JSON.stringify(rawData, null, 2)}
+            </pre>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // Permission to capability mapping with icons
 const CAPABILITY_MAP = {
   tabCapture: { icon: "🎥", label: "Screen Capture", desc: "Can record your screen or tabs", risk: "medium" },
@@ -148,8 +220,11 @@ const ReportDetailPage = () => {
   const navigate = useNavigate();
 
   const [scanResults, setScanResults] = useState(null);
+  const [rawScanData, setRawScanData] = useState(null); // Keep raw data for error display
+  const [reportViewModel, setReportViewModel] = useState(null); // Normalized view model
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [normalizationError, setNormalizationError] = useState(null);
   const [showInfoPopup, setShowInfoPopup] = useState(null);
   const [fileViewerModal, setFileViewerModal] = useState({ isOpen: false, file: null });
   const [versionHistory, setVersionHistory] = useState([]);
@@ -161,14 +236,40 @@ const ReportDetailPage = () => {
   const loadReportData = async (extId) => {
     try {
       setIsLoading(true);
-      let results = await databaseService.getScanResult(extId);
-      if (!results) {
-        results = await realScanService.getRealScanResults(extId);
+      setNormalizationError(null);
+      
+      // Fetch raw data
+      let rawResults = await databaseService.getScanResult(extId);
+      if (!rawResults) {
+        rawResults = await realScanService.getRealScanResults(extId);
       }
+      
+      // Store raw data for error display
+      setRawScanData(rawResults);
+      
+      // Format for legacy compatibility
+      let results = rawResults;
       if (results && !results.files) {
         results = realScanService.formatRealResults(results);
       }
       setScanResults(results);
+      
+      // Try to normalize using safe normalizer (won't throw)
+      const viewModel = normalizeScanResultSafe(rawResults);
+      setReportViewModel(viewModel);
+      
+      if (!viewModel) {
+        setNormalizationError("Failed to normalize scan result data");
+        console.error("[ReportDetailPage] normalizeScanResultSafe returned null");
+      } else {
+        // Validate evidence integrity and log warnings
+        const validation = validateEvidenceIntegrity(viewModel);
+        if (!validation.valid) {
+          validation.warnings.forEach(warning => {
+            console.warn(`[ReportDetailPage] Evidence validation warning: ${warning}`);
+          });
+        }
+      }
       
       // Build version history from current scan (in future, this could come from API)
       // For now, we show current version as the only entry
@@ -251,7 +352,7 @@ const ReportDetailPage = () => {
     );
   }
 
-  // Error state
+  // Error state - no data at all
   if (!scanResults && error) {
     return (
       <div className="report-detail-page">
@@ -265,6 +366,34 @@ const ReportDetailPage = () => {
             <h2>Report Not Found</h2>
             <p>{error}</p>
             <Button onClick={() => navigate("/reports")}>Back to Reports</Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Normalization failed - show data unavailable with debug info
+  if (scanResults && !reportViewModel) {
+    return (
+      <div className="report-detail-page">
+        <div className="report-bg-effects">
+          <div className="report-bg-gradient report-gradient-1" />
+          <div className="report-bg-gradient report-gradient-2" />
+        </div>
+        <div className="report-content">
+          <div className="report-nav">
+            <Link to="/reports" className="back-link">← Back to Reports</Link>
+          </div>
+          <ReportDataUnavailable 
+            extensionId={reportId}
+            rawData={rawScanData}
+            error={normalizationError}
+          />
+          <div className="error-actions">
+            <Button onClick={() => navigate("/reports")}>Back to Reports</Button>
+            <Button variant="outline" onClick={() => loadReportData(reportId)}>
+              Retry
+            </Button>
           </div>
         </div>
       </div>

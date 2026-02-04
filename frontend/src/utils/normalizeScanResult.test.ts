@@ -1,0 +1,565 @@
+/**
+ * normalizeScanResult Tests & Runtime Assertions
+ * 
+ * This module provides:
+ * 1. Jest-compatible test suites (when Jest/Vitest is configured)
+ * 2. Runtime assertions that can be called directly
+ * 3. Test fixtures for manual validation
+ * 
+ * To run runtime assertions in browser console:
+ *   window.__runNormalizerAssertions()
+ */
+
+import {
+  normalizeScanResult,
+  normalizeScanResultSafe,
+  createEmptyReportViewModel,
+  hasScoring,
+  hasScoringV2,
+} from './normalizeScanResult';
+import type { RawScanResult, ReportViewModel } from './reportTypes';
+
+// Polyfill for environments without Jest
+const describe = typeof global !== 'undefined' && (global as Record<string, unknown>).describe 
+  ? (global as Record<string, unknown>).describe as (name: string, fn: () => void) => void
+  : (name: string, fn: () => void) => { /* no-op in non-test environments */ };
+const it = typeof global !== 'undefined' && (global as Record<string, unknown>).it
+  ? (global as Record<string, unknown>).it as (name: string, fn: () => void) => void  
+  : (name: string, fn: () => void) => { /* no-op in non-test environments */ };
+const expect = typeof global !== 'undefined' && (global as Record<string, unknown>).expect
+  ? (global as Record<string, unknown>).expect as (value: unknown) => {
+      toBe: (expected: unknown) => void;
+      toBeNull: () => void;
+      toBeDefined: () => void;
+      toEqual: (expected: unknown) => void;
+      toContain: (expected: unknown) => void;
+      toBeGreaterThan: (expected: number) => void;
+      toThrow: () => void;
+    }
+  : (value: unknown) => ({
+      toBe: () => {},
+      toBeNull: () => {},
+      toBeDefined: () => {},
+      toEqual: () => {},
+      toContain: () => {},
+      toBeGreaterThan: () => {},
+      toThrow: () => {},
+    });
+
+// =============================================================================
+// TEST FIXTURES
+// =============================================================================
+
+/**
+ * Minimal valid raw result (only required field)
+ */
+const minimalRawResult: RawScanResult = {
+  extension_id: 'test123',
+};
+
+/**
+ * Complete raw result with scoring_v2
+ */
+const completeRawResult: RawScanResult = {
+  extension_id: 'beepaenfejnphdgnkmccjcfiieihhogl',
+  extension_name: 'Check US Visa Slots - USVisaScheduling',
+  url: 'https://chromewebstore.google.com/detail/check-us-visa-slots-usvis/beepaenfejnphdgnkmccjcfiieihhogl',
+  timestamp: '2026-02-02T18:03:14.904402',
+  status: 'completed',
+  metadata: {
+    title: 'Check US Visa Slots - USVisaScheduling',
+    user_count: 70000,
+    rating: 4.6,
+    ratings_count: 1000,
+    last_updated: 'December 24, 2025',
+    version: '4.6.6',
+  },
+  manifest: {
+    name: 'Check US Visa Slots - USVisaScheduling',
+    version: '4.6.6',
+    manifest_version: 3,
+    permissions: ['storage', 'activeTab', 'scripting'],
+    host_permissions: ['https://*.usvisascheduling.com/*'],
+  },
+  scoring_v2: {
+    scoring_version: 'v2',
+    security_score: 75,
+    privacy_score: 70,
+    governance_score: 80,
+    overall_score: 74,
+    overall_confidence: 0.85,
+    decision: 'ALLOW',
+    decision_reasons: ['Overall score 74/100 - extension passes all checks'],
+    hard_gates_triggered: [],
+    risk_level: 'medium',
+    security_layer: {
+      layer_name: 'security',
+      score: 75,
+      risk: 0.25,
+      risk_level: 'low',
+      confidence: 0.9,
+      factors: [
+        {
+          name: 'SAST',
+          severity: 0.2,
+          confidence: 0.9,
+          weight: 0.4,
+          contribution: 0.072,
+          evidence_ids: ['ev_001'],
+        },
+        {
+          name: 'VirusTotal',
+          severity: 0.0,
+          confidence: 1.0,
+          weight: 0.3,
+          contribution: 0,
+          evidence_ids: [],
+        },
+      ],
+    },
+    privacy_layer: {
+      layer_name: 'privacy',
+      score: 70,
+      risk: 0.3,
+      confidence: 0.8,
+      factors: [
+        {
+          name: 'Permissions',
+          severity: 0.35,
+          confidence: 0.7,
+          weight: 0.5,
+          contribution: 0.1225,
+          evidence_ids: ['ev_002'],
+        },
+      ],
+    },
+    governance_layer: {
+      layer_name: 'governance',
+      score: 80,
+      risk: 0.2,
+      confidence: 0.75,
+      factors: [],
+    },
+  },
+  governance_bundle: {
+    evidence_index: {
+      evidence: {
+        ev_001: {
+          evidence_id: 'ev_001',
+          file_path: 'js/content.js',
+          line_start: 1,
+          line_end: 1,
+          snippet: 'function e(e){...',
+          provenance: 'SAST: banking.third_party.external_api_calls [ERROR]',
+          created_at: '2026-02-03T00:03:14.883037',
+        },
+        ev_002: {
+          evidence_id: 'ev_002',
+          file_path: 'manifest.json',
+          snippet: '"permissions": ["scripting"]',
+          provenance: 'Permission: scripting',
+          created_at: '2026-02-03T00:03:14.883443',
+        },
+      },
+    },
+  },
+  permissions_analysis: {
+    permissions_details: {
+      scripting: {
+        permission_name: 'scripting',
+        is_reasonable: false,
+        justification_reasoning: 'High risk permission',
+      },
+      storage: {
+        permission_name: 'storage',
+        is_reasonable: true,
+        justification_reasoning: 'Standard permission',
+      },
+    },
+  },
+};
+
+/**
+ * Legacy raw result (no scoring_v2)
+ */
+const legacyRawResult: RawScanResult = {
+  extension_id: 'legacy123',
+  extension_name: 'Legacy Extension',
+  overall_security_score: 65,
+  total_findings: 2,
+  risk_distribution: { high: 0, medium: 2, low: 0 },
+  overall_risk: 'medium',
+  manifest: {
+    permissions: ['storage', 'tabs'],
+  },
+  summary: {
+    key_findings: [
+      'Found external API calls',
+      'Unreasonable permissions detected',
+    ],
+  },
+};
+
+/**
+ * Raw result with hard gates triggered
+ */
+const blockedRawResult: RawScanResult = {
+  extension_id: 'blocked123',
+  extension_name: 'Blocked Extension',
+  scoring_v2: {
+    security_score: 15,
+    privacy_score: 20,
+    governance_score: 40,
+    overall_score: 21,
+    overall_confidence: 0.95,
+    decision: 'BLOCK',
+    decision_reasons: ['VirusTotal: 8 malware detections'],
+    hard_gates_triggered: ['VIRUSTOTAL_MALWARE'],
+    risk_level: 'critical',
+  },
+};
+
+// =============================================================================
+// TESTS
+// =============================================================================
+
+describe('normalizeScanResult', () => {
+  describe('basic functionality', () => {
+    it('should normalize a minimal raw result', () => {
+      const result = normalizeScanResult(minimalRawResult);
+      expect(result.meta.extensionId).toBe('test123');
+      expect(result.meta.name).toBe('Unknown Extension');
+      expect(result.scores.decision).toBeNull();
+    });
+
+    it('should normalize a complete raw result with scoring_v2', () => {
+      const result = normalizeScanResult(completeRawResult);
+      
+      // Meta
+      expect(result.meta.extensionId).toBe('beepaenfejnphdgnkmccjcfiieihhogl');
+      expect(result.meta.name).toBe('Check US Visa Slots - USVisaScheduling');
+      expect(result.meta.version).toBe('4.6.6');
+      expect(result.meta.users).toBe(70000);
+      expect(result.meta.rating).toBe(4.6);
+      
+      // Scores
+      expect(result.scores.security.score).toBe(75);
+      expect(result.scores.privacy.score).toBe(70);
+      expect(result.scores.governance.score).toBe(80);
+      expect(result.scores.overall.score).toBe(74);
+      expect(result.scores.overall.confidence).toBe(0.85);
+      expect(result.scores.decision).toBe('ALLOW');
+      expect(result.scores.overall.band).toBe('GOOD');
+      
+      // Factors
+      expect(result.factorsByLayer.security.length).toBeGreaterThan(0);
+      expect(result.factorsByLayer.privacy.length).toBeGreaterThan(0);
+      
+      // Evidence
+      expect(Object.keys(result.evidenceIndex).length).toBe(2);
+      expect(result.evidenceIndex['ev_001']).toBeDefined();
+      expect(result.evidenceIndex['ev_001'].filePath).toBe('js/content.js');
+      
+      // Permissions
+      expect(result.permissions.apiPermissions).toContain('storage');
+      expect(result.permissions.unreasonablePermissions).toContain('scripting');
+    });
+
+    it('should handle legacy raw result without scoring_v2', () => {
+      const result = normalizeScanResult(legacyRawResult);
+      
+      expect(result.meta.extensionId).toBe('legacy123');
+      expect(result.scores.overall.score).toBe(65);
+      expect(result.scores.security.score).toBe(65); // Falls back to overall
+      expect(result.scores.privacy.score).toBeNull();
+      expect(result.scores.decision).toBeNull();
+      
+      // Should pick up legacy key_findings
+      expect(result.keyFindings.length).toBeGreaterThan(0);
+    });
+
+    it('should handle blocked extension with hard gates', () => {
+      const result = normalizeScanResult(blockedRawResult);
+      
+      expect(result.scores.decision).toBe('BLOCK');
+      expect(result.scores.overall.band).toBe('BAD');
+      expect(result.keyFindings.some(f => f.title === 'VIRUSTOTAL_MALWARE')).toBe(true);
+      expect(result.keyFindings[0].severity).toBe('high');
+    });
+  });
+
+  describe('error handling', () => {
+    it('should throw on missing extension_id', () => {
+      expect(() => normalizeScanResult({} as RawScanResult)).toThrow();
+    });
+
+    it('should handle null/undefined gracefully with safe variant', () => {
+      expect(normalizeScanResultSafe(null as unknown as RawScanResult)).toBeNull();
+      expect(normalizeScanResultSafe(undefined as unknown as RawScanResult)).toBeNull();
+      expect(normalizeScanResultSafe({} as RawScanResult)).toBeNull();
+    });
+
+    it('should not crash on deeply nested missing fields', () => {
+      const sparse: RawScanResult = {
+        extension_id: 'sparse123',
+        governance_bundle: {
+          // Empty bundle
+        },
+        permissions_analysis: {
+          // Empty analysis
+        },
+      };
+      
+      const result = normalizeScanResult(sparse);
+      expect(result.meta.extensionId).toBe('sparse123');
+      expect(result.evidenceIndex).toEqual({});
+      expect(result.factorsByLayer.security).toEqual([]);
+    });
+  });
+
+  describe('band calculation', () => {
+    it('should use decision-based bands when decision exists', () => {
+      const allowResult = normalizeScanResult({
+        extension_id: 'test',
+        scoring_v2: { decision: 'ALLOW', overall_score: 50 },
+      });
+      expect(allowResult.scores.overall.band).toBe('GOOD');
+
+      const warnResult = normalizeScanResult({
+        extension_id: 'test',
+        scoring_v2: { decision: 'NEEDS_REVIEW', overall_score: 70 },
+      });
+      expect(warnResult.scores.overall.band).toBe('WARN');
+
+      const blockResult = normalizeScanResult({
+        extension_id: 'test',
+        scoring_v2: { decision: 'BLOCK', overall_score: 80 },
+      });
+      expect(blockResult.scores.overall.band).toBe('BAD');
+    });
+
+    it('should use score-based bands when no decision exists', () => {
+      const result90 = normalizeScanResult({
+        extension_id: 'test',
+        overall_security_score: 90,
+      });
+      expect(result90.scores.overall.band).toBe('GOOD');
+
+      const result70 = normalizeScanResult({
+        extension_id: 'test',
+        overall_security_score: 70,
+      });
+      expect(result70.scores.overall.band).toBe('WARN');
+
+      const result40 = normalizeScanResult({
+        extension_id: 'test',
+        overall_security_score: 40,
+      });
+      expect(result40.scores.overall.band).toBe('BAD');
+    });
+  });
+
+  describe('helper functions', () => {
+    it('createEmptyReportViewModel should return valid empty model', () => {
+      const empty = createEmptyReportViewModel('test123');
+      expect(empty.meta.extensionId).toBe('test123');
+      expect(empty.meta.name).toBe('Loading...');
+      expect(empty.scores.overall.band).toBe('NA');
+      expect(empty.keyFindings).toEqual([]);
+    });
+
+    it('hasScoring should detect presence of scores', () => {
+      const withScore = normalizeScanResult(completeRawResult);
+      const withoutScore = createEmptyReportViewModel();
+      
+      expect(hasScoring(withScore)).toBe(true);
+      expect(hasScoring(withoutScore)).toBe(false);
+    });
+
+    it('hasScoringV2 should detect v2 scoring data', () => {
+      const v2Result = normalizeScanResult(completeRawResult);
+      const legacyResult = normalizeScanResult(legacyRawResult);
+      
+      expect(hasScoringV2(v2Result)).toBe(true);
+      expect(hasScoringV2(legacyResult)).toBe(false);
+    });
+  });
+
+  describe('key findings extraction', () => {
+    it('should prioritize hard gates as high severity', () => {
+      const result = normalizeScanResult(blockedRawResult);
+      const hardGateFinding = result.keyFindings.find(f => f.title === 'VIRUSTOTAL_MALWARE');
+      
+      expect(hardGateFinding).toBeDefined();
+      expect(hardGateFinding?.severity).toBe('high');
+      expect(hardGateFinding?.layer).toBe('security');
+    });
+
+    it('should extract top factors by contribution', () => {
+      // Create result with high-severity factors
+      const result = normalizeScanResult({
+        extension_id: 'test',
+        scoring_v2: {
+          decision: 'WARN',
+          security_layer: {
+            factors: [
+              { name: 'Low', severity: 0.1, confidence: 0.9, contribution: 0.01 },
+              { name: 'High', severity: 0.8, confidence: 0.9, contribution: 0.5 },
+              { name: 'Medium', severity: 0.5, confidence: 0.9, contribution: 0.2 },
+            ],
+          },
+          privacy_layer: { factors: [] },
+          governance_layer: { factors: [] },
+        },
+      });
+      
+      // High severity factor should be in findings
+      expect(result.keyFindings.some(f => f.title === 'High')).toBe(true);
+      // Low severity factor should not be (severity < 0.4)
+      expect(result.keyFindings.some(f => f.title === 'Low')).toBe(false);
+    });
+
+    it('should fallback to decision_reasons when no factors', () => {
+      const result = normalizeScanResult({
+        extension_id: 'test',
+        scoring_v2: {
+          decision: 'ALLOW',
+          decision_reasons: ['Extension passes all checks'],
+          security_layer: { factors: [] },
+          privacy_layer: { factors: [] },
+          governance_layer: { factors: [] },
+        },
+      });
+      
+      expect(result.keyFindings.length).toBeGreaterThan(0);
+      expect(result.keyFindings[0].title).toBe('Extension passes all checks');
+      expect(result.keyFindings[0].severity).toBe('low');
+    });
+  });
+
+  describe('permissions extraction', () => {
+    it('should identify high-risk permissions', () => {
+      const result = normalizeScanResult({
+        extension_id: 'test',
+        manifest: {
+          permissions: ['storage', 'tabs', 'webRequest', 'clipboardRead'],
+        },
+      });
+      
+      expect(result.permissions.highRiskPermissions).toContain('webRequest');
+      expect(result.permissions.highRiskPermissions).toContain('clipboardRead');
+      expect(result.permissions.highRiskPermissions).not.toContain('storage');
+    });
+
+    it('should identify unreasonable permissions', () => {
+      const result = normalizeScanResult({
+        extension_id: 'test',
+        manifest: { permissions: ['scripting'] },
+        permissions_analysis: {
+          permissions_details: {
+            scripting: { is_reasonable: false },
+          },
+        },
+      });
+      
+      expect(result.permissions.unreasonablePermissions).toContain('scripting');
+    });
+
+    it('should identify broad host patterns', () => {
+      const result = normalizeScanResult({
+        extension_id: 'test',
+        manifest: {
+          host_permissions: ['<all_urls>', 'https://specific.com/*'],
+        },
+      });
+      
+      expect(result.permissions.broadHostPatterns).toContain('<all_urls>');
+      expect(result.permissions.broadHostPatterns?.length).toBe(1);
+    });
+  });
+
+  describe('evidence index building', () => {
+    it('should extract evidence from governance_bundle.evidence_index', () => {
+      const result = normalizeScanResult(completeRawResult);
+      
+      expect(result.evidenceIndex['ev_001']).toBeDefined();
+      expect(result.evidenceIndex['ev_001'].filePath).toBe('js/content.js');
+      expect(result.evidenceIndex['ev_001'].lineStart).toBe(1);
+      expect(result.evidenceIndex['ev_001'].snippet).toBeDefined();
+    });
+
+    it('should handle missing evidence gracefully', () => {
+      const result = normalizeScanResult({
+        extension_id: 'test',
+        governance_bundle: {},
+      });
+      
+      expect(result.evidenceIndex).toEqual({});
+    });
+  });
+});
+
+// =============================================================================
+// RUNTIME ASSERTIONS (can be run independently)
+// =============================================================================
+
+/**
+ * Run runtime assertions to validate normalizer behavior
+ * Call this during development/testing to catch issues early
+ */
+export function runRuntimeAssertions(): void {
+  console.log('[normalizeScanResult] Running runtime assertions...');
+  
+  // 1. Minimal input should not throw
+  try {
+    normalizeScanResult(minimalRawResult);
+    console.log('✓ Minimal input handled');
+  } catch (e) {
+    console.error('✗ Minimal input failed:', e);
+  }
+  
+  // 2. Complete input should produce valid output
+  try {
+    const result = normalizeScanResult(completeRawResult);
+    if (!result.meta.extensionId) throw new Error('Missing extensionId');
+    if (typeof result.scores.overall.score !== 'number') throw new Error('Invalid score type');
+    console.log('✓ Complete input handled');
+  } catch (e) {
+    console.error('✗ Complete input failed:', e);
+  }
+  
+  // 3. Legacy input should work
+  try {
+    const result = normalizeScanResult(legacyRawResult);
+    if (!result.scores.overall.score) throw new Error('Missing legacy score');
+    console.log('✓ Legacy input handled');
+  } catch (e) {
+    console.error('✗ Legacy input failed:', e);
+  }
+  
+  // 4. Safe variant should not throw
+  try {
+    normalizeScanResultSafe(null as unknown as RawScanResult);
+    normalizeScanResultSafe({} as RawScanResult);
+    console.log('✓ Safe variant handled edge cases');
+  } catch (e) {
+    console.error('✗ Safe variant failed:', e);
+  }
+  
+  // 5. Empty model should be valid
+  try {
+    const empty = createEmptyReportViewModel('test');
+    if (!empty.scores.overall.band) throw new Error('Missing band');
+    console.log('✓ Empty model valid');
+  } catch (e) {
+    console.error('✗ Empty model failed:', e);
+  }
+  
+  console.log('[normalizeScanResult] Runtime assertions complete');
+}
+
+// Export for use in browser console
+if (typeof window !== 'undefined') {
+  (window as unknown as Record<string, unknown>).__runNormalizerAssertions = runRuntimeAssertions;
+}
+

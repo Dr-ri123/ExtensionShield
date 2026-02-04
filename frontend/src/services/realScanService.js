@@ -176,6 +176,27 @@ class RealScanService {
 
         // Entropy/Obfuscation analysis
         entropyAnalysis: cliResults.entropy_analysis || null,
+        
+        // V2 Scoring - preserve raw fields for normalizer
+        security_score: cliResults.security_score,
+        privacy_score: cliResults.privacy_score,
+        governance_score: cliResults.governance_score,
+        overall_confidence: cliResults.overall_confidence,
+        decision_v2: cliResults.decision_v2,
+        decision_reasons_v2: cliResults.decision_reasons_v2,
+        scoring_v2: cliResults.scoring_v2,
+        
+        // Governance bundle - needed for factors and evidence
+        governance_bundle: cliResults.governance_bundle,
+        governance_verdict: cliResults.governance_verdict,
+        
+        // Preserve raw manifest and metadata for permissions
+        manifest: cliResults.manifest,
+        metadata: cliResults.metadata,
+        permissions_analysis: cliResults.permissions_analysis,
+        
+        // Timestamp
+        timestamp: cliResults.timestamp,
       };
     } catch (error) {
       console.error("Error formatting CLI results:", error);
