@@ -205,6 +205,88 @@ class TestVerifySupabaseAccessToken:
                 
                 assert result is None
 
+    def test_audience_as_list_passes(self, test_keypair, mock_settings):
+        """Token with audience as list should pass if expected aud is in the list."""
+        private_key, public_key = test_keypair
+        jwk_data = _public_key_to_jwk(public_key, kid="test-kid")
+        
+        # Create token with audience as list containing the expected audience
+        now = int(time.time())
+        payload = {
+            "sub": "user-123",
+            "aud": ["authenticated", "other-audience"],  # List with expected aud
+            "iss": "https://test-project.supabase.co/auth/v1",
+            "exp": now + 3600,
+            "iat": now,
+        }
+        headers = {"kid": "test-kid", "alg": "RS256"}
+        private_pem = _private_key_to_pem(private_key)
+        token = jwt.encode(payload, private_pem, algorithm="RS256", headers=headers)
+        
+        with patch("extension_shield.api.supabase_auth.get_settings", return_value=mock_settings):
+            with patch("extension_shield.api.supabase_auth._get_jwks_by_kid", return_value={"test-kid": jwk_data}):
+                from extension_shield.api.supabase_auth import verify_supabase_access_token
+                
+                result = verify_supabase_access_token(token)
+                
+                assert result is not None
+                assert result["sub"] == "user-123"
+
+
+class TestGetCurrentUserId:
+    """Tests for get_current_user_id()."""
+
+    def test_valid_token_with_correct_issuer_returns_user_id(self, test_keypair, mock_settings):
+        """get_current_user_id should return user_id for valid token with correct issuer."""
+        private_key, public_key = test_keypair
+        jwk_data = _public_key_to_jwk(public_key, kid="test-kid")
+        
+        # Create token with correct issuer
+        token = _create_test_token(
+            private_key,
+            sub="user-123",
+            iss="https://test-project.supabase.co/auth/v1",
+        )
+        
+        # Mock FastAPI Request
+        from fastapi import Request
+        mock_request = MagicMock(spec=Request)
+        mock_request.headers = {"Authorization": f"Bearer {token}"}
+        
+        with patch("extension_shield.api.supabase_auth.get_settings", return_value=mock_settings):
+            with patch("extension_shield.api.supabase_auth._get_jwks_by_kid", return_value={"test-kid": jwk_data}):
+                from extension_shield.api.supabase_auth import get_current_user_id
+                
+                user_id = get_current_user_id(mock_request)
+                
+                assert user_id == "user-123"
+
+    def test_token_with_wrong_issuer_returns_none(self, test_keypair, mock_settings):
+        """get_current_user_id should return None for token with wrong issuer (user_id None)."""
+        private_key, public_key = test_keypair
+        jwk_data = _public_key_to_jwk(public_key, kid="test-kid")
+        
+        # Create token with WRONG issuer (different Supabase project)
+        token = _create_test_token(
+            private_key,
+            sub="user-123",
+            iss="https://other-project.supabase.co/auth/v1",  # Wrong issuer!
+        )
+        
+        # Mock FastAPI Request
+        from fastapi import Request
+        mock_request = MagicMock(spec=Request)
+        mock_request.headers = {"Authorization": f"Bearer {token}"}
+        
+        with patch("extension_shield.api.supabase_auth.get_settings", return_value=mock_settings):
+            with patch("extension_shield.api.supabase_auth._get_jwks_by_kid", return_value={"test-kid": jwk_data}):
+                from extension_shield.api.supabase_auth import get_current_user_id
+                
+                user_id = get_current_user_id(mock_request)
+                
+                # Should return None due to issuer mismatch
+                assert user_id is None
+
 
 class TestGetExpectedIssuer:
     """Tests for _get_expected_issuer()."""

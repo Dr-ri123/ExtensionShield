@@ -117,8 +117,29 @@ def verify_supabase_access_token(token: str) -> Optional[Dict[str, Any]]:
             options={
                 "verify_aud": bool(aud),
                 "verify_iss": True,
+                "verify_exp": True,
             },
         )
+        
+        # Explicitly validate decoded claims
+        # Validate issuer
+        if payload.get("iss") != expected_issuer:
+            return None
+        
+        # Validate audience (support both string and list)
+        if aud:
+            token_aud = payload.get("aud")
+            if isinstance(token_aud, list):
+                if aud not in token_aud:
+                    return None
+            elif isinstance(token_aud, str):
+                if token_aud != aud:
+                    return None
+            else:
+                return None
+        
+        # exp is validated by jwt.decode with verify_exp=True
+        
         return payload
     except Exception:
         return None
