@@ -1,5 +1,19 @@
 # Acknowledgments
 
+## Project Status & Attribution
+
+**Important Note**: ExtensionShield is built on top of the **ThreatXtension** codebase. I took the original codebase and am actively developing on top of it. Since ThreatXtension was extension-focused, it seemed like a natural foundation to build upon and contribute to the security community.
+
+**Current Status**:
+- **Active Development**: This project is under active solo development
+- **Original Rulesets**: My original custom rulesets and some configurations remain private
+- **Public Components**: Modified code, enhanced privacy rulesets, and architectural improvements are public in this repository
+- **Work in Progress**: Features and documentation are continuously being improved
+
+**Note**: If you encounter any issues or have questions, please reach out at **snorzang65@gmail.com**
+
+Thanks for your patience as I continue to enhance and expand this project!
+
 ## Foundation
 
 ExtensionShield builds upon the pioneering work of **ThreatXtension** by Bar Haim and Itzik Chanan (https://github.com/barvhaim/ThreatXtension).

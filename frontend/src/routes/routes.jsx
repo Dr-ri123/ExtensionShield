@@ -15,6 +15,7 @@ const ResearchPage = React.lazy(() => import("../pages/research/ResearchPage"));
 const MethodologyPage = React.lazy(() => import("../pages/research/MethodologyPage"));
 const CaseStudiesPage = React.lazy(() => import("../pages/research/CaseStudiesPage"));
 const HoneyCaseStudyPage = React.lazy(() => import("../pages/research/HoneyCaseStudyPage"));
+const BenchmarksPage = React.lazy(() => import("../pages/research/BenchmarksPage"));
 
 // GSoC / Open Source Pages
 const GSoCIdeasPage = React.lazy(() => import("../pages/gsoc/GSoCIdeasPage"));
@@ -148,6 +149,17 @@ export const routes = [
       title: "Methodology: How ExtensionShield Scores Risk | ExtensionShield",
       description: "Learn how ExtensionShield analyzes Chrome extensions using static analysis, threat intelligence, and evidence chain-of-custody.",
       canonical: "/research/methodology"
+    },
+    priority: 0.7,
+    changefreq: "monthly"
+  },
+  {
+    path: "/research/benchmarks",
+    element: <BenchmarksPage />,
+    seo: {
+      title: "Benchmarks & Industry Trends | ExtensionShield",
+      description: "Transparent metrics: coverage, disagreement, speed, and governance/privacy signals. Open, reproducible comparisons across scanners.",
+      canonical: "/research/benchmarks"
     },
     priority: 0.7,
     changefreq: "monthly"

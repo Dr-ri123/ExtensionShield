@@ -86,25 +86,6 @@ const BenchmarksPage = () => {
             </p>
           </header>
 
-          {/* Methodology Info Box */}
-          <div className="methodology-info-box">
-            <h4>Methodology</h4>
-            <div className="methodology-content">
-              <div className="methodology-item">
-                <strong>Dataset:</strong> {benchmarksData?.metadata?.sample_size || '1,247 extensions'} across 6 categories
-              </div>
-              <div className="methodology-item">
-                <strong>Date Range:</strong> {benchmarksData?.metadata?.last_updated || '2025-01-15'}
-              </div>
-              <div className="methodology-item">
-                <strong>Coverage %:</strong> Signals implemented / detectable, not accuracy measure
-              </div>
-              <div className="methodology-item">
-                <strong>Note:</strong> Competitor names may be anonymized unless explicitly provided
-              </div>
-            </div>
-          </div>
-
           {/* Industry Trends Section */}
           <section className="trends-section">
             <div className="section-header">
