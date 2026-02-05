@@ -122,16 +122,18 @@ def _get_user_id(request: Request) -> str:
     """
     Best-effort user identifier.
 
-    Frontend should send `X-User-Id` (stable per account/device). If absent,
-    we fallback to IP-based identifier to keep the placeholder limit functional.
+    Prefer Supabase-authenticated user_id (JWT `sub`) when available.
+    If absent, allow an optional `X-User-Id` header for local/dev usage.
+    No IP-based fallback (privacy-first).
     """
+    state_user = getattr(getattr(request, "state", None), "user_id", None)
+    if state_user:
+        return str(state_user)
+
     header_user = request.headers.get("x-user-id") or request.headers.get("X-User-Id")
     if header_user:
         return header_user.strip()
 
-    host = getattr(getattr(request, "client", None), "host", None)
-    if host:
-        return f"anon-ip:{host}"
     return "anon"
 
 
