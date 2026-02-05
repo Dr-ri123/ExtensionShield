@@ -542,13 +542,6 @@ const DashboardPage = () => {
         extensionId={scanResults?.extensionId}
         onGetFileContent={getFileContent}
       />
-
-      {/* Footer Disclaimer */}
-      <footer className="dashboard-footer">
-        <p className="footer-disclaimer">
-          Extension Compliance Scanner generates compliance reports using deterministic rule evaluation and static code analysis. Reports are evidence-based and do not constitute legal advice, compliance guarantees, or endorsement of any extension. All uploaded files are processed securely and deleted after 24 hours.
-        </p>
-      </footer>
     </div>
   );
 };

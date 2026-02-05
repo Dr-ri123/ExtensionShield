@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import ShieldLogo from "../components/ShieldLogo";
 import "./HomePage.scss";
 
 // Static configuration - defined outside component to prevent recreation
@@ -972,25 +971,6 @@ const HomePage = () => {
           </div>
         </div>
       </section>
-
-      {/* Footer */}
-      <footer className="home-footer">
-        <div className="footer-content">
-          <div className="footer-brand">
-            <ShieldLogo size={28} />
-            <span className="brand-extensionshield">ExtensionShield</span>
-          </div>
-          <p className="footer-disclaimer">
-            Comprehensive extension governance through security, privacy, and compliance analysis. 
-            We aggregate multiple dimensions into a single actionable score. So you can trust the results you find.
-          </p>
-          <div className="footer-links">
-            <a href="/research/methodology">How We Score</a>
-            <a href="/contribute">Contribute</a>
-            <a href="https://github.com/Stanzin7/ExtensionShield" target="_blank" rel="noopener noreferrer">GitHub</a>
-          </div>
-        </div>
-      </footer>
       </div>
     </>
   );

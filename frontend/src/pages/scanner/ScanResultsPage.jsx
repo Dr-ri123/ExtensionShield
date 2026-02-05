@@ -173,14 +173,6 @@ const ScanResultsPage = () => {
         extensionId={scanResults?.extensionId || scanId}
         onGetFileContent={getFileContent}
       />
-
-      {/* Footer */}
-      <footer className="results-footer">
-        <p className="footer-disclaimer">
-          This report was generated using deterministic rule evaluation and static code analysis. 
-          Results should be reviewed by a security professional before taking enforcement action.
-        </p>
-      </footer>
     </div>
   );
 };

@@ -154,28 +154,38 @@ export const userMenuItems = [
 ];
 
 /**
- * Footer Links
+ * Footer Configuration
  */
-export const footerLinks = [
-  {
-    label: "How We Score",
-    path: "/research/methodology"
-  },
-  {
-    label: "Contribute",
-    path: "/contribute"
-  },
-  {
-    label: "GitHub",
-    href: "https://github.com/Stanzin7/ExtensionShield",
-    external: true
-  }
-];
+export const footerConfig = {
+  disclaimer: "Comprehensive extension governance through security, privacy, and compliance analysis. We aggregate multiple dimensions into a single actionable score. So you can trust the results you find.",
+  links: [
+    {
+      label: "How We Score",
+      path: "/research/methodology"
+    },
+    {
+      label: "Contribute",
+      path: "/contribute"
+    },
+    {
+      label: "GitHub",
+      href: "https://github.com/Stanzin7/ExtensionShield",
+      external: true
+    }
+  ]
+};
+
+/**
+ * Footer Links (backward compatibility)
+ * @deprecated Use footerConfig.links instead
+ */
+export const footerLinks = footerConfig.links;
 
 export default {
   topNavItems,
   megaMenuConfig,
   userMenuItems,
-  footerLinks
+  footerConfig,
+  footerLinks // backward compatibility
 };
 

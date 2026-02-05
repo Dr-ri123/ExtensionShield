@@ -6,6 +6,7 @@ import routes from "./routes/routes";
 import { topNavItems, megaMenuConfig, userMenuItems } from "./nav/navigation";
 import SignInModal from "./components/SignInModal";
 import ShieldLogo from "./components/ShieldLogo";
+import Footer from "./components/Footer";
 import "./App.scss";
 
 // Loading fallback
@@ -285,6 +286,8 @@ function AppContent() {
           </Routes>
         </Suspense>
       </main>
+      
+      <Footer />
     </div>
   );
 }

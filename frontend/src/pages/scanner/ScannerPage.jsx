@@ -764,14 +764,6 @@ const ScannerPage = () => {
           )}
         </div>
       </section>
-
-      {/* Minimal Footer */}
-      <footer className="scanner-footer">
-        <p>
-          All uploads are processed securely and deleted after 24 hours.
-          <a href="#privacy"> Privacy Policy</a>
-        </p>
-      </footer>
     </div>
   );
 };
