@@ -93,6 +93,8 @@ const ScanHistoryPage = () => {
 
   // API base URL - use environment variable or same-origin
   const API_BASE_URL = import.meta.env.VITE_API_URL || "";
+  const supabaseConfigured = Boolean(import.meta.env.VITE_SUPABASE_URL);
+  const canLoadHistory = isAuthenticated || !supabaseConfigured;
 
   // Helper function to get proper image source
   const getIconSrc = (extensionId) => {
@@ -105,13 +107,14 @@ const ScanHistoryPage = () => {
   useEffect(() => {
     const loadHistory = async () => {
       setLoading(true);
-      if (!isAuthenticated) {
+      if (!canLoadHistory) {
         setAllScans([]);
         setLoading(false);
         return;
       }
       try {
-        const history = await databaseService.getScanHistory(100, accessToken);
+        const token = isAuthenticated ? accessToken : undefined;
+        const history = await databaseService.getScanHistory(100, token);
         
         // Fetch full details for each scan to get signals data
         const enrichedScans = await Promise.all(
@@ -196,7 +199,7 @@ const ScanHistoryPage = () => {
     };
 
     loadHistory();
-  }, [isAuthenticated, accessToken]);
+  }, [isAuthenticated, accessToken, canLoadHistory]);
 
   // Handle scroll shadows for horizontal scrolling
   useEffect(() => {

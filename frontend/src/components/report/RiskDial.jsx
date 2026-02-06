@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import './RiskDial.scss';
 
 /**
@@ -20,33 +20,77 @@ const RiskDial = ({
   decision = null,
   size = 280
 }) => {
+  // Clamp score 0-100
+  const clampedScore = Math.max(0, Math.min(100, score ?? 0));
+  
+  // Initialize to 0 for animation effect
   const [animatedScore, setAnimatedScore] = useState(0);
+  
+  // Track animation frame for cleanup
+  const animationFrameRef = useRef(null);
+  const isMountedRef = useRef(true);
+  const currentAnimatedScoreRef = useRef(0);
   
   // Generate unique ID for SVG filters to avoid conflicts with multiple instances
   const uniqueId = useMemo(() => `dial-${Math.random().toString(36).substr(2, 9)}`, []);
   
-  // Clamp score 0-100
-  const clampedScore = Math.max(0, Math.min(100, score ?? 0));
-  
-  // Animate score on mount
+  // Update ref when animatedScore changes
   useEffect(() => {
+    currentAnimatedScoreRef.current = animatedScore;
+  }, [animatedScore]);
+  
+  // Animate score on mount and when score changes
+  useEffect(() => {
+    isMountedRef.current = true;
+    
+    // Cancel any existing animation
+    if (animationFrameRef.current) {
+      cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+    
     const duration = 1000;
     const startTime = Date.now();
-    const startScore = 0;
+    const startScore = currentAnimatedScoreRef.current;
     
     const animate = () => {
+      if (!isMountedRef.current) {
+        return;
+      }
+      
       const elapsed = Date.now() - startTime;
       const progress = Math.min(elapsed / duration, 1);
       // Ease-out cubic
       const eased = 1 - Math.pow(1 - progress, 3);
-      setAnimatedScore(startScore + (clampedScore - startScore) * eased);
+      const newScore = startScore + (clampedScore - startScore) * eased;
       
-      if (progress < 1) {
-        requestAnimationFrame(animate);
+      if (isMountedRef.current) {
+        setAnimatedScore(newScore);
+      }
+      
+      if (progress < 1 && isMountedRef.current) {
+        animationFrameRef.current = requestAnimationFrame(animate);
+      } else {
+        // Ensure we end at the exact target score
+        if (isMountedRef.current) {
+          setAnimatedScore(clampedScore);
+          currentAnimatedScoreRef.current = clampedScore;
+        }
+        animationFrameRef.current = null;
       }
     };
     
-    requestAnimationFrame(animate);
+    // Start animation
+    animationFrameRef.current = requestAnimationFrame(animate);
+    
+    // Cleanup function
+    return () => {
+      isMountedRef.current = false;
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+        animationFrameRef.current = null;
+      }
+    };
   }, [clampedScore]);
 
   // Calculate which tick the needle should point to

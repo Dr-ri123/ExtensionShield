@@ -1,7 +1,7 @@
 import React, { useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { Button } from "../../components/ui/button";
-import ScanProgress from "../../components/ScanProgress";
+import CarAnimation from "../../components/CarAnimation";
 import { useScan } from "../../context/ScanContext";
 import "./ScanProgressPage.scss";
 
@@ -51,73 +51,7 @@ const ScanProgressPage = () => {
 
         {/* Active Scan Progress */}
         {hasActiveScan && (
-          <>
-            {/* Visual Scanner Animation */}
-            <div className="scanner-visual">
-              <div className="scanner-ring outer"></div>
-              <div className="scanner-ring middle"></div>
-              <div className="scanner-ring inner"></div>
-              <div className="scanner-core">
-                <div className="core-pulse"></div>
-                <span className="core-icon">🔍</span>
-              </div>
-            </div>
-
-            {/* Stage Progress */}
-            <div className="stage-progress-wrapper">
-              <ScanProgress currentStage={scanStage} />
-            </div>
-
-            {/* Status Message */}
-            <div className="status-message">
-              <div className="status-indicator">
-                <span className="pulse-dot"></span>
-                <span>Scan in progress</span>
-              </div>
-              <p className="status-description">
-                {scanStage === "extracting" && "Downloading and extracting extension package..."}
-                {scanStage === "security_scan" && "Running security analysis..."}
-                {scanStage === "building_evidence" && "Analyzing code patterns..."}
-                {scanStage === "applying_rules" && "Evaluating security policies..."}
-                {scanStage === "generating_report" && "Generating final report..."}
-              </p>
-            </div>
-
-            {/* What's Happening Section */}
-            <div className="analysis-info">
-              <h3>What we're checking:</h3>
-              <div className="check-grid">
-                <div className="check-item">
-                  <span className="check-icon">🔐</span>
-                  <div>
-                    <strong>Permission Analysis</strong>
-                    <p>Evaluating declared permissions against functionality</p>
-                  </div>
-                </div>
-                <div className="check-item">
-                  <span className="check-icon">📜</span>
-                  <div>
-                    <strong>Code Patterns</strong>
-                    <p>Scanning for suspicious or risky code patterns</p>
-                  </div>
-                </div>
-                <div className="check-item">
-                  <span className="check-icon">⚖️</span>
-                  <div>
-                    <strong>Policy Compliance</strong>
-                    <p>Checking against Chrome Web Store policies</p>
-                  </div>
-                </div>
-                <div className="check-item">
-                  <span className="check-icon">🛡️</span>
-                  <div>
-                    <strong>Threat Intelligence</strong>
-                    <p>Cross-referencing with known threat databases</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </>
+          <CarAnimation isActive={hasActiveScan} />
         )}
 
         {/* Error State */}

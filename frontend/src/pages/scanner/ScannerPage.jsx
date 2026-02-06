@@ -358,10 +358,6 @@ const ScannerPage = () => {
       return;
     }
     await startScan(url);
-    // Reload scans after new scan
-    setTimeout(() => {
-      window.location.reload();
-    }, 2000);
   };
 
   const deepScanLimitReached = deepScanLimit && deepScanLimit.remaining <= 0;

@@ -33,8 +33,9 @@ class ExtensionMetadata:
     def _fetch_page(self):
         """Fetches the HTML content of the extension page"""
         try:
-            # SSRF protection: only allow Chrome Web Store domains
-            ALLOWED_HOSTS = {"chromewebstore.google.com", "chrome.google.com", ".google.com"}
+            # SSRF protection: only allow Chrome Web Store domain
+            # This module only fetches from chromewebstore.google.com (Chrome Web Store extension pages)
+            ALLOWED_HOSTS = {"chromewebstore.google.com"}
             response = safe_get(
                 self.extension_url,
                 allowed_hosts=ALLOWED_HOSTS,

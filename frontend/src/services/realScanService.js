@@ -4,6 +4,7 @@ class RealScanService {
     // For local development, set VITE_API_URL=http://localhost:8007 in .env.local
     this.baseURL = import.meta.env.VITE_API_URL || "";
     this.userIdStorageKey = "extensionshield_user_id";
+    this.accessToken = null;
   }
 
   getOrCreateUserId() {
@@ -27,6 +28,19 @@ class RealScanService {
     return { "X-User-Id": this.getOrCreateUserId() };
   }
 
+  setAccessToken(token) {
+    this.accessToken = token || null;
+  }
+
+  getAuthHeaders() {
+    if (!this.accessToken) return {};
+    return { Authorization: `Bearer ${this.accessToken}` };
+  }
+
+  getRequestHeaders() {
+    return { ...this.getUserHeaders(), ...this.getAuthHeaders() };
+  }
+
   // Extract extension ID from Chrome Web Store URL
   extractExtensionId(url) {
     const match = url.match(/\/detail\/(?:[^\/]+\/)?([a-z]{32})/);
@@ -37,7 +51,7 @@ class RealScanService {
     const response = await fetch(`${this.baseURL}/api/limits/deep-scan`, {
       method: "GET",
       headers: {
-        ...this.getUserHeaders(),
+        ...this.getRequestHeaders(),
       },
     });
 
@@ -53,7 +67,7 @@ class RealScanService {
       const response = await fetch(`${this.baseURL}/api/scan/results/${extensionId}`, {
         method: "GET",
         headers: {
-          ...this.getUserHeaders(),
+          ...this.getRequestHeaders(),
         },
       });
       return response.ok;
@@ -69,7 +83,7 @@ class RealScanService {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...this.getUserHeaders(),
+          ...this.getRequestHeaders(),
         },
         body: JSON.stringify({ url }),
       });
@@ -105,7 +119,7 @@ class RealScanService {
       const response = await fetch(`${this.baseURL}/api/scan/upload`, {
         method: "POST",
         headers: {
-          ...this.getUserHeaders(),
+          ...this.getRequestHeaders(),
         },
         body: formData,
       });

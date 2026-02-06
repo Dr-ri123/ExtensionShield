@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import authService from "../services/authService";
 import { supabase } from "../services/supabaseClient";
+import realScanService from "../services/realScanService";
 
 const AuthContext = createContext(null);
 
@@ -118,6 +119,11 @@ export const AuthProvider = ({ children }) => {
       authStateSubscription?.subscription?.unsubscribe();
     };
   }, [toUiUser]);
+
+  // Keep API requests in sync with current auth session
+  useEffect(() => {
+    realScanService.setAccessToken(session?.access_token || null);
+  }, [session]);
 
   const signInWithGoogle = useCallback(async () => {
     setAuthError(null);

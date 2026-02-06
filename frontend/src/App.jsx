@@ -147,7 +147,127 @@ function UserMenu() {
   );
 }
 
-// Mega Menu Component
+// Nav Item Dropdown Component (for Scan, Research, Enterprise)
+function NavItemDropdown({ item, location }) {
+  const [isOpen, setIsOpen] = React.useState(false);
+  const menuRef = React.useRef(null);
+  const timeoutRef = React.useRef(null);
+  
+  const isActive = item.matchPaths.some(path => 
+    location.pathname.startsWith(path)
+  );
+
+  React.useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (menuRef.current && !menuRef.current.contains(event.target)) {
+        setIsOpen(false);
+      }
+    };
+    if (isOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isOpen]);
+
+  // Cleanup timeout on unmount
+  React.useEffect(() => {
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, []);
+
+  const renderIcon = (icon) => {
+    if (icon === "github") {
+      return (
+        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
+          <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
+        </svg>
+      );
+    }
+    return icon;
+  };
+
+  if (!item.dropdownItems || item.dropdownItems.length === 0) {
+    return (
+      <NavLink
+        to={item.path}
+        className={({ isActive: navIsActive }) => {
+          const matchesPath = item.matchPaths.some(path => location.pathname.startsWith(path));
+          return `nav-item ${navIsActive || matchesPath ? "active" : ""}`;
+        }}
+      >
+        {item.label}
+      </NavLink>
+    );
+  }
+
+  const handleMouseEnter = () => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    setIsOpen(true);
+  };
+
+  const handleMouseLeave = () => {
+    timeoutRef.current = setTimeout(() => {
+      setIsOpen(false);
+    }, 150); // Small delay to allow moving to dropdown
+  };
+
+  return (
+    <div 
+      className="nav-dropdown-container" 
+      ref={menuRef}
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
+      <button 
+        className={`nav-item nav-dropdown-trigger ${isActive ? "active" : ""} ${isOpen ? "open" : ""}`}
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        {item.label}
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
+          <path d={isOpen ? "M3 9l3-3 3 3" : "M3 3l3 3 3-3"} />
+        </svg>
+      </button>
+
+      {isOpen && (
+        <div 
+          className="nav-dropdown-menu"
+          onMouseEnter={handleMouseEnter}
+          onMouseLeave={handleMouseLeave}
+        >
+          {item.dropdownItems.map((dropdownItem, idx) => {
+            const Element = dropdownItem.external ? "a" : NavLink;
+            const linkProps = dropdownItem.external 
+              ? { href: dropdownItem.href, target: "_blank", rel: "noopener noreferrer" }
+              : { to: dropdownItem.path };
+
+            return (
+              <Element 
+                key={idx} 
+                {...linkProps} 
+                className="nav-dropdown-item" 
+                onClick={() => setIsOpen(false)}
+              >
+                <div className="nav-dropdown-icon">{renderIcon(dropdownItem.icon)}</div>
+                <div className="nav-dropdown-content">
+                  <div className="nav-dropdown-label">{dropdownItem.label}</div>
+                  <div className="nav-dropdown-desc">{dropdownItem.description}</div>
+                </div>
+              </Element>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Mega Menu Component (Resources - Open Source only)
 function MainMegamenu() {
   const location = useLocation();
   const [isOpen, setIsOpen] = React.useState(false);
@@ -190,30 +310,24 @@ function MainMegamenu() {
       </button>
 
       {isOpen && (
-        <div className="megamenu-dropdown megamenu-4col">
-          <div className="megamenu-grid">
-            {megaMenuConfig.sections.map((section) => (
-              <div key={section.id} className="megamenu-section">
-                <h3 className="megamenu-section-title">{section.title}</h3>
-                {section.items.map((item, idx) => {
-                  const Element = item.external ? "a" : NavLink;
-                  const linkProps = item.external 
-                    ? { href: item.href, target: "_blank", rel: "noopener noreferrer" }
-                    : { to: item.path };
+        <div className="megamenu-dropdown">
+          <div className="megamenu-items-list">
+            {megaMenuConfig.items.map((item, idx) => {
+              const Element = item.external ? "a" : NavLink;
+              const linkProps = item.external 
+                ? { href: item.href, target: "_blank", rel: "noopener noreferrer" }
+                : { to: item.path };
 
-                  return (
-                    <Element key={idx} {...linkProps} className="megamenu-item" onClick={() => setIsOpen(false)}>
-                      {item.badge && <span className={`${item.badge.type === 'enterprise' ? 'upgrade' : 'free'}-badge-top`}>{item.badge.text}</span>}
-                      <div className="megamenu-icon">{renderIcon(item.icon)}</div>
-                      <div className="megamenu-content">
-                        <div className="megamenu-label">{item.label}</div>
-                        <div className="megamenu-desc">{item.description}</div>
-                      </div>
-                    </Element>
-                  );
-                })}
-              </div>
-            ))}
+              return (
+                <Element key={idx} {...linkProps} className="megamenu-item" onClick={() => setIsOpen(false)}>
+                  <div className="megamenu-icon">{renderIcon(item.icon)}</div>
+                  <div className="megamenu-content">
+                    <div className="megamenu-label">{item.label}</div>
+                    <div className="megamenu-desc">{item.description}</div>
+                  </div>
+                </Element>
+              );
+            })}
           </div>
         </div>
       )}
@@ -237,16 +351,7 @@ function AppHeader() {
 
         <nav className="header-nav">
           {topNavItems.map((item) => (
-            <NavLink
-              key={item.path}
-              to={item.path}
-              className={({ isActive }) => {
-                const matchesPath = item.matchPaths.some(path => location.pathname.startsWith(path));
-                return `nav-item ${isActive || matchesPath ? "active" : ""}`;
-              }}
-            >
-              {item.label}
-            </NavLink>
+            <NavItemDropdown key={item.path} item={item} location={location} />
           ))}
           <MainMegamenu />
         </nav>

@@ -15,114 +15,96 @@ export const topNavItems = [
   {
     label: "Scan",
     path: "/scan",
-    matchPaths: ["/scan"]
+    matchPaths: ["/scan"],
+    dropdownItems: [
+      {
+        icon: "🔍",
+        label: "Start Scan",
+        description: "Analyze any extension",
+        path: "/scan"
+      },
+      {
+        icon: "🕐",
+        label: "Scan History",
+        description: "Browse past scans",
+        path: "/scan/history"
+      }
+    ]
   },
   {
     label: "Research",
     path: "/research",
-    matchPaths: ["/research"]
+    matchPaths: ["/research"],
+    dropdownItems: [
+      {
+        icon: "📋",
+        label: "Case Studies",
+        description: "Real-world analysis",
+        path: "/research/case-studies"
+      },
+      {
+        icon: "⚙️",
+        label: "How We Score",
+        description: "How we score risk",
+        path: "/research/methodology"
+      }
+    ]
   },
   {
     label: "Enterprise",
     path: "/enterprise",
-    matchPaths: ["/enterprise"]
+    matchPaths: ["/enterprise"],
+    dropdownItems: [
+      {
+        icon: "🏢",
+        label: "Governance",
+        description: "Org reports & policies",
+        path: "/enterprise"
+      },
+      {
+        icon: "📡",
+        label: "Monitoring & Alerts",
+        description: "Real-time updates",
+        path: "/enterprise#monitoring"
+      }
+    ]
   }
 ];
 
 /**
  * Mega Menu Configuration
- * 4-column layout with sections
+ * Resources dropdown - Open Source section only
  */
 export const megaMenuConfig = {
   trigger: {
     label: "Resources",
-    matchPaths: ["/scan", "/research", "/open-source", "/gsoc", "/contribute"]
+    matchPaths: ["/open-source", "/gsoc", "/contribute"]
   },
-  sections: [
+  items: [
     {
-      id: "scan",
-      title: "Scan",
-      items: [
-        {
-          icon: "🔍",
-          label: "Start Scan",
-          description: "Analyze any extension",
-          path: "/scan"
-        },
-        {
-          icon: "🕐",
-          label: "Scan History",
-          description: "Browse past scans",
-          path: "/scan/history"
-        }
-      ]
+      icon: "🌱",
+      label: "Open Source",
+      description: "Contribute & explore",
+      path: "/open-source"
     },
     {
-      id: "enterprise",
-      title: "Enterprise",
-      items: [
-        {
-          icon: "🏢",
-          label: "Governance",
-          description: "Org reports & policies",
-          path: "/enterprise"
-        },
-        {
-          icon: "📡",
-          label: "Monitoring & Alerts",
-          description: "Real-time updates",
-          path: "/enterprise#monitoring"
-        }
-      ]
+      icon: "☀️",
+      label: "GSoC Ideas",
+      description: "Summer of Code projects",
+      path: "/gsoc/ideas"
     },
     {
-      id: "research",
-      title: "Research",
-      items: [
-        {
-          icon: "📋",
-          label: "Case Studies",
-          description: "Real-world analysis",
-          path: "/research/case-studies"
-        },
-        {
-          icon: "⚙️",
-          label: "How We Score",
-          description: "How we score risk",
-          path: "/research/methodology"
-        }
-      ]
+      icon: "🤝",
+      label: "Contribute",
+      description: "Get started guide",
+      path: "/contribute"
     },
     {
-      id: "open-source",
-      title: "Open Source",
-      items: [
-        {
-          icon: "🌱",
-          label: "Open Source",
-          description: "Contribute & explore",
-          path: "/open-source"
-        },
-        {
-          icon: "☀️",
-          label: "GSoC Ideas",
-          description: "Summer of Code projects",
-          path: "/gsoc/ideas"
-        },
-        {
-          icon: "🤝",
-          label: "Contribute",
-          description: "Get started guide",
-          path: "/contribute"
-        },
-        {
-          icon: "github",
-          label: "GitHub",
-          description: "View source code",
-          href: "https://github.com/Stanzin7/ExtensionShield",
-          external: true
-        }
-      ]
+      icon: "github",
+      label: "GitHub",
+      description: "View source code",
+      href: "https://github.com/Stanzin7/ExtensionShield",
+      external: true
     }
   ]
 };

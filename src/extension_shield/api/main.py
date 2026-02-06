@@ -14,9 +14,14 @@ from datetime import datetime, timezone, timedelta
 from fastapi import FastAPI, HTTPException, BackgroundTasks, Response, UploadFile, File, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 import shutil
+
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 
 from extension_shield.core.report_generator import ReportGenerator
 
@@ -69,6 +74,28 @@ app = FastAPI(
     version="1.0.0",
 )
 
+# Global rate limiting toggle
+RATE_LIMIT_ENABLED = os.getenv("RATE_LIMIT_ENABLED", "true").lower() in ("1", "true", "yes")
+limiter = None
+if RATE_LIMIT_ENABLED:
+    limiter = Limiter(key_func=get_remote_address, default_limits=["100/minute"])
+    app.state.limiter = limiter
+    app.add_middleware(SlowAPIMiddleware)
+
+
+def _rate_limit(limit: str):
+    """Return a limiter decorator if enabled, otherwise no-op."""
+    if RATE_LIMIT_ENABLED and limiter:
+        return limiter.limit(limit)
+    def _noop(func):
+        return func
+    return _noop
+
+
+@app.exception_handler(RateLimitExceeded)
+async def rate_limit_handler(request: Request, exc: RateLimitExceeded):
+    return JSONResponse(status_code=429, content={"detail": "Rate limit exceeded"})
+
 
 @app.middleware("http")
 async def attach_user_context(request: Request, call_next):
@@ -100,9 +127,11 @@ async def add_security_headers(request: Request, call_next):
     return response
 
 # Configure CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[
+_cors_env = os.getenv("CORS_ORIGINS", "").strip()
+if _cors_env:
+    allowed_origins = [o.strip() for o in _cors_env.split(",") if o.strip()]
+else:
+    allowed_origins = [
         "http://localhost:5173",  # Vite dev server (default)
         "http://localhost:5174",  # Vite fallback port
         "http://localhost:5175",  # Vite fallback port
@@ -110,9 +139,13 @@ app.add_middleware(
         "http://localhost:5177",  # Vite fallback port
         "http://localhost:3000",  # Alternative dev port
         "http://localhost:8007",  # Same-origin in container
-    ],
+    ]
+print(f"CORS allowed origins: {allowed_origins}")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -1076,7 +1109,8 @@ async def create_enterprise_pilot_request(request: EnterprisePilotRequest, http_
 
 
 @app.post("/api/scan/trigger")
-async def trigger_scan(request: ScanRequest, background_tasks: BackgroundTasks, http_request: Request):
+@_rate_limit("5/minute")
+async def trigger_scan(scan_request: ScanRequest, background_tasks: BackgroundTasks, request: Request):
     """
     Trigger a new extension scan.
 
@@ -1087,7 +1121,7 @@ async def trigger_scan(request: ScanRequest, background_tasks: BackgroundTasks, 
     Returns:
         Scan trigger confirmation with extension ID
     """
-    url = request.url
+    url = scan_request.url
     extension_id = extract_extension_id(url)
 
     if not extension_id:
@@ -1096,7 +1130,7 @@ async def trigger_scan(request: ScanRequest, background_tasks: BackgroundTasks, 
     # If we already have results, treat this as a cached lookup (no deep-scan consumption)
     if _has_cached_results(extension_id):
         # Record user history even for cached lookups (if authenticated)
-        user_id = getattr(getattr(http_request, "state", None), "user_id", None)
+        user_id = getattr(getattr(request, "state", None), "user_id", None)
         if user_id:
             try:
                 db.add_user_scan_history(user_id=user_id, extension_id=extension_id)
@@ -1120,7 +1154,7 @@ async def trigger_scan(request: ScanRequest, background_tasks: BackgroundTasks, 
         }
 
     # Enforce daily deep-scan limit (placeholder)
-    user_id = _get_user_id(http_request)
+    user_id = _get_user_id(request)
     limit_status = _deep_scan_limit_status(user_id)
     if limit_status["remaining"] <= 0:
         raise HTTPException(
@@ -1136,7 +1170,7 @@ async def trigger_scan(request: ScanRequest, background_tasks: BackgroundTasks, 
     after_consume = _consume_deep_scan(user_id)
 
     # Start background analysis
-    scan_user_ids[extension_id] = getattr(getattr(http_request, "state", None), "user_id", None)
+    scan_user_ids[extension_id] = getattr(getattr(request, "state", None), "user_id", None)
     background_tasks.add_task(run_analysis_workflow, url, extension_id)
 
     return {
@@ -1150,8 +1184,9 @@ async def trigger_scan(request: ScanRequest, background_tasks: BackgroundTasks, 
 
 
 @app.post("/api/scan/upload")
+@_rate_limit("10/minute")
 async def upload_and_scan(
-    http_request: Request,
+    request: Request,
     background_tasks: BackgroundTasks,
     file: UploadFile = File(...)
 ):
@@ -1211,7 +1246,7 @@ async def upload_and_scan(
     extension_id = str(uuid.uuid4())
 
     # Enforce daily deep-scan limit (uploads are always deep scans)
-    user_id = _get_user_id(http_request)
+    user_id = _get_user_id(request)
     limit_status = _deep_scan_limit_status(user_id)
     if limit_status["remaining"] <= 0:
         raise HTTPException(
@@ -1234,7 +1269,7 @@ async def upload_and_scan(
         raise HTTPException(status_code=500, detail=f"Failed to save file: {str(e)}")
 
     # Start background analysis with local file path
-    scan_user_ids[extension_id] = getattr(getattr(http_request, "state", None), "user_id", None)
+    scan_user_ids[extension_id] = getattr(getattr(request, "state", None), "user_id", None)
     background_tasks.add_task(run_analysis_workflow, str(file_path), extension_id)
 
     return {
