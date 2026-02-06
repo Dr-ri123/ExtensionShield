@@ -6,9 +6,7 @@ import "./RocketGame.scss";
  */
 const RocketGame = ({ 
   isActive = true, 
-  statusLabel = "Running the scan...",
   onStatsUpdate,
-  showScoreboard = true,
 }) => {
   const canvasRef = useRef(null);
   const rafRef = useRef(null);

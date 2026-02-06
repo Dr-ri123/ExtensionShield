@@ -9,7 +9,7 @@ const CommunityPage = () => {
       <Helmet>
         <title>Join the Community | ExtensionShield</title>
         <meta name="description" content="Join the ExtensionShield community: Discord, GitHub Discussions, mailing lists, and more ways to connect with contributors." />
-        <link rel="canonical" href="https://extensionaudit.com/gsoc/community" />
+        <link rel="canonical" href="https://extensionshield.com/gsoc/community" />
       </Helmet>
 
       <div className="community-page">

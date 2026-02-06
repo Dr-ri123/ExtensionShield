@@ -11,7 +11,7 @@ const ResearchPage = () => {
       <Helmet>
         <title>Extension Threat Research & Case Studies | ExtensionShield</title>
         <meta name="description" content="In-depth security research on Chrome extension threats, malware analysis, and case studies of deceptive extensions like Honey." />
-        <link rel="canonical" href="https://extensionaudit.com/research" />
+        <link rel="canonical" href="https://extensionshield.com/research" />
       </Helmet>
 
       <div className="research-page">

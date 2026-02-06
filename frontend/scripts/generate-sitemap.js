@@ -6,7 +6,7 @@
  * Generates sitemap.xml from route configuration
  * Run: npm run generate:sitemap
  * 
- * Uses VITE_SITE_URL environment variable or defaults to https://extensionaudit.com
+ * Uses VITE_SITE_URL environment variable or defaults to https://extensionshield.com
  */
 
 import { writeFileSync } from 'fs';
@@ -16,7 +16,7 @@ import { fileURLToPath } from 'url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 // Site URL from environment or default
-const SITE_URL = process.env.VITE_SITE_URL || 'https://extensionaudit.com';
+const SITE_URL = process.env.VITE_SITE_URL || 'https://extensionshield.com';
 
 // Route definitions with SEO metadata
 // NOTE: Keep in sync with src/routes/routes.jsx

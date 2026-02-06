@@ -90,6 +90,10 @@ export const ScanProvider = ({ children }) => {
         }
 
         if (status.status === "failed") {
+          // Check for API key errors (401) - show user-friendly message
+          if (status.error_code === 401 || status.error?.includes("API key") || status.error?.includes("Invalid API key") || status.error?.includes("Authentication") || status.error?.includes("sk-proj")) {
+            throw new Error("Connection is down try back in a while");
+          }
           throw new Error(status.error || "Scan failed on the server.");
         }
       }
@@ -177,7 +181,12 @@ export const ScanProvider = ({ children }) => {
       // Navigate to results page
       navigate(`/scan/results/${extId}`);
     } catch (err) {
-      setError(err.message || "Failed to scan extension.");
+      // Check for API key errors (401) - show user-friendly message
+      let errorMessage = err.message || "Failed to scan extension.";
+      if (err.message?.includes("API key") || err.message?.includes("Invalid API key") || err.message?.includes("Authentication") || err.message?.includes("401")) {
+        errorMessage = "Connection is down try back in a while";
+      }
+      setError(errorMessage);
       setScanStage(null);
       setIsScanning(false);
       // Stay on progress page to show error

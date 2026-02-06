@@ -33,6 +33,7 @@ from extension_shield.api.supabase_auth import get_current_user_id as _get_curre
 from extension_shield.scoring.engine import ScoringEngine
 from extension_shield.governance.tool_adapters import SignalPackBuilder
 from extension_shield.core.config import get_settings
+from extension_shield.api.csp_middleware import CSPMiddleware
 
 # Initialize logger
 logger = logging.getLogger(__name__)
@@ -51,6 +52,7 @@ class ScanStatusResponse(BaseModel):
     status: Optional[str] = None
     extension_id: Optional[str] = None
     error: Optional[str] = None
+    error_code: Optional[int] = None
 
 
 class FileContentResponse(BaseModel):
@@ -124,18 +126,7 @@ async def add_security_headers(request: Request, call_next):
     # HSTS only for HTTPS (check if request is secure)
     if request.url.scheme == "https":
         response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-    # Basic CSP (can be customized per route if needed)
-    # Note: connect-src allows Supabase API calls, style-src allows Google Fonts
-    # img-src allows OAuth provider avatars (Google, GitHub)
-    if not response.headers.get("Content-Security-Policy"):
-        response.headers["Content-Security-Policy"] = (
-            "default-src 'self'; "
-            "connect-src 'self' https://*.supabase.co https://*.supabase.co/*; "
-            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://static.cloudflareinsights.com; "
-            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://fonts.gstatic.com; "
-            "font-src 'self' https://fonts.gstatic.com; "
-            "img-src 'self' data: https://*.googleusercontent.com https://avatars.githubusercontent.com;"
-        )
+    # Note: CSP is now handled by CSPMiddleware (added below)
     return response
 
 # Configure CORS
@@ -162,9 +153,19 @@ app.add_middleware(
 )
 
 # Static files directory for React frontend (in container)
+# IMPORTANT: Define STATIC_DIR BEFORE CSP middleware so it can detect production mode
 STATIC_DIR = Path(__file__).parent.parent.parent.parent / "static"
 # Frontend public directory for development (serves data files)
 FRONTEND_PUBLIC_DIR = Path(__file__).parent.parent.parent.parent / "frontend" / "public"
+
+# Add CSP middleware (after CORS, after STATIC_DIR is defined)
+# Check if we're in development mode (when STATIC_DIR doesn't exist or is empty)
+_is_dev = not (STATIC_DIR.exists() and (STATIC_DIR / "index.html").exists())
+if _is_dev:
+    print(f"⚠️  CSP: Development mode detected (STATIC_DIR={STATIC_DIR}, exists={STATIC_DIR.exists()})")
+else:
+    print(f"✅ CSP: Production mode detected (STATIC_DIR={STATIC_DIR}, index.html exists)")
+app.add_middleware(CSPMiddleware, is_dev=_is_dev)
 
 # Storage for scan results (in-memory cache + database persistence)
 scan_results: Dict[str, Dict[str, Any]] = {}
@@ -492,11 +493,44 @@ async def run_analysis_workflow(url: str, extension_id: str):
 
     except Exception as e:
         scan_status[extension_id] = "failed"
+        
+        # Check if this is an OpenAI API key error
+        error_str = str(e)
+        error_message = str(e)
+        error_code = None
+        
+        # Check for OpenAI API key errors - detect specific patterns
+        if "sk-proj-" in error_str:
+            # Specific case: User has a project key instead of an API key
+            error_code = 401
+            error_message = (
+                "Invalid API key format: Keys starting with 'sk-proj-' are project keys, not API keys. "
+                "Please get a valid API key from https://platform.openai.com/api-keys. "
+                "Valid OpenAI API keys start with 'sk-' but NOT 'sk-proj-'."
+            )
+        elif "invalid_api_key" in error_str or "Incorrect API key" in error_str:
+            error_code = 401
+            error_message = (
+                "Invalid API key provided. The OpenAI API key is incorrect or has been revoked. "
+                "Please check your OPENAI_API_KEY environment variable and ensure it's a valid key from "
+                "https://platform.openai.com/api-keys"
+            )
+        elif "401" in error_str and ("api" in error_str.lower() or "key" in error_str.lower()):
+            error_code = 401
+            error_message = (
+                "API authentication failed. Please verify your OpenAI API key configuration. "
+                "Check your OPENAI_API_KEY environment variable."
+            )
+        elif "AuthenticationError" in error_str or "authentication" in error_str.lower():
+            error_code = 401
+            error_message = "Authentication failed. Please check your API key configuration."
+        
         scan_results[extension_id] = {
             "extension_id": extension_id,
             "url": url,
             "status": "failed",
-            "error": str(e),
+            "error": error_message,
+            "error_code": error_code,
         }
 
 
@@ -1337,6 +1371,7 @@ async def get_scan_status(extension_id: str) -> ScanStatusResponse:
         status=status,
         extension_id=extension_id,
         error=result.get("error"),
+        error_code=result.get("error_code"),
     )
 
 

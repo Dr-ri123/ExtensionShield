@@ -69,7 +69,7 @@ const ExtensionVersionPage = () => {
       <Helmet>
         <title>Version Report {shortHash} | ExtensionShield</title>
         <meta name="description" content={`Detailed security report for extension version ${shortHash}. View findings, evidence, and recommendations.`} />
-        <link rel="canonical" href={`https://extensionaudit.com/extension/${extensionId}/version/${buildHash}`} />
+        <link rel="canonical" href={`https://extensionshield.com/extension/${extensionId}/version/${buildHash}`} />
       </Helmet>
 
       <div className="version-page">

@@ -82,7 +82,7 @@ const GSoCIdeasPage = () => {
       <Helmet>
         <title>Google Summer of Code Ideas | ExtensionShield</title>
         <meta name="description" content="GSoC project ideas for ExtensionShield: ML detection, browser support, real-time monitoring, policy engines, and more." />
-        <link rel="canonical" href="https://extensionaudit.com/gsoc/ideas" />
+        <link rel="canonical" href="https://extensionshield.com/gsoc/ideas" />
       </Helmet>
 
       <div className="gsoc-ideas-page">

@@ -78,7 +78,7 @@ const ExtensionPage = () => {
       <Helmet>
         <title>{extensionName} Security Report | ExtensionShield</title>
         <meta name="description" content={`Security analysis and risk assessment for ${extensionName}. View permission analysis, threat detection, and governance recommendations.`} />
-        <link rel="canonical" href={`https://extensionaudit.com/extension/${extensionId}`} />
+        <link rel="canonical" href={`https://extensionshield.com/extension/${extensionId}`} />
       </Helmet>
 
       <div className="extension-page">

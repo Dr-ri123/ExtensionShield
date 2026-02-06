@@ -20,7 +20,7 @@ const BlogPage = () => {
       <Helmet>
         <title>Blog | ExtensionShield</title>
         <meta name="description" content="ExtensionShield blog: updates, tutorials, security research, and deep dives on browser extension threats." />
-        <link rel="canonical" href="https://extensionaudit.com/gsoc/blog" />
+        <link rel="canonical" href="https://extensionshield.com/gsoc/blog" />
       </Helmet>
 
       <div className="blog-page">

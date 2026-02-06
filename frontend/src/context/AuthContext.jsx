@@ -3,6 +3,7 @@ import authService from "../services/authService";
 import { supabase } from "../services/supabaseClient";
 import realScanService from "../services/realScanService";
 import { validateReturnTo } from "../utils/authUtils";
+import logger from "../utils/logger";
 
 const AuthContext = createContext(null);
 
@@ -53,7 +54,7 @@ export const AuthProvider = ({ children }) => {
         const { data } = supabase.auth.onAuthStateChange((event, nextSession) => {
           if (!isMounted) return;
           
-          console.log("Auth state changed:", event, nextSession ? "has session" : "no session");
+          logger.log("Auth state changed:", event, nextSession ? "has session" : "no session");
           
           setSession(nextSession || null);
           setUser(toUiUser(nextSession?.user));
@@ -68,14 +69,14 @@ export const AuthProvider = ({ children }) => {
           
           // Close modal on successful sign in
           if (event === 'SIGNED_IN' && nextSession) {
-            console.log("User signed in successfully");
+            logger.log("User signed in successfully");
             setIsSignInModalOpen(false);
             setAuthError(null);
           }
           
           // Handle token refresh - update API client
           if (event === 'TOKEN_REFRESHED' && nextSession) {
-            console.log("Token refreshed, updating API client");
+            logger.log("Token refreshed, updating API client");
             realScanService.setAccessToken(nextSession.access_token);
           }
           
@@ -176,7 +177,7 @@ export const AuthProvider = ({ children }) => {
         // Check if Supabase is configured
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
         if (!supabaseUrl) {
-          console.warn("Supabase not configured - running in anonymous mode");
+          logger.warn("Supabase not configured - running in anonymous mode");
           if (isMounted) setIsLoading(false);
           return;
         }
@@ -198,7 +199,7 @@ export const AuthProvider = ({ children }) => {
         } catch (error) {
           // If timeout fired, we'll handle it gracefully
           if (timeoutFired) {
-            console.warn("Session check timed out, continuing without session");
+            logger.warn("Session check timed out, continuing without session");
             sessionResult = { data: { session: null }, error: null };
           } else {
             throw error;
@@ -238,7 +239,7 @@ export const AuthProvider = ({ children }) => {
     // Fallback timeout - ensure isLoading is always set to false after max 10 seconds
     fallbackTimeout = setTimeout(() => {
       if (isMounted) {
-        console.warn("Auth initialization taking too long, forcing completion");
+        logger.warn("Auth initialization taking too long, forcing completion");
         setIsLoading(false);
       }
     }, 10000);

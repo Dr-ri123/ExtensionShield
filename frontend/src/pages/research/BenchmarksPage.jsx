@@ -94,7 +94,7 @@ const BenchmarksPage = () => {
       <Helmet>
         <title>Benchmarks & How We Score | ExtensionShield</title>
         <meta name="description" content="Coverage, performance, and governance/privacy signals — transparently documented. ExtensionShield scores beyond security into privacy and compliance signals." />
-        <link rel="canonical" href="https://extensionaudit.com/research/benchmarks" />
+        <link rel="canonical" href="https://extensionshield.com/research/benchmarks" />
       </Helmet>
 
       <div className="benchmarks-page">

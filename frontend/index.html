@@ -16,6 +16,13 @@
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#22c55e" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Content Security Policy -->
+    <!-- CSP is injected by Vite plugins:
+         - Dev: Permissive CSP for Vite HMR (via vite.config.js plugin)
+         - Prod: Strict CSP (via vite.config.js build plugin)
+         - Backend: HTTP header takes precedence (via FastAPI middleware)
+         - Fallback: Meta tag below for static hosting scenarios -->
+    <!-- CSP meta tag will be injected here by Vite build plugin -->
     <title>ExtensionShield | Browser Extension Security Scanner</title>
     
     <!-- Google Fonts - Distinctive Typography -->

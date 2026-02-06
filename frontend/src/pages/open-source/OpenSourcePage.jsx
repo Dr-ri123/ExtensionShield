@@ -9,7 +9,7 @@ const OpenSourcePage = () => {
       <Helmet>
         <title>Open Source | ExtensionShield</title>
         <meta name="description" content="ExtensionShield Core is open source under the MIT License. The hosted service and enterprise components are proprietary. Explore our GitHub, contribute code, join GSoC, or help improve browser extension security for everyone." />
-        <link rel="canonical" href="https://extensionaudit.com/open-source" />
+        <link rel="canonical" href="https://extensionshield.com/open-source" />
       </Helmet>
 
       <div className="open-source-page">

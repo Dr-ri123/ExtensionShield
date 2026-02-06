@@ -42,7 +42,7 @@ const CaseStudiesPage = () => {
       <Helmet>
         <title>Extension Security Case Studies | ExtensionShield</title>
         <meta name="description" content="Real-world case studies of malicious Chrome extensions. Learn how Honey, PDF converters, and fake ad blockers deceive millions of users." />
-        <link rel="canonical" href="https://extensionaudit.com/research/case-studies" />
+        <link rel="canonical" href="https://extensionshield.com/research/case-studies" />
       </Helmet>
 
       <div className="case-studies-page">

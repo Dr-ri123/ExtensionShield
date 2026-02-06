@@ -11,7 +11,7 @@ const ContributePage = () => {
       <Helmet>
         <title>Everyone Can Contribute | ExtensionShield</title>
         <meta name="description" content="Help build a safer web. Scan extensions, report threats, help others—every contribution matters, no coding required." />
-        <link rel="canonical" href="https://extensionaudit.com/contribute" />
+        <link rel="canonical" href="https://extensionshield.com/contribute" />
       </Helmet>
 
       <div className="contribute-page">

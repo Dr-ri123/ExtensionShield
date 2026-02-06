@@ -172,7 +172,16 @@ class RealScanService {
         `${this.baseURL}/api/scan/status/${extensionId}`,
       );
       if (response.ok) {
-        return await response.json();
+        const data = await response.json();
+        // Check if the status response contains an error with code 401
+        if (data.error && (data.error_code === 401 || data.error?.includes("API key") || data.error?.includes("Invalid API key"))) {
+          return { scanned: false, status: "failed", error: "Connection is down try back in a while", error_code: 401 };
+        }
+        return data;
+      }
+      // Check for 401 status code
+      if (response.status === 401) {
+        return { scanned: false, status: "failed", error: "Connection is down try back in a while", error_code: 401 };
       }
       return { scanned: false };
     } catch (error) {
@@ -180,6 +189,10 @@ class RealScanService {
       // Determine if it's a network error (server down)
       if (error.message.includes("fetch") || error.message.includes("network")) {
         throw new Error("Backend server unavailable. Please make sure the API server is running (make api).");
+      }
+      // Check for 401 errors
+      if (error.status === 401 || error.message?.includes("401") || error.message?.includes("API key")) {
+        return { scanned: false, status: "failed", error: "Connection is down try back in a while", error_code: 401 };
       }
       return { scanned: false, status: "error", error: error.message };
     }

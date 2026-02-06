@@ -9,7 +9,7 @@ const HoneyCaseStudyPage = () => {
       <Helmet>
         <title>Honey Extension Scam Case Study | ExtensionShield</title>
         <meta name="description" content="In-depth analysis of how PayPal's Honey extension hijacked affiliate links, tracked shopping behavior, and deceived 17 million users." />
-        <link rel="canonical" href="https://extensionaudit.com/research/case-studies/honey" />
+        <link rel="canonical" href="https://extensionshield.com/research/case-studies/honey" />
         <script type="application/ld+json">
           {JSON.stringify({
             "@context": "https://schema.org",

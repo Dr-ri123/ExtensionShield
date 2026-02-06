@@ -277,14 +277,14 @@ const HomePage = () => {
       <Helmet>
         <title>ExtensionShield - Chrome Extension Security Scanner</title>
         <meta name="description" content="Analyze Chrome extensions for hidden threats, malware, and privacy risks. Free security scanning powered by AI and static analysis." />
-        <link rel="canonical" href="https://extensionaudit.com/" />
+        <link rel="canonical" href="https://extensionshield.com/" />
         <script type="application/ld+json">
           {JSON.stringify({
             "@context": "https://schema.org",
             "@type": "Organization",
             "name": "ExtensionShield",
-            "url": "https://extensionaudit.com",
-            "logo": "https://extensionaudit.com/logo.png",
+            "url": "https://extensionshield.com",
+            "logo": "https://extensionshield.com/logo.png",
             "description": "Open source Chrome extension security scanner",
             "sameAs": [
               "https://github.com/Stanzin7/ExtensionShield"

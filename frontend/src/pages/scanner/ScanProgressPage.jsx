@@ -112,6 +112,12 @@ const ScanProgressPage = () => {
     const checkStatus = async () => {
       try {
         const status = await realScanService.checkScanStatus(scanId);
+        // Check for API key errors (401)
+        if (status.error_code === 401 || (status.status === "failed" && (status.error?.includes("API key") || status.error?.includes("Connection is down")))) {
+          setError("Connection is down try back in a while");
+          setGameStarted(true);
+          return;
+        }
         if (status.scanned) {
           // Scan is complete, try to load results
           try {
@@ -130,6 +136,10 @@ const ScanProgressPage = () => {
           setGameStarted(true);
         }
       } catch (e) {
+        // Check if error is related to API key
+        if (e.message?.includes("401") || e.message?.includes("API key") || e.message?.includes("Connection is down")) {
+          setError("Connection is down try back in a while");
+        }
         // If status check fails, show game anyway
         setGameStarted(true);
       }
@@ -167,7 +177,12 @@ const ScanProgressPage = () => {
   // Handle errors with modal (don't close game)
   useEffect(() => {
     if (error && shouldShowGame) {
-      setErrorMessage(error);
+      // Check for API key errors (401) - show user-friendly message
+      let displayError = error;
+      if (error.includes("API key") || error.includes("Invalid API key") || error.includes("Authentication") || error.includes("401") || error.includes("sk-proj")) {
+        displayError = "Connection is down try back in a while";
+      }
+      setErrorMessage(displayError);
       setShowErrorModal(true);
       // Don't clear error - let user dismiss it
     }
@@ -187,7 +202,9 @@ const ScanProgressPage = () => {
         }
         
         // Check for common error patterns
-        if (errorMsg.includes("JSON") || errorMsg.includes("parse")) {
+        if (errorMsg.includes("401") || errorMsg.includes("API key") || errorMsg.includes("Invalid API key") || errorMsg.includes("Connection is down")) {
+          errorMsg = "Connection is down try back in a while";
+        } else if (errorMsg.includes("JSON") || errorMsg.includes("parse")) {
           errorMsg = "Failed to parse server response. The scan may still be running.";
         } else if (errorMsg.includes("fetch") || errorMsg.includes("network") || errorMsg.includes("Failed to fetch")) {
           errorMsg = "Network error occurred. Check your connection and try again.";
@@ -213,8 +230,10 @@ const ScanProgressPage = () => {
           }
         }
         
-        // Check for common error patterns
-        if (errorMsg.includes("JSON") || errorMsg.includes("parse")) {
+        // Check for API key errors first
+        if (errorMsg.includes("401") || errorMsg.includes("API key") || errorMsg.includes("Invalid API key") || errorMsg.includes("Authentication") || errorMsg.includes("sk-proj") || errorMsg.includes("Connection is down")) {
+          errorMsg = "Connection is down try back in a while";
+        } else if (errorMsg.includes("JSON") || errorMsg.includes("parse")) {
           errorMsg = "Failed to parse server response. The scan may still be running.";
         } else if (errorMsg.includes("fetch") || errorMsg.includes("network") || errorMsg.includes("Failed to fetch")) {
           errorMsg = "Network error occurred. Check your connection and try again.";

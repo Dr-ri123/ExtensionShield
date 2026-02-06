@@ -10,7 +10,7 @@ const MethodologyPage = () => {
       <Helmet>
         <title>How We Score: ExtensionShield Risk Analysis | ExtensionShield</title>
         <meta name="description" content="Learn how ExtensionShield analyzes Chrome extensions using three security pipelines: ThreatXtension open-source SAST, privacy analysis, and compliance monitoring." />
-        <link rel="canonical" href="https://extensionaudit.com/research/methodology" />
+        <link rel="canonical" href="https://extensionshield.com/research/methodology" />
       </Helmet>
 
       <div className="methodology-page">
