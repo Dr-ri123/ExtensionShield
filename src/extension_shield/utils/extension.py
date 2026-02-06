@@ -92,14 +92,30 @@ def extract_extension_crx(file_path: str) -> Optional[str]:
                 f.write(zip_data)
 
             with zipfile.ZipFile(temp_zip, "r") as zip_ref:
-                zip_ref.extractall(extract_dir)
+                # Safe extraction with zip-slip protection
+                for member in zip_ref.infolist():
+                    # Normalize path and check for zip-slip
+                    target_path = os.path.join(extract_dir, member.filename)
+                    abs_target = os.path.abspath(target_path)
+                    abs_extract = os.path.abspath(extract_dir)
+                    if not abs_target.startswith(abs_extract):
+                        raise ValueError(f"Zip-slip attempt detected: {member.filename}")
+                    zip_ref.extract(member, extract_dir)
 
             os.remove(temp_zip)
 
         elif file_path.endswith(".zip"):
-            # Direct ZIP extraction
+            # Direct ZIP extraction with zip-slip protection
             with zipfile.ZipFile(file_path, "r") as zip_ref:
-                zip_ref.extractall(extract_dir)
+                # Safe extraction with zip-slip protection
+                for member in zip_ref.infolist():
+                    # Normalize path and check for zip-slip
+                    target_path = os.path.join(extract_dir, member.filename)
+                    abs_target = os.path.abspath(target_path)
+                    abs_extract = os.path.abspath(extract_dir)
+                    if not abs_target.startswith(abs_extract):
+                        raise ValueError(f"Zip-slip attempt detected: {member.filename}")
+                    zip_ref.extract(member, extract_dir)
 
         else:
             logger.error("Unsupported file format for extraction: %s", file_path)

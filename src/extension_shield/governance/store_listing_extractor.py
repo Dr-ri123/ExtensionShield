@@ -432,6 +432,7 @@ class StoreListingExtractor:
         try:
             import requests
             from bs4 import BeautifulSoup
+            from extension_shield.utils.http_safety import safe_get
             
             headers = {
                 "User-Agent": (
@@ -441,7 +442,9 @@ class StoreListingExtractor:
                 ),
             }
             
-            response = requests.get(store_url, headers=headers, timeout=self.timeout)
+            # SSRF protection: only allow Chrome Web Store domain
+            ALLOWED_HOSTS = {"chromewebstore.google.com"}
+            response = safe_get(store_url, allowed_hosts=ALLOWED_HOSTS, headers=headers, timeout=self.timeout)
             response.raise_for_status()
             
             soup = BeautifulSoup(response.text, "html.parser")

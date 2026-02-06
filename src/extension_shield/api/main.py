@@ -82,6 +82,23 @@ async def attach_user_context(request: Request, call_next):
         request.state.user_id = None
     return await call_next(request)
 
+
+@app.middleware("http")
+async def add_security_headers(request: Request, call_next):
+    """Add security headers to all responses."""
+    response = await call_next(request)
+    # Security headers
+    response.headers["X-Content-Type-Options"] = "nosniff"
+    response.headers["X-Frame-Options"] = "DENY"
+    response.headers["X-XSS-Protection"] = "1; mode=block"
+    # HSTS only for HTTPS (check if request is secure)
+    if request.url.scheme == "https":
+        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
+    # Basic CSP (can be customized per route if needed)
+    if not response.headers.get("Content-Security-Policy"):
+        response.headers["Content-Security-Policy"] = "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline';"
+    return response
+
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
@@ -1152,7 +1169,15 @@ async def upload_and_scan(
     if not file.filename:
         raise HTTPException(status_code=400, detail="No filename provided")
     
-    filename_lower = file.filename.lower()
+    # Sanitize filename to prevent path traversal attacks
+    import os
+    safe_filename = os.path.basename(file.filename)  # Remove any path components
+    # Remove any remaining dangerous characters
+    safe_filename = "".join(c for c in safe_filename if c.isalnum() or c in "._-")
+    if not safe_filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+    
+    filename_lower = safe_filename.lower()
     if not (filename_lower.endswith('.crx') or filename_lower.endswith('.zip')):
         raise HTTPException(
             status_code=400,
@@ -1166,6 +1191,19 @@ async def upload_and_scan(
         raise HTTPException(
             status_code=400,
             detail=f"File too large. Maximum size is {max_size / (1024*1024):.0f}MB"
+        )
+
+    # Validate MIME type (additional security check)
+    import mimetypes
+    detected_mime, _ = mimetypes.guess_type(safe_filename)
+    # Check content magic bytes for CRX (Chrome Extension) or ZIP
+    is_crx = file_content[:4] == b'Cr24'  # CRX v3 magic bytes
+    is_zip = file_content[:2] == b'PK'  # ZIP magic bytes
+    
+    if not (is_crx or is_zip):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid file content. File does not appear to be a valid CRX or ZIP file"
         )
 
     # Generate unique ID for uploaded file
@@ -1186,8 +1224,8 @@ async def upload_and_scan(
         )
     after_consume = _consume_deep_scan(user_id)
 
-    # Save uploaded file to extensions_storage
-    file_path = RESULTS_DIR / f"{extension_id}_{file.filename}"
+    # Save uploaded file to extensions_storage (use sanitized filename)
+    file_path = RESULTS_DIR / f"{extension_id}_{safe_filename}"
 
     try:
         with open(file_path, "wb") as buffer:
@@ -1237,7 +1275,7 @@ async def get_scan_status(extension_id: str) -> ScanStatusResponse:
 
 
 @app.get("/api/scan/results/{extension_id}")
-async def get_scan_results(extension_id: str):
+async def get_scan_results(extension_id: str, http_request: Request):
     """
     Get the results of a completed scan.
 
@@ -1247,6 +1285,20 @@ async def get_scan_results(extension_id: str):
     Returns:
         Complete scan results
     """
+    # Authorization check: verify user owns this scan
+    user_id = getattr(getattr(http_request, "state", None), "user_id", None)
+    if user_id:
+        # Check in-progress scans
+        scan_owner = scan_user_ids.get(extension_id)
+        if scan_owner and scan_owner != user_id:
+            raise HTTPException(status_code=403, detail="Access denied")
+        # Check completed scans via user history
+        user_history = db.get_user_scan_history(user_id=user_id, limit=1000)
+        if not any(item.get("extension_id") == extension_id for item in user_history):
+            # Not in user's history - check if scan is in progress (allow) or deny
+            if extension_id not in scan_user_ids:
+                raise HTTPException(status_code=403, detail="Access denied")
+    
     # Try memory first
     if extension_id in scan_results:
         return scan_results[extension_id]
@@ -1418,7 +1470,7 @@ async def generate_pdf_report(extension_id: str) -> Response:
 
 
 @app.get("/api/scan/files/{extension_id}")
-async def get_file_list(extension_id: str) -> FileListResponse:
+async def get_file_list(extension_id: str, http_request: Request) -> FileListResponse:
     """
     Get list of files in the extracted extension.
 
@@ -1428,6 +1480,17 @@ async def get_file_list(extension_id: str) -> FileListResponse:
     Returns:
         List of file paths
     """
+    # Authorization check: verify user owns this scan
+    user_id = getattr(getattr(http_request, "state", None), "user_id", None)
+    if user_id:
+        scan_owner = scan_user_ids.get(extension_id)
+        if scan_owner and scan_owner != user_id:
+            raise HTTPException(status_code=403, detail="Access denied")
+        user_history = db.get_user_scan_history(user_id=user_id, limit=1000)
+        if not any(item.get("extension_id") == extension_id for item in user_history):
+            if extension_id not in scan_user_ids:
+                raise HTTPException(status_code=403, detail="Access denied")
+    
     results = scan_results.get(extension_id)
     if not results:
         raise HTTPException(status_code=404, detail="Extension not found")
@@ -1441,7 +1504,7 @@ async def get_file_list(extension_id: str) -> FileListResponse:
 
 
 @app.get("/api/scan/file/{extension_id}/{file_path:path}")
-async def get_file_content(extension_id: str, file_path: str) -> FileContentResponse:
+async def get_file_content(extension_id: str, file_path: str, http_request: Request) -> FileContentResponse:
     """
     Get content of a specific file from the extracted extension.
 
@@ -1452,6 +1515,17 @@ async def get_file_content(extension_id: str, file_path: str) -> FileContentResp
     Returns:
         File content
     """
+    # Authorization check: verify user owns this scan
+    user_id = getattr(getattr(http_request, "state", None), "user_id", None)
+    if user_id:
+        scan_owner = scan_user_ids.get(extension_id)
+        if scan_owner and scan_owner != user_id:
+            raise HTTPException(status_code=403, detail="Access denied")
+        user_history = db.get_user_scan_history(user_id=user_id, limit=1000)
+        if not any(item.get("extension_id") == extension_id for item in user_history):
+            if extension_id not in scan_user_ids:
+                raise HTTPException(status_code=403, detail="Access denied")
+    
     results = scan_results.get(extension_id)
     if not results:
         raise HTTPException(status_code=404, detail="Extension not found")
@@ -1545,6 +1619,10 @@ async def get_history(http_request: Request, limit: int = 50):
     """
     user_id = getattr(getattr(http_request, "state", None), "user_id", None)
     if not user_id:
+        # In local/dev, allow global history for easier testing without auth.
+        if _settings.env != "prod":
+            history = db.get_scan_history(limit=limit)
+            return {"history": history, "total": len(history)}
         raise HTTPException(status_code=401, detail="Sign in to view history")
 
     history = db.get_user_scan_history(user_id=user_id, limit=limit)

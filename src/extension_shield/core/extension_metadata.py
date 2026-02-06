@@ -5,6 +5,7 @@ import re
 from typing import Optional, Dict
 import requests
 from bs4 import BeautifulSoup
+from extension_shield.utils.http_safety import safe_get
 
 logger = logging.getLogger(__name__)
 
@@ -32,10 +33,17 @@ class ExtensionMetadata:
     def _fetch_page(self):
         """Fetches the HTML content of the extension page"""
         try:
-            response = self.session.get(self.extension_url, timeout=10)
+            # SSRF protection: only allow Chrome Web Store domains
+            ALLOWED_HOSTS = {"chromewebstore.google.com", "chrome.google.com", ".google.com"}
+            response = safe_get(
+                self.extension_url,
+                allowed_hosts=ALLOWED_HOSTS,
+                timeout=10,
+                headers=dict(self.session.headers)
+            )
             response.raise_for_status()
             return response.text
-        except requests.RequestException as e:
+        except (requests.RequestException, ValueError) as e:
             logger.error("Error fetching extension page: %s", e)
             return None
 

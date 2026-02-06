@@ -11,6 +11,7 @@ from typing import Optional, Dict, Tuple
 from pathlib import Path
 from dotenv import load_dotenv
 from extension_shield.core.config import get_settings
+from extension_shield.utils.http_safety import safe_get
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -54,7 +55,9 @@ class ChromeStatsDownloader:
             params = {"id": extension_id}
             
             logger.info("Fetching extension details for ID: %s", extension_id)
-            response = requests.get(url, headers=headers, params=params, timeout=30)
+            # SSRF protection: only allow chrome-stats.com domain
+            ALLOWED_HOSTS = {"chrome-stats.com", ".chrome-stats.com"}
+            response = safe_get(url, allowed_hosts=ALLOWED_HOSTS, headers=headers, params=params, timeout=30)
             response.raise_for_status()
             
             data = response.json()
@@ -126,7 +129,9 @@ class ChromeStatsDownloader:
                 extension_id, version, file_format
             )
             
-            response = requests.get(url, headers=headers, params=params, timeout=60, stream=True)
+            # SSRF protection: only allow chrome-stats.com domain
+            ALLOWED_HOSTS = {"chrome-stats.com", ".chrome-stats.com"}
+            response = safe_get(url, allowed_hosts=ALLOWED_HOSTS, headers=headers, params=params, timeout=60, stream=True)
             response.raise_for_status()
             
             # Determine file extension

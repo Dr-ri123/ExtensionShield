@@ -8,9 +8,9 @@ import logging
 from typing import Optional, Dict
 from datetime import datetime
 from dotenv import load_dotenv
-import requests
 from extension_shield.utils.extension import calculate_file_hash, extract_extension_id_by_url
 from extension_shield.core.config import get_settings
+from extension_shield.utils.http_safety import safe_get
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -58,8 +58,9 @@ class ExtensionDownloader:
             file_path = os.path.join(self.extension_storage_path, filename)
             os.makedirs(self.extension_storage_path, exist_ok=True)
 
-            # Download the file
-            response = requests.get(download_url, stream=True, timeout=120)
+            # Download the file (SSRF protection: only allow clients2.google.com)
+            ALLOWED_HOSTS = {"clients2.google.com"}
+            response = safe_get(download_url, allowed_hosts=ALLOWED_HOSTS, stream=True, timeout=120)
             response.raise_for_status()
 
             content_type = response.headers.get("content-type", "")

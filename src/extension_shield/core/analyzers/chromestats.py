@@ -75,11 +75,14 @@ class ChromeStatsAnalyzer(BaseAnalyzer):
                 "X-API-Key": self.api_key  # Try API key in header
             }
             
-            response = requests.get(url, headers=headers, params=params, timeout=30)
+            # SSRF protection: only allow chrome-stats.com domain
+            from extension_shield.utils.http_safety import safe_get
+            ALLOWED_HOSTS = {"chrome-stats.com", ".chrome-stats.com"}
+            response = safe_get(url, allowed_hosts=ALLOWED_HOSTS, headers=headers, params=params, timeout=30)
             response.raise_for_status()
             return response.json()
             
-        except requests.exceptions.RequestException as e:
+        except (requests.exceptions.RequestException, ValueError) as e:
             logger.error("Chrome Stats API error: %s", e)
             return None
         except Exception as e:

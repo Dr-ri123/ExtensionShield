@@ -30,6 +30,32 @@ def _normalize_env(value: Optional[str]) -> Optional[str]:
     return v or None
 
 
+def get_required_env(name: str) -> str:
+    """
+    Get a required environment variable, raising a clear error if missing.
+    
+    Use this ONLY when a feature is invoked that requires the env var.
+    Do not call at module load time - call only when the feature is used.
+    
+    Args:
+        name: Environment variable name
+        
+    Returns:
+        The environment variable value
+        
+    Raises:
+        ValueError: If the environment variable is not set
+    """
+    value = os.environ.get(name)
+    if not value:
+        raise ValueError(
+            f"Required environment variable '{name}' is not set. "
+            f"Please set it in your .env file or environment. "
+            f"See docs/SECURITY.md for setup instructions."
+        )
+    return value
+
+
 def _parse_env_name(value: Optional[str]) -> EnvName:
     v = _normalize_env(value) or "local"
     if v in ("local", "development", "dev"):
