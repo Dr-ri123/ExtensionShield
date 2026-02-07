@@ -34,9 +34,32 @@ from extension_shield.scoring.engine import ScoringEngine
 from extension_shield.governance.tool_adapters import SignalPackBuilder
 from extension_shield.core.config import get_settings
 from extension_shield.api.csp_middleware import CSPMiddleware
+from extension_shield.core.report_view_model import build_report_view_model
 
 # Initialize logger
 logger = logging.getLogger(__name__)
+
+
+def _build_report_view_model_safe(
+    manifest: Dict[str, Any],
+    analysis_results: Dict[str, Any],
+    metadata: Optional[Dict[str, Any]],
+    extension_id: str,
+    scan_id: str,
+) -> Dict[str, Any]:
+    """Safely build report view model, returning empty dict on any error."""
+    try:
+        return build_report_view_model(
+            manifest=manifest,
+            analysis_results=analysis_results,
+            metadata=metadata,
+            extension_id=extension_id,
+            scan_id=scan_id,
+        )
+    except Exception as exc:
+        # LLM failures should not fail the entire scan - use fallbacks
+        logger.warning("Failed to build report_view_model, using empty dict: %s", exc)
+        return {}
 
 # Pydantic models for request/response
 class ScanRequest(BaseModel):
@@ -473,8 +496,17 @@ async def run_analysis_workflow(url: str, extension_id: str):
                 "entropy_analysis": analysis_results.get("entropy_analysis") or {},
                 "summary": final_state.get("executive_summary") or {},
                 "impact_analysis": analysis_results.get("impact_analysis") or {},
+                "privacy_compliance": analysis_results.get("privacy_compliance") or {},
                 "extracted_path": final_state.get("extension_dir"),
                 "extracted_files": extracted_files,
+                # UI-first payload (production) - handle LLM failures gracefully
+                "report_view_model": _build_report_view_model_safe(
+                    manifest=manifest,
+                    analysis_results={**analysis_results, "executive_summary": final_state.get("executive_summary") or {}},
+                    metadata=metadata,
+                    extension_id=extension_id,
+                    scan_id=extension_id,
+                ),
                 # V2 scoring - overall_security_score for backward compatibility
                 "overall_security_score": scoring_result.overall_score,
                 # Explicit v2 keys for new consumers
@@ -556,6 +588,23 @@ async def run_analysis_workflow(url: str, extension_id: str):
         elif "AuthenticationError" in error_str or "authentication" in error_str.lower():
             error_code = 401
             error_message = "Authentication failed. Please check your API key configuration."
+        elif "connection refused" in error_str.lower() or "errno 61" in error_str.lower():
+            # Connection refused errors (e.g., Ollama not running, wrong LLM provider in chain)
+            error_code = 503
+            error_message = (
+                "LLM service connection failed. This usually means: "
+                "1) An LLM provider in your fallback chain is not available (e.g., Ollama not running), "
+                "2) Network connectivity issues, or "
+                "3) The LLM service endpoint is incorrect. "
+                "Please check your LLM_FALLBACK_CHAIN configuration and ensure only available providers are included. "
+                "Default: watsonx,openai"
+            )
+        elif "connection" in error_str.lower() and ("refused" in error_str.lower() or "timeout" in error_str.lower()):
+            error_code = 503
+            error_message = (
+                "LLM service connection error. Please verify your LLM provider configuration. "
+                "Check LLM_FALLBACK_CHAIN in your environment variables."
+            )
         
         scan_results[extension_id] = {
             "extension_id": extension_id,
@@ -1470,7 +1519,30 @@ async def get_scan_results(extension_id: str, http_request: Request):
     
     # Try memory first
     if extension_id in scan_results:
-        return scan_results[extension_id]
+        results = scan_results[extension_id]
+        # Ensure UI view model is present for frontend rendering
+        if not results.get("report_view_model"):
+            try:
+                results["report_view_model"] = build_report_view_model(
+                    manifest=results.get("manifest") or {},
+                    analysis_results={
+                        # Prefer canonical workflow dict if present, otherwise reconstruct
+                        "permissions_analysis": results.get("permissions_analysis") or {},
+                        "javascript_analysis": results.get("sast_results") or {},
+                        "webstore_analysis": results.get("webstore_analysis") or {},
+                        "virustotal_analysis": results.get("virustotal_analysis") or {},
+                        "entropy_analysis": results.get("entropy_analysis") or {},
+                        "impact_analysis": results.get("impact_analysis") or {},
+                        "privacy_compliance": results.get("privacy_compliance") or {},
+                        "executive_summary": results.get("summary") or {},
+                    },
+                    metadata=results.get("metadata") or {},
+                    extension_id=results.get("extension_id") or extension_id,
+                    scan_id=results.get("extension_id") or extension_id,
+                )
+            except Exception as exc:
+                logger.warning("Failed to build report_view_model (memory cache): %s", exc)
+        return results
 
     # Try loading from database
     results = db.get_scan_result(extension_id)
@@ -1489,6 +1561,7 @@ async def get_scan_results(extension_id: str, http_request: Request):
             "webstore_analysis": results.get("webstore_analysis", {}),
             "summary": results.get("summary", {}),
             "impact_analysis": results.get("impact_analysis", {}),
+            "privacy_compliance": results.get("privacy_compliance", {}),
             "extracted_path": results.get("extracted_path"),
             "extracted_files": results.get("extracted_files", []),
             "overall_security_score": results.get("security_score", 0),
@@ -1501,6 +1574,26 @@ async def get_scan_results(extension_id: str, http_request: Request):
             "overall_risk": results.get("risk_level", "unknown"),
             "total_risk_score": results.get("total_findings", 0),
         }
+        # Add UI view model (computed on read for backward compatibility)
+        try:
+            formatted_results["report_view_model"] = build_report_view_model(
+                manifest=formatted_results.get("manifest") or {},
+                analysis_results={
+                    "permissions_analysis": formatted_results.get("permissions_analysis") or {},
+                    "javascript_analysis": formatted_results.get("sast_results") or {},
+                    "webstore_analysis": formatted_results.get("webstore_analysis") or {},
+                    "virustotal_analysis": formatted_results.get("virustotal_analysis") or {},
+                    "entropy_analysis": formatted_results.get("entropy_analysis") or {},
+                    "impact_analysis": formatted_results.get("impact_analysis") or {},
+                    "privacy_compliance": formatted_results.get("privacy_compliance") or {},
+                    "executive_summary": formatted_results.get("summary") or {},
+                },
+                metadata=formatted_results.get("metadata") or {},
+                extension_id=formatted_results.get("extension_id") or extension_id,
+                scan_id=formatted_results.get("extension_id") or extension_id,
+            )
+        except Exception as exc:
+            logger.warning("Failed to build report_view_model (db read): %s", exc)
         scan_results[extension_id] = formatted_results  # Cache in memory
         return formatted_results
 
@@ -1509,6 +1602,27 @@ async def get_scan_results(extension_id: str, http_request: Request):
     if result_file.exists():
         with open(result_file, "r", encoding="utf-8") as f:
             results = json.load(f)
+            # Add UI view model if missing
+            if not results.get("report_view_model"):
+                try:
+                    results["report_view_model"] = build_report_view_model(
+                        manifest=results.get("manifest") or {},
+                        analysis_results={
+                            "permissions_analysis": results.get("permissions_analysis") or {},
+                            "javascript_analysis": results.get("sast_results") or {},
+                            "webstore_analysis": results.get("webstore_analysis") or {},
+                            "virustotal_analysis": results.get("virustotal_analysis") or {},
+                            "entropy_analysis": results.get("entropy_analysis") or {},
+                            "impact_analysis": results.get("impact_analysis") or {},
+                            "privacy_compliance": results.get("privacy_compliance") or {},
+                            "executive_summary": results.get("summary") or {},
+                        },
+                        metadata=results.get("metadata") or {},
+                        extension_id=results.get("extension_id") or extension_id,
+                        scan_id=results.get("extension_id") or extension_id,
+                    )
+                except Exception as exc:
+                    logger.warning("Failed to build report_view_model (file read): %s", exc)
             scan_results[extension_id] = results  # Cache in memory
             return results
 
@@ -2225,13 +2339,50 @@ async def get_extension_icon(extension_id: str):
     Returns:
         PNG icon file
     """
+    # Check if scan is completed first
     results = scan_results.get(extension_id)
-    if not results:
-        raise HTTPException(status_code=404, detail="Extension not found")
+    extracted_path = None
     
-    extracted_path = results.get("extracted_path")
+    if results:
+        extracted_path = results.get("extracted_path")
+    else:
+        # Scan might still be running - try to find extracted extension in storage
+        # Check if extension is being scanned
+        status = scan_status.get(extension_id)
+        if status in ("running", "pending"):
+            # Try to find the extracted extension in the storage directory
+            # Extensions are stored as extracted_{filename}_{pid}, so we need to search
+            settings = get_settings()
+            storage_path = Path(settings.extension_storage_path)
+            
+            # Search for extracted directories that might contain this extension
+            if storage_path.exists():
+                try:
+                    # Look for directories starting with "extracted_"
+                    for item in storage_path.iterdir():
+                        if item.is_dir() and item.name.startswith("extracted_"):
+                            manifest_path = item / "manifest.json"
+                            if manifest_path.exists():
+                                # Check if manifest has matching extension_id
+                                try:
+                                    with open(manifest_path, "r", encoding="utf-8") as f:
+                                        manifest = json.load(f)
+                                        # Check manifest key (MV2) or extension_id from metadata
+                                        manifest_id = manifest.get("key") or manifest.get("extension_id")
+                                        # Also check if extension_id matches (for MV3)
+                                        if manifest_id == extension_id or extension_id in str(manifest):
+                                            extracted_path = str(item)
+                                            logger.debug(f"Found extracted extension during scan at: {extracted_path}")
+                                            break
+                                except Exception:
+                                    # Skip if we can't read manifest
+                                    continue
+                except Exception as e:
+                    logger.debug(f"Error searching for extracted extension: {e}")
+    
     if not extracted_path:
-        raise HTTPException(status_code=404, detail="Extracted path not available")
+        # Return 404 but don't log as error - this is expected during early scan stages
+        raise HTTPException(status_code=404, detail="Extension icon not available yet")
     
     # Convert to absolute path if it's relative (for Railway deployment)
     if not os.path.isabs(extracted_path):
