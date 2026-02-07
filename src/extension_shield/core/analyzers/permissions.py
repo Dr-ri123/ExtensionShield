@@ -140,23 +140,45 @@ class PermissionsAnalyzer(BaseAnalyzer):
     def _analyze_permissions(
         self, extension_name: str, extension_description: str, permissions: List
     ) -> tuple[Optional[str], Optional[Dict]]:
-        """Analyze the permissions requested by the extension."""
-        tasks = {
-            permission: self._analyze_permission(
-                extension_name=extension_name,
-                extension_description=extension_description,
-                permission_name=permission,
-                permission_info=self.permissions_db[permission],
-            )
-            for permission in permissions
+        """Analyze the permissions requested by the extension.
+        
+        Note: Uses sequential processing with delays to avoid WatsonX rate limits (2 req/s).
+        """
+        import time
+        
+        permissions_to_analyze = [
+            permission for permission in permissions
             if permission in self.permissions_db
-        }
+        ]
 
-        if not tasks:
+        if not permissions_to_analyze:
             logger.info("No known permissions to analyze.")
             return None, None
 
-        is_permissions_reasonable = RunnableParallel(**tasks).invoke({})
+        # Process sequentially with delay to avoid rate limits (WatsonX has 2 req/s limit)
+        is_permissions_reasonable = {}
+        for i, permission in enumerate(permissions_to_analyze):
+            try:
+                chain = self._analyze_permission(
+                    extension_name=extension_name,
+                    extension_description=extension_description,
+                    permission_name=permission,
+                    permission_info=self.permissions_db[permission],
+                )
+                result = chain.invoke({})
+                is_permissions_reasonable[permission] = result
+                
+                # Add delay between calls to respect rate limits (0.6s = ~1.7 req/s, under 2 req/s limit)
+                if i < len(permissions_to_analyze) - 1:
+                    time.sleep(0.6)
+            except Exception as e:
+                logger.warning(f"Failed to analyze permission {permission}: {e}")
+                # Provide a fallback result for failed permission analysis
+                is_permissions_reasonable[permission] = {
+                    "is_reasonable": True,  # Default to reasonable to avoid blocking
+                    "justification_reasoning": f"Analysis unavailable: {str(e)[:100]}",
+                }
+        
         return (
             self._format_permissions_analysis_result(permissions, is_permissions_reasonable),
             is_permissions_reasonable,
