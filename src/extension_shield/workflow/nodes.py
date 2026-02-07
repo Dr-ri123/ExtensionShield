@@ -15,6 +15,7 @@ from extension_shield.core.manifest_parser import ManifestParser
 from extension_shield.core.extension_analyzer import ExtensionAnalyzer
 from extension_shield.core.summary_generator import SummaryGenerator
 from extension_shield.core.impact_analyzer import ImpactAnalyzer
+from extension_shield.core.privacy_compliance_analyzer import PrivacyComplianceAnalyzer
 from extension_shield.utils.extension import (
     extract_extension_crx,
     cleanup_extension_dir,
@@ -31,6 +32,7 @@ from extension_shield.workflow.node_types import (
     EXTENSION_ANALYZER_NODE,
     SUMMARY_GENERATION_NODE,
     IMPACT_ANALYSIS_NODE,
+    PRIVACY_COMPLIANCE_NODE,
     GOVERNANCE_NODE,
     CLEANUP_NODE,
 )
@@ -299,14 +301,26 @@ def extension_analyzer_node(state: WorkflowState) -> Command:
         analysis_results = analyzer.analyze()
 
     except Exception as exc:
-        logger.exception("Extension analysis failed")
-        return Command(
-            goto=CLEANUP_NODE,
-            update={
-                "status": WorkflowStatus.FAILED.value,
-                "error": str(exc),
-            },
-        )
+        error_str = str(exc).lower()
+        # Check if this is a rate limit error - continue with empty results instead of failing
+        if "429" in str(exc) or "rate_limit" in error_str or "rate limit" in error_str:
+            logger.warning("Extension analysis hit rate limit, continuing with partial results: %s", exc)
+            analysis_results = {
+                "permissions_analysis": None,
+                "permissions_details": None,
+                "sast_analysis": None,
+                "webstore_analysis": None,
+                "error": f"Rate limit reached: {str(exc)[:200]}",
+            }
+        else:
+            logger.exception("Extension analysis failed")
+            return Command(
+                goto=CLEANUP_NODE,
+                update={
+                    "status": WorkflowStatus.FAILED.value,
+                    "error": str(exc),
+                },
+            )
 
     return Command(
         goto=SUMMARY_GENERATION_NODE,
@@ -347,16 +361,15 @@ def summary_generation_node(state: WorkflowState) -> Command:
             scan_id=scan_id,
             extension_id=extension_id,
         )
-
     except Exception as exc:
-        logger.exception("Summary generation failed")
-        return Command(
-            goto=GOVERNANCE_NODE,
-            update={
-                "executive_summary": None,
-                "error": str(exc),
-            },
-        )
+        # LLM failures are non-fatal - generators return None and callers use fallbacks
+        # Only log as warning to avoid noisy stack traces
+        from extension_shield.llm.clients.fallback import LLMFallbackError
+        if isinstance(exc, LLMFallbackError):
+            logger.warning("LLM providers failed for summary generation, using fallback: %s", exc)
+        else:
+            logger.warning("Summary generation failed, using fallback: %s", exc)
+        executive_summary = None
 
     return Command(
         goto=IMPACT_ANALYSIS_NODE,
@@ -395,23 +408,70 @@ def impact_analysis_node(state: WorkflowState) -> Command:
             extension_id=extension_id,
         )
     except Exception as exc:
-        logger.exception("Impact analysis failed")
-        return Command(
-            goto=GOVERNANCE_NODE,
-            update={
-                "analysis_results": analysis_results,
-                "error": str(exc),
-            },
-        )
+        # LLM failures are non-fatal - generators return None and callers use fallbacks
+        # Only log as warning to avoid noisy stack traces
+        from extension_shield.llm.clients.fallback import LLMFallbackError
+        if isinstance(exc, LLMFallbackError):
+            logger.warning("LLM providers failed for impact analysis, using fallback: %s", exc)
+        else:
+            logger.warning("Impact analysis failed, using fallback: %s", exc)
+        impact_analysis = None
 
     updated_results = dict(analysis_results)
     updated_results["impact_analysis"] = impact_analysis
 
     return Command(
-        goto=GOVERNANCE_NODE,
+        goto=PRIVACY_COMPLIANCE_NODE,
         update={
             "analysis_results": updated_results,
             "impact_analysis": impact_analysis,
+        },
+    )
+
+
+def privacy_compliance_node(state: WorkflowState) -> Command:
+    """
+    Node that generates privacy + compliance snapshot for UI tiles.
+    """
+    analysis_results = state.get("analysis_results") or {}
+    manifest = state.get("manifest_data") or {}
+    metadata = state.get("extension_metadata") or {}
+    extension_dir = state.get("extension_dir")
+
+    if not manifest:
+        logger.warning("No manifest data available for privacy compliance")
+        return Command(
+            goto=GOVERNANCE_NODE,
+            update={"analysis_results": analysis_results},
+        )
+
+    try:
+        logger.info("Generating privacy + compliance snapshot")
+        analyzer = PrivacyComplianceAnalyzer()
+        privacy_compliance = analyzer.generate(
+            analysis_results=analysis_results,
+            manifest=manifest,
+            extension_dir=extension_dir,
+            webstore_metadata=metadata or {},
+        )
+    except Exception as exc:
+        # LLM failures are non-fatal - analyzer returns fallback result
+        # Only log as warning to avoid noisy stack traces
+        from extension_shield.llm.clients.fallback import LLMFallbackError
+        if isinstance(exc, LLMFallbackError):
+            logger.warning("LLM providers failed for privacy compliance, using fallback: %s", exc)
+        else:
+            logger.warning("Privacy compliance analysis failed, using fallback: %s", exc)
+        privacy_compliance = None
+
+    updated_results = dict(analysis_results)
+    updated_results["privacy_compliance"] = privacy_compliance
+
+    return Command(
+        goto=GOVERNANCE_NODE,
+        update={
+            "analysis_results": updated_results,
+            "privacy_compliance": privacy_compliance,
         },
     )
 
