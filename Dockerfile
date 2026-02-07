@@ -68,7 +68,9 @@ COPY pyproject.toml uv.lock README.md ./
 # Copy application source code (needed for package build)
 COPY src/ ./src/
 COPY scripts/ ./scripts/
-COPY docs/supabase_migrations/ ./docs/supabase_migrations/
+
+# Copy docs directory (migrations are needed, .dockerignore excludes other docs)
+COPY docs/ ./docs/
 
 # Install Python dependencies and build the project
 RUN uv sync --frozen --no-dev
