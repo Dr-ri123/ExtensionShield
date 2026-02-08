@@ -146,6 +146,22 @@ def _get_base_llm_settings(
             "temperature": model_parameters.get("temperature", 0.7),
         }
 
+    if current_provider == LLMProviderType.GROQ:
+        # Groq is OpenAI-compatible, uses same API format
+        api_key = os.getenv("GROQ_API_KEY")
+        if not api_key:
+            raise ValueError(
+                "GROQ_API_KEY environment variable is not set. "
+                "Please set it in your .env file. Get a free API key from https://console.groq.com/keys"
+            )
+        return {
+            "model": model_name,
+            "api_key": api_key,
+            "base_url": "https://api.groq.com/openai/v1",
+            "max_tokens": model_parameters.get("max_tokens", 4096),
+            "temperature": model_parameters.get("temperature", 0.7),
+        }
+
     raise ValueError(f"Incorrect LLM provider: {current_provider}")
 
 
@@ -199,6 +215,16 @@ def get_chat_llm_client(
         )
 
     if current_provider == LLMProviderType.OPENAI:
+        from langchain_openai import ChatOpenAI  # pylint: disable=import-outside-toplevel
+
+        return ChatOpenAI(
+            **_get_base_llm_settings(
+                model_name=model_name, model_parameters=model_parameters, provider=current_provider
+            )
+        )
+
+    if current_provider == LLMProviderType.GROQ:
+        # Groq is OpenAI-compatible, uses ChatOpenAI with Groq's base URL
         from langchain_openai import ChatOpenAI  # pylint: disable=import-outside-toplevel
 
         return ChatOpenAI(

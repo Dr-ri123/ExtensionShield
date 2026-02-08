@@ -50,8 +50,8 @@ def _parse_fallback_chain() -> List[LLMProviderType]:
         except ValueError:
             logger.warning(f"Invalid LLM_PROVIDER: {primary_provider}, using default")
 
-    # Default to watsonx, then openai (ollama removed)
-    return [LLMProviderType.WATSONX, LLMProviderType.OPENAI]
+    # Default to groq (free tier), then watsonx, then openai
+    return [LLMProviderType.GROQ, LLMProviderType.WATSONX, LLMProviderType.OPENAI]
 
 
 def _invoke_with_timeout(
@@ -163,6 +163,50 @@ def get_chat_llm_client_with_fallback(
     )
 
 
+def _get_provider_model_name(provider: LLMProviderType, model_name: str) -> str:
+    """Get provider-specific model name.
+    
+    Args:
+        provider: The LLM provider type.
+        model_name: The requested model name.
+        
+    Returns:
+        Provider-specific model name.
+    """
+    # Model name mappings per provider
+    provider_models = {
+        LLMProviderType.GROQ: {
+            # Map common model names to Groq equivalents
+            "meta-llama/llama-3-3-70b-instruct": "llama-3.1-8b-instant",  # Fast, free tier
+            "meta-llama/llama-3-1-70b": "llama-3.1-8b-instant",
+            "llama-3.1-70b-versatile": "llama-3.1-8b-instant",  # Decommissioned -> instant
+            "rits/openai/gpt-oss-20b": "llama-3.1-8b-instant",
+            "rits/openai/gpt-oss-120b": "llama-3.1-8b-instant",
+            # Default Groq models
+            "llama-3.1-8b-instant": "llama-3.1-8b-instant",
+            "mixtral-8x7b-32768": "mixtral-8x7b-32768",
+        },
+        LLMProviderType.WATSONX: {
+            # WatsonX uses full model paths
+            "llama-3.1-8b-instant": "meta-llama/llama-3-3-70b-instruct",
+            "mixtral-8x7b-32768": "meta-llama/llama-3-3-70b-instruct",
+        },
+        LLMProviderType.OPENAI: {
+            # OpenAI models
+            "llama-3.1-8b-instant": "gpt-4o-mini",
+            "meta-llama/llama-3-3-70b-instruct": "gpt-4o-mini",
+        },
+    }
+    
+    # Check if we have a mapping for this provider and model
+    if provider in provider_models:
+        if model_name in provider_models[provider]:
+            return provider_models[provider][model_name]
+    
+    # Default: return model name as-is (may fail, but let provider handle it)
+    return model_name
+
+
 def invoke_with_fallback(
     messages: List[BaseMessage],
     model_name: str,
@@ -198,15 +242,19 @@ def invoke_with_fallback(
 
         for attempt in range(max_retries + 1):
             try:
+                # Get provider-specific model name
+                provider_model_name = _get_provider_model_name(provider, model_name)
+                
                 # Get client for this provider
                 llm = get_chat_llm_client(
-                    model_name=model_name,
+                    model_name=provider_model_name,
                     model_parameters=model_parameters,
                     provider_override=provider,
                 )
 
-                # Invoke with timeout
-                result = _invoke_with_timeout(llm, messages, timeout_seconds, **kwargs)
+                # Invoke with timeout (filter out max_retries from kwargs as it's not an LLM parameter)
+                filtered_kwargs = {k: v for k, v in kwargs.items() if k != 'max_retries'}
+                result = _invoke_with_timeout(llm, messages, timeout_seconds, **filtered_kwargs)
 
                 if attempt > 0:
                     logger.info(f"LLM invocation succeeded with provider {provider_name} on retry {attempt}")

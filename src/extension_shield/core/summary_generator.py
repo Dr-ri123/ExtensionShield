@@ -13,6 +13,8 @@ from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import JsonOutputParser
 from extension_shield.llm.prompts import get_prompts
 from extension_shield.llm.clients.fallback import invoke_with_fallback
+from extension_shield.llm.validators import validate_summary
+from extension_shield.core.impact_analyzer import ImpactAnalyzer
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -324,6 +326,45 @@ class SummaryGenerator:
                     self._normalize_label_to_level(summary.get("score_label", "")),
                 )
                 summary.setdefault("overall_security_score", summary.get("score", 0))
+                
+                # Validate against authoritative signals
+                host_access_summary = self._classify_host_access_scope(manifest)
+                host_scope_label = host_access_summary.get("host_scope_label", "UNKNOWN")
+                
+                # Compute capability flags for validation
+                impact_analyzer = ImpactAnalyzer()
+                external_domains = impact_analyzer._extract_external_domains(analysis_results)
+                network_evidence = ImpactAnalyzer._extract_network_evidence_from_sast(
+                    analysis_results.get("javascript_analysis")
+                )
+                capability_flags = impact_analyzer._compute_capability_flags(
+                    manifest=manifest,
+                    analysis_results=analysis_results,
+                    host_access_summary=host_access_summary,
+                    external_domains=external_domains,
+                    network_evidence=network_evidence,
+                )
+                
+                validation = validate_summary(
+                    output=summary,
+                    score_label=score_label,
+                    host_scope_label=host_scope_label,
+                    capability_flags=capability_flags,
+                )
+                
+                if not validation.ok:
+                    logger.warning(
+                        "LLM summary validation failed, using fallback. Reasons: %s",
+                        "; ".join(validation.reasons),
+                    )
+                    # Return deterministic fallback
+                    from extension_shield.core.report_view_model import _fallback_executive_summary
+                    return _fallback_executive_summary(
+                        score=score,
+                        score_label=score_label,
+                        host_scope_label=host_scope_label,
+                    )
+            
             logger.info("Executive summary generated successfully")
             return summary
         except Exception as exc:

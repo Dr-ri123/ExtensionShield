@@ -20,6 +20,7 @@ from langchain_core.output_parsers import JsonOutputParser
 
 from extension_shield.llm.prompts import get_prompts
 from extension_shield.llm.clients.fallback import invoke_with_fallback
+from extension_shield.llm.validators import validate_privacy
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -652,9 +653,48 @@ class PrivacyComplianceAnalyzer:
             result = parser.parse(
                 response.content if hasattr(response, "content") else str(response)
             )
-            logger.info("Privacy compliance snapshot generated successfully")
+            
             if isinstance(result, dict):
+                # Validate against authoritative signals
+                host_access_summary = self._classify_host_access_scope(manifest)
+                host_scope_label = host_access_summary.get("host_scope_label", "UNKNOWN")
+                
+                external_domains_net = self._extract_external_domains_from_network_payloads(analysis_results)
+                sast_domains, network_evidence = self._extract_network_evidence_from_sast(
+                    analysis_results.get("javascript_analysis")
+                )
+                merged_domains = list(dict.fromkeys((external_domains_net or []) + (sast_domains or [])))[:100]
+                
+                capability_flags = self._compute_capability_flags(
+                    manifest=manifest,
+                    analysis_results=analysis_results,
+                    host_access_summary=host_access_summary,
+                    external_domains=merged_domains,
+                )
+                
+                validation = validate_privacy(
+                    output=result,
+                    capability_flags=capability_flags,
+                    external_domains=merged_domains,
+                    network_evidence=network_evidence,
+                    host_scope_label=host_scope_label,
+                )
+                
+                if not validation.ok:
+                    logger.warning(
+                        "LLM privacy compliance validation failed, using fallback. Reasons: %s",
+                        "; ".join(validation.reasons),
+                    )
+                    return self._fallback_result(
+                        analysis_results=analysis_results or {},
+                        manifest=manifest or {},
+                        extension_dir=extension_dir,
+                        webstore_metadata=webstore_metadata,
+                    )
+                
+                logger.info("Privacy compliance snapshot generated successfully")
                 return result
+            
             logger.warning("Privacy compliance LLM returned non-dict result; using fallback")
             return self._fallback_result(
                 analysis_results=analysis_results or {},

@@ -6,6 +6,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/ca
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs";
 import { Download, X, Clock, TrendingUp, TrendingDown, Minus, Copy, ChevronDown, ChevronUp } from "lucide-react";
 import FileViewerModal from "../../components/FileViewerModal";
+import SafetyLabelCard from "../../components/report/SafetyLabelCard";
+import ScenarioGrid from "../../components/report/ScenarioGrid";
+import TopDriversRow from "../../components/report/TopDriversRow";
 import realScanService from "../../services/realScanService";
 import databaseService from "../../services/databaseService";
 import { getRiskLevel } from "../../utils/signalMapper";
@@ -35,9 +38,18 @@ const ReportViewModelDetail = ({ report, extensionId, onExportPdf }) => {
   const highlights = report?.highlights || {};
   const impactCards = Array.isArray(report?.impact_cards) ? report.impact_cards : [];
   const privacy = report?.privacy_snapshot || {};
+  const consumer = report?.consumer_insights || report?.consumerInsights || null;
+
+  const safetyRows = Array.isArray(consumer?.safety_label) ? consumer.safety_label : [];
+  const scenarios = Array.isArray(consumer?.scenarios) ? consumer.scenarios : [];
+  const topDrivers = Array.isArray(consumer?.top_drivers) ? consumer.top_drivers : [];
 
   const why = Array.isArray(highlights?.why_this_score) ? highlights.why_this_score : [];
   const watch = Array.isArray(highlights?.what_to_watch) ? highlights.what_to_watch : [];
+
+  const handleEvidenceClick = (evidenceId) => {
+    console.log("evidence:", evidenceId);
+  };
 
   return (
     <div className="report-detail-page">
@@ -127,6 +139,39 @@ const ReportViewModelDetail = ({ report, extensionId, onExportPdf }) => {
             </CardContent>
           </Card>
         </div>
+
+        {consumer && (
+          <div className="consumer-insights-section">
+            <div className="consumer-insights-grid">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Safety Labels</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <SafetyLabelCard rows={safetyRows} onEvidenceClick={handleEvidenceClick} />
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Top Drivers</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <TopDriversRow drivers={topDrivers} onEvidenceClick={handleEvidenceClick} />
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card className="consumer-insights-scenarios">
+              <CardHeader>
+                <CardTitle>Scenarios</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ScenarioGrid scenarios={scenarios} onEvidenceClick={handleEvidenceClick} />
+              </CardContent>
+            </Card>
+          </div>
+        )}
 
         <div style={{ marginTop: "1rem", display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))", gap: "1rem" }}>
           {impactCards.slice(0, 3).map((c) => (

@@ -41,6 +41,7 @@ export type {
   RawScoringV2,
   RawGovernanceBundle,
   RawGovernanceDecision,
+  RawReportViewModel,
   // View model types
   ReportViewModel,
   MetaVM,
@@ -54,6 +55,12 @@ export type {
   FindingSeverity,
   PermissionsVM,
   EvidenceItemVM,
+  ConsumerInsights,
+  ConsumerInsightValue,
+  ConsumerInsightSeverity,
+  ConsumerSafetyLabelRow,
+  ConsumerScenario,
+  ConsumerTopDriver,
 } from './reportTypes';
 
 // Normalizer functions

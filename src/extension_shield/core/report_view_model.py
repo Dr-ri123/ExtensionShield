@@ -253,6 +253,551 @@ def _extract_context(
     return host_access_summary, capability_flags, external_domains, network_evidence
 
 
+def build_consumer_insights(
+    scoring_v2: Optional[Dict[str, Any]],
+    capability_flags: Optional[Dict[str, Any]],
+    host_access_summary: Optional[Dict[str, Any]],
+    permissions_analysis: Optional[Dict[str, Any]],
+    webstore_metadata: Optional[Dict[str, Any]],
+    network_evidence: Optional[List[Dict[str, Any]]],
+    external_domains: Optional[List[str]],
+) -> Dict[str, Any]:
+    """
+    Build a deterministic, consumer-friendly aggregation payload for the UI.
+
+    Constraints:
+    - Deterministic only (LLM outputs must not introduce new facts).
+    - Safe fallbacks: missing inputs → UNKNOWN and empty lists; never raise.
+    """
+
+    def _to_float(value: Any) -> float:
+        try:
+            return float(value)
+        except (TypeError, ValueError):
+            return 0.0
+
+    def _yn(value: Any) -> str:
+        if value is True:
+            return "YES"
+        if value is False:
+            return "NO"
+        return "UNKNOWN"
+
+    def _dedupe_strs(items: List[Any], max_len: int = 25) -> List[str]:
+        out: List[str] = []
+        seen: set[str] = set()
+        for x in items:
+            if not isinstance(x, str):
+                continue
+            s = x.strip()
+            if not s or s in seen:
+                continue
+            out.append(s)
+            seen.add(s)
+            if len(out) >= max_len:
+                break
+        return out
+
+    def _domain_matches(hostname: str, base_domains: Any) -> bool:
+        if not isinstance(hostname, str) or not hostname.strip():
+            return False
+        h = hostname.lower().strip(".")
+        if not isinstance(base_domains, (set, list, tuple)):
+            return False
+        for d in base_domains:
+            if not isinstance(d, str) or not d:
+                continue
+            d = d.lower().strip(".")
+            if h == d or h.endswith(f".{d}"):
+                return True
+        return False
+
+    scoring = _coerce_dict(scoring_v2)
+    flags = _coerce_dict(capability_flags)
+    host = _coerce_dict(host_access_summary)
+    _ = _coerce_dict(permissions_analysis)  # reserved for future deterministic enrichments
+    md = _coerce_dict(webstore_metadata)
+    net_evidence = _coerce_list(network_evidence)
+    domains = [d for d in (_coerce_list(external_domains)) if isinstance(d, str) and d.strip()]
+
+    # ---------------------------------------------------------------------
+    # Scoring helpers
+    # ---------------------------------------------------------------------
+    def _iter_factors() -> List[Tuple[str, Dict[str, Any]]]:
+        out: List[Tuple[str, Dict[str, Any]]] = []
+        for layer_key, layer_name in [
+            ("security_layer", "security"),
+            ("privacy_layer", "privacy"),
+            ("governance_layer", "governance"),
+        ]:
+            layer = scoring.get(layer_key)
+            if not isinstance(layer, dict):
+                continue
+            factors = layer.get("factors") or []
+            if not isinstance(factors, list):
+                continue
+            for f in factors:
+                if isinstance(f, dict):
+                    out.append((layer_name, f))
+        return out
+
+    def _find_factor(factor_name: str) -> Optional[Dict[str, Any]]:
+        for _, f in _iter_factors():
+            if str(f.get("name") or "") == factor_name:
+                return f
+        return None
+
+    def _evidence_from_factors(
+        factor_names: List[str],
+        *,
+        contains_any: Optional[List[str]] = None,
+        max_len: int = 20,
+    ) -> List[str]:
+        ids: List[str] = []
+        for fn in factor_names:
+            f = _find_factor(fn)
+            if not isinstance(f, dict):
+                continue
+            ev = f.get("evidence_ids") or []
+            if not isinstance(ev, list):
+                continue
+            ids.extend([x for x in ev if isinstance(x, str)])
+        if contains_any:
+            needles = [n.lower() for n in contains_any if isinstance(n, str) and n.strip()]
+            filtered: List[str] = []
+            for e in ids:
+                el = e.lower()
+                if any(n in el for n in needles):
+                    filtered.append(e)
+            ids = filtered
+        return _dedupe_strs(ids, max_len=max_len)
+
+    # ---------------------------------------------------------------------
+    # Top drivers (deterministic, from scoring_v2 factor contributions)
+    # ---------------------------------------------------------------------
+    top_drivers: List[Dict[str, Any]] = []
+    try:
+        for layer_name, f in _iter_factors():
+            name = str(f.get("name") or "")
+            if not name:
+                continue
+            sev = _to_float(f.get("severity"))
+            conf = _to_float(f.get("confidence"))
+            weight = _to_float(f.get("weight"))
+            contrib = f.get("contribution")
+            contribution = _to_float(contrib) if contrib is not None else (sev * conf * weight)
+            if contribution <= 0:
+                continue
+            ev_ids = _dedupe_strs(
+                f.get("evidence_ids") if isinstance(f.get("evidence_ids"), list) else [],
+                max_len=15,
+            )
+            top_drivers.append(
+                {
+                    "layer": layer_name,
+                    "name": name,
+                    "contribution": round(contribution, 4),
+                    "severity": round(sev, 3),
+                    "confidence": round(conf, 3),
+                    "evidence_ids": ev_ids,
+                }
+            )
+
+        # Stable sort: primary=contribution desc, then layer/name asc for determinism
+        top_drivers.sort(key=lambda d: (-_to_float(d.get("contribution")), str(d.get("layer")), str(d.get("name"))))
+        top_drivers = top_drivers[:5]
+    except Exception:
+        top_drivers = []
+
+    # ---------------------------------------------------------------------
+    # Deterministic derived signals for labels/scenarios
+    # ---------------------------------------------------------------------
+    host_scope_label = str(host.get("host_scope_label") or "UNKNOWN")
+    is_broad_host = host_scope_label == "ALL_WEBSITES"
+
+    has_network = bool(domains) or bool(net_evidence) or bool(flags.get("can_connect_external_domains"))
+
+    # Scoring factors used for deterministic evidence + some classifications
+    obfusc_factor = _find_factor("Obfuscation")
+    maintenance_factor = _find_factor("Maintenance")
+    webstore_factor = _find_factor("Webstore")
+
+    obfusc_present = False
+    if isinstance(obfusc_factor, dict):
+        obfusc_present = _to_float(obfusc_factor.get("severity")) > 0.0 or bool(obfusc_factor.get("evidence_ids"))
+
+    days_since_update: Optional[int] = None
+    if isinstance(maintenance_factor, dict):
+        details = maintenance_factor.get("details") or {}
+        if isinstance(details, dict) and details.get("days_since_update") is not None:
+            try:
+                days_since_update = int(details.get("days_since_update"))
+            except (TypeError, ValueError):
+                days_since_update = None
+
+    has_privacy_policy = None
+    if md:
+        has_privacy_policy = bool(
+            md.get("privacy_policy")
+            or md.get("privacyPolicy")
+            or md.get("privacy_policy_url")
+            or md.get("privacyPolicyUrl")
+            or md.get("privacy_policy_link")
+        )
+
+    recently_updated = None
+    if days_since_update is not None:
+        recently_updated = days_since_update <= 90
+
+    # Low trust = notable webstore factor severity (heuristic, deterministic)
+    low_trust = False
+    if isinstance(webstore_factor, dict):
+        low_trust = _to_float(webstore_factor.get("severity")) >= 0.4
+
+    stale = False
+    if days_since_update is not None:
+        stale = days_since_update > 180
+    elif isinstance(maintenance_factor, dict):
+        stale = _to_float(maintenance_factor.get("severity")) >= 0.6
+
+    # ---------------------------------------------------------------------
+    # Safety labels (fixed rows; UNKNOWN when inputs are missing)
+    # ---------------------------------------------------------------------
+    safety_label: List[Dict[str, Any]] = []
+
+    # Host scope
+    if host_scope_label == "UNKNOWN":
+        host_value = "UNKNOWN"
+        host_sev = "MEDIUM"
+        host_why = "Host access scope was not available from scan signals."
+        host_ev: List[str] = []
+    else:
+        host_value = "YES" if is_broad_host else "NO"
+        host_sev = "HIGH" if is_broad_host else "LOW"
+        host_why = (
+            "Requests access to all websites (broad host permissions increase potential impact)."
+            if is_broad_host
+            else f"Host access scope is {host_scope_label} (not all websites)."
+        )
+        host_ev = _evidence_from_factors(["Manifest", "PermissionCombos"], contains_any=["broad_host_access", "all_urls"])
+
+    safety_label.append(
+        {
+            "id": "host_scope",
+            "title": "Runs on all websites",
+            "value": host_value,
+            "severity": host_sev,
+            "why": host_why,
+            "evidence_ids": host_ev,
+        }
+    )
+
+    # Cookies
+    cookies_value = _yn(flags.get("can_read_cookies"))
+    safety_label.append(
+        {
+            "id": "cookies",
+            "title": "Can access cookies",
+            "value": cookies_value,
+            "severity": "HIGH" if cookies_value == "YES" else ("MEDIUM" if cookies_value == "UNKNOWN" else "LOW"),
+            "why": (
+                "Has permission to access cookies on matching sites."
+                if cookies_value == "YES"
+                else ("No cookies permission detected." if cookies_value == "NO" else "Cookies capability was not available.")
+            ),
+            "evidence_ids": _evidence_from_factors(["PermissionsBaseline", "PermissionCombos"], contains_any=["cookies"]),
+        }
+    )
+
+    # History / Tabs
+    history = flags.get("can_read_history")
+    tabs = flags.get("can_read_tabs")
+    ht_value = "UNKNOWN" if history is None and tabs is None else ("YES" if (history or tabs) else "NO")
+    if ht_value == "YES":
+        ht_sev = "HIGH" if history else "MEDIUM"
+        ht_why = "Can access browsing history." if history else "Can access open tab context (e.g., URLs/titles)."
+    elif ht_value == "NO":
+        ht_sev = "LOW"
+        ht_why = "No history or tab-access capability detected."
+    else:
+        ht_sev = "MEDIUM"
+        ht_why = "History/tab capability was not available."
+    safety_label.append(
+        {
+            "id": "history_tabs",
+            "title": "Can access history or tabs",
+            "value": ht_value,
+            "severity": ht_sev,
+            "why": ht_why,
+            "evidence_ids": _evidence_from_factors(
+                ["PermissionsBaseline", "PermissionCombos"],
+                contains_any=["history", "browsingdata", "tabcapture", "desktopcapture"],
+            ),
+        }
+    )
+
+    # Page modification
+    can_modify = flags.get("can_modify_page_content")
+    can_inject = flags.get("can_inject_scripts")
+    if can_modify is None and can_inject is None:
+        page_mod_value = "UNKNOWN"
+    else:
+        page_mod_value = "YES" if (can_modify or can_inject) else "NO"
+    safety_label.append(
+        {
+            "id": "page_modification",
+            "title": "Can modify web pages",
+            "value": page_mod_value,
+            "severity": "MEDIUM" if page_mod_value == "YES" else ("MEDIUM" if page_mod_value == "UNKNOWN" else "LOW"),
+            "why": (
+                "Can inject scripts or modify page content on matching sites."
+                if page_mod_value == "YES"
+                else (
+                    "No page-modification capability detected." if page_mod_value == "NO" else "Page modification capability was not available."
+                )
+            ),
+            "evidence_ids": _evidence_from_factors(["Manifest"], contains_any=["broad_host_access"]),
+        }
+    )
+
+    # External sharing
+    external_value = "UNKNOWN" if external_domains is None and network_evidence is None else ("YES" if has_network else "NO")
+    safety_label.append(
+        {
+            "id": "external_sharing",
+            "title": "Connects to external domains",
+            "value": external_value,
+            "severity": "MEDIUM" if external_value == "YES" else ("MEDIUM" if external_value == "UNKNOWN" else "LOW"),
+            "why": (
+                f"External domains detected (examples: {', '.join(domains[:3])})."
+                if external_value == "YES" and domains
+                else (
+                    "Network-related evidence was detected in scan results."
+                    if external_value == "YES"
+                    else ("No external domain evidence was found." if external_value == "NO" else "External connectivity signals were not available.")
+                )
+            ),
+            "evidence_ids": _evidence_from_factors(["NetworkExfil", "DisclosureAlignment"]),
+        }
+    )
+
+    # Obfuscation
+    if scoring_v2 is None or obfusc_factor is None:
+        ob_value = "UNKNOWN"
+        ob_sev = "MEDIUM"
+        ob_why = "Obfuscation signal was not available."
+        ob_ev: List[str] = []
+    else:
+        ob_value = "YES" if obfusc_present else "NO"
+        ob_sev = "HIGH" if ob_value == "YES" else "LOW"
+        ob_why = (
+            "Code obfuscation or suspicious minification patterns were detected."
+            if ob_value == "YES"
+            else "No obfuscation signals were detected."
+        )
+        ob_ev = _evidence_from_factors(["Obfuscation"])
+    safety_label.append(
+        {
+            "id": "obfuscation",
+            "title": "Obfuscated code detected",
+            "value": ob_value,
+            "severity": ob_sev,
+            "why": ob_why,
+            "evidence_ids": ob_ev,
+        }
+    )
+
+    # Privacy policy present
+    pp_value = _yn(has_privacy_policy) if has_privacy_policy is not None else "UNKNOWN"
+    if pp_value == "YES":
+        pp_sev = "LOW"
+        pp_why = "A privacy policy is present in webstore metadata."
+    elif pp_value == "NO":
+        pp_sev = "MEDIUM"
+        pp_why = "No privacy policy was found in webstore metadata."
+    else:
+        pp_sev = "MEDIUM"
+        pp_why = "Privacy policy presence was not available."
+    safety_label.append(
+        {
+            "id": "privacy_policy",
+            "title": "Privacy policy present",
+            "value": pp_value,
+            "severity": pp_sev,
+            "why": pp_why,
+            "evidence_ids": _evidence_from_factors(["Webstore", "DisclosureAlignment"], contains_any=["no_privacy_policy"]),
+        }
+    )
+
+    # Recently updated
+    ru_value = _yn(recently_updated) if recently_updated is not None else "UNKNOWN"
+    if ru_value == "YES":
+        ru_sev = "LOW"
+        ru_why = "Recently updated based on available maintenance signals."
+    elif ru_value == "NO":
+        ru_sev = "MEDIUM"
+        ru_why = "Not recently updated based on available maintenance signals."
+    else:
+        ru_sev = "MEDIUM"
+        ru_why = "Update recency was not available."
+    ru_ev = _evidence_from_factors(["Maintenance"], contains_any=["maintenance:days", "stale", "aging", "needs_update"])
+    safety_label.append(
+        {
+            "id": "recently_updated",
+            "title": "Recently updated",
+            "value": ru_value,
+            "severity": ru_sev,
+            "why": (f"{ru_why} (days since update: {days_since_update})" if days_since_update is not None else ru_why),
+            "evidence_ids": ru_ev,
+        }
+    )
+
+    # ---------------------------------------------------------------------
+    # Scenarios (only when deterministic triggers match)
+    # ---------------------------------------------------------------------
+    scenarios: List[Dict[str, Any]] = []
+
+    # Domain classification: reuse the same sets as scoring normalizers when available
+    analytics_set: Any = set()
+    known_good_set: Any = set()
+    try:
+        from extension_shield.scoring.normalizers import ANALYTICS_DOMAINS, KNOWN_GOOD_DOMAINS
+
+        analytics_set = ANALYTICS_DOMAINS
+        known_good_set = KNOWN_GOOD_DOMAINS
+    except Exception:
+        analytics_set = set()
+        known_good_set = set()
+
+    analytics_domains = [d for d in domains if _domain_matches(d, analytics_set)]
+    unknown_domains = [d for d in domains if not _domain_matches(d, known_good_set) and not _domain_matches(d, analytics_set)]
+
+    # Scenario 1: cookies + broad + network
+    if bool(flags.get("can_read_cookies")) and is_broad_host and has_network:
+        scenarios.append(
+            {
+                "id": "cookies_broad_network",
+                "title": "Cookies + broad access + network",
+                "severity": "HIGH",
+                "summary": "Can access cookies across many sites and has external connectivity signals.",
+                "why": "Cookies access combined with broad site access and network connectivity increases the potential for sensitive data exposure.",
+                "evidence_ids": _dedupe_strs(
+                    (
+                        _evidence_from_factors(["PermissionsBaseline", "PermissionCombos"], contains_any=["cookies"])
+                        + host_ev
+                        + _evidence_from_factors(["NetworkExfil"])
+                    ),
+                    max_len=25,
+                ),
+                "mitigations": _ensure_max_len(
+                    [
+                        "Restrict the extension’s site access to only required domains.",
+                        "Review and validate any external endpoints it contacts.",
+                        "Avoid using with sensitive accounts if not necessary.",
+                    ],
+                    3,
+                ),
+            }
+        )
+
+    # Scenario 2: inject scripts
+    if bool(flags.get("can_inject_scripts")):
+        sev = "HIGH" if is_broad_host else "MEDIUM"
+        scenarios.append(
+            {
+                "id": "inject_scripts",
+                "title": "Page script injection",
+                "severity": sev,
+                "summary": "Can inject scripts into pages, which can change what you see and do on sites.",
+                "why": "Script injection can modify pages and interact with content on matching sites.",
+                "evidence_ids": _dedupe_strs(host_ev, max_len=15),
+                "mitigations": _ensure_max_len(
+                    [
+                        "Limit site access to only the sites where it is needed.",
+                        "Disable the extension on sensitive sites (banking, email, admin consoles).",
+                    ],
+                    3,
+                ),
+            }
+        )
+
+    # Scenario 3: analytics / unknown domains
+    if analytics_domains or unknown_domains:
+        sev = "MEDIUM" if unknown_domains else "LOW"
+        examples = analytics_domains[:2] + [d for d in unknown_domains[:2] if d not in analytics_domains]
+        scenarios.append(
+            {
+                "id": "analytics_or_unknown_domains",
+                "title": "Contacts analytics or unrecognized domains",
+                "severity": sev,
+                "summary": "Contacts external domains that may be used for analytics/telemetry or are not in a known-good allowlist.",
+                "why": (
+                    f"Detected external domains (examples: {', '.join(examples)})." if examples else "Detected external domains in scan results."
+                ),
+                "evidence_ids": _evidence_from_factors(["NetworkExfil"]),
+                "mitigations": _ensure_max_len(
+                    [
+                        "Review the extension’s privacy policy and disclosures.",
+                        "Block or monitor unexpected domains at the network layer.",
+                        "Prefer extensions that minimize external data sharing.",
+                    ],
+                    3,
+                ),
+            }
+        )
+
+    # Scenario 4: capture + network
+    if bool(flags.get("can_capture_screenshots")) and has_network:
+        scenarios.append(
+            {
+                "id": "capture_plus_network",
+                "title": "Capture capability + network connectivity",
+                "severity": "HIGH",
+                "summary": "Can capture page/tab content and also has external connectivity signals.",
+                "why": "Capture capabilities combined with network access can increase the risk of sensitive data being transmitted.",
+                "evidence_ids": _dedupe_strs(_evidence_from_factors(["CaptureSignals"]) + _evidence_from_factors(["NetworkExfil"]), max_len=25),
+                "mitigations": _ensure_max_len(
+                    [
+                        "Use only when necessary and avoid sensitive workflows.",
+                        "Review capture-related permissions and features.",
+                        "Monitor outbound network connections for unexpected destinations.",
+                    ],
+                    3,
+                ),
+            }
+        )
+
+    # Scenario 5: stale + obfuscation + low trust
+    if stale and obfusc_present and low_trust:
+        scenarios.append(
+            {
+                "id": "stale_obfuscated_low_trust",
+                "title": "Stale + obfuscated + low trust signals",
+                "severity": "HIGH",
+                "summary": "Shows a combination of staleness, code obfuscation, and weak webstore trust signals.",
+                "why": "Extensions that are not maintained, are hard to inspect, and have weak store signals can be higher risk to keep installed.",
+                "evidence_ids": _dedupe_strs(
+                    _evidence_from_factors(["Maintenance", "Obfuscation", "Webstore", "DisclosureAlignment"]),
+                    max_len=25,
+                ),
+                "mitigations": _ensure_max_len(
+                    [
+                        "Prefer well-maintained alternatives with clear disclosures.",
+                        "Limit usage and site access if you must keep it installed.",
+                        "Re-evaluate after updates, especially if permissions expand.",
+                    ],
+                    3,
+                ),
+            }
+        )
+
+    return {
+        "safety_label": safety_label,
+        "scenarios": scenarios,
+        "top_drivers": top_drivers,
+    }
+
+
 def build_report_view_model(
     manifest: Dict[str, Any],
     analysis_results: Dict[str, Any],
@@ -436,6 +981,26 @@ def build_report_view_model(
             }
         )
 
+    # -------------------------------------------------------------------------
+    # Consumer insights (deterministic aggregation; safe fallbacks)
+    # -------------------------------------------------------------------------
+    scoring_v2_for_insights: Optional[Dict[str, Any]] = None
+    try:
+        # Includes layer factor contributions + evidence IDs
+        scoring_v2_for_insights = scoring_result.model_dump_for_api() if scoring_result else None
+    except Exception:
+        scoring_v2_for_insights = None
+
+    consumer_insights = build_consumer_insights(
+        scoring_v2=scoring_v2_for_insights,
+        capability_flags=capability_flags,
+        host_access_summary=host_access_summary,
+        permissions_analysis=analysis_results.get("permissions_analysis") or {},
+        webstore_metadata=metadata,
+        network_evidence=network_evidence,
+        external_domains=external_domains,
+    )
+
     report_view_model = {
         "meta": {
             "extension_id": extension_id,
@@ -489,6 +1054,7 @@ def build_report_view_model(
             "impact_analysis": impact_analysis,
             "privacy_compliance": privacy_compliance,
         },
+        "consumer_insights": consumer_insights,
     }
 
     return report_view_model

@@ -143,6 +143,26 @@
 }
 
 /* ============================================================================
+   CONSUMER INSIGHTS
+   ============================================================================ */
+.consumer-insights-section {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.consumer-insights-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+.consumer-insights-scenarios {
+  margin-top: 0.25rem;
+}
+
+/* ============================================================================
    REPORT HERO SECTION
    ============================================================================ */
 .report-hero {

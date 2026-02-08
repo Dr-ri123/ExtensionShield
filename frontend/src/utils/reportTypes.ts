@@ -446,6 +446,9 @@ export interface RawScanResult {
     }>;
   };
   governance_error?: string | null;
+
+  // UI-friendly report view model (backend-computed)
+  report_view_model?: RawReportViewModel;
 }
 
 // =============================================================================
@@ -525,6 +528,52 @@ export interface EvidenceItemVM {
   rawData?: unknown;
 }
 
+// =============================================================================
+// CONSUMER INSIGHTS - UI-friendly aggregation from report_view_model
+// =============================================================================
+
+export type ConsumerInsightValue = "YES" | "NO" | "UNKNOWN";
+export type ConsumerInsightSeverity = "LOW" | "MEDIUM" | "HIGH";
+
+export type ConsumerSafetyLabelRow = {
+  id: string;
+  title: string;
+  value: ConsumerInsightValue;
+  severity: ConsumerInsightSeverity;
+  why?: string;
+  evidence_ids?: string[];
+};
+
+export type ConsumerScenario = {
+  id: string;
+  title: string;
+  severity: ConsumerInsightSeverity;
+  summary: string;
+  why?: string;
+  mitigations?: string[];
+  evidence_ids?: string[];
+};
+
+export type ConsumerTopDriver = {
+  layer: string; // "security" | "privacy" | "governance" (allow string for forward compat)
+  name: string;
+  contribution: number;
+  severity?: number;    // 0-1
+  confidence?: number;  // 0-1
+  evidence_ids?: string[];
+};
+
+export type ConsumerInsights = {
+  safety_label: ConsumerSafetyLabelRow[];
+  scenarios: ConsumerScenario[];
+  top_drivers: ConsumerTopDriver[];
+};
+
+/** Raw report_view_model (only fields used by frontend) */
+export interface RawReportViewModel {
+  consumer_insights?: ConsumerInsights;
+}
+
 /** Meta information */
 export interface MetaVM {
   extensionId: string;
@@ -550,5 +599,6 @@ export interface ReportViewModel {
   keyFindings: KeyFindingVM[];
   permissions: PermissionsVM;
   evidenceIndex: Record<string, EvidenceItemVM>;
+  consumerInsights?: ConsumerInsights;
 }
 

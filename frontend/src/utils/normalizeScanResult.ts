@@ -39,6 +39,7 @@ import type {
   FindingSeverity,
   PermissionsVM,
   EvidenceItemVM,
+  ConsumerInsights,
 } from './reportTypes';
 
 // =============================================================================
@@ -540,6 +541,16 @@ export function normalizeScanResult(raw: RawScanResult): ReportViewModel {
   
   // Build evidence index
   const evidenceIndex = buildEvidenceIndex(raw);
+
+  // Map consumer insights (from backend report_view_model)
+  const consumerRaw = raw?.report_view_model?.consumer_insights;
+  const consumerInsights: ConsumerInsights | undefined = (
+    consumerRaw && typeof consumerRaw === 'object'
+  ) ? {
+    safety_label: Array.isArray(consumerRaw.safety_label) ? consumerRaw.safety_label : [],
+    scenarios: Array.isArray(consumerRaw.scenarios) ? consumerRaw.scenarios : [],
+    top_drivers: Array.isArray(consumerRaw.top_drivers) ? consumerRaw.top_drivers : [],
+  } : undefined;
   
   return {
     meta,
@@ -548,6 +559,7 @@ export function normalizeScanResult(raw: RawScanResult): ReportViewModel {
     keyFindings,
     permissions,
     evidenceIndex,
+    consumerInsights,
   };
 }
 

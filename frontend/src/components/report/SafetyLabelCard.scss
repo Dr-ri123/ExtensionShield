@@ -1,0 +1,118 @@
+.safety-label-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+
+  &.empty {
+    color: rgba(148, 163, 184, 0.7);
+    font-size: 0.875rem;
+  }
+}
+
+.safety-label-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  align-items: center;
+
+  &.severity-high {
+    border-color: rgba(239, 68, 68, 0.2);
+  }
+
+  &.severity-medium {
+    border-color: rgba(245, 158, 11, 0.2);
+  }
+
+  &.severity-low {
+    border-color: rgba(16, 185, 129, 0.2);
+  }
+}
+
+.label-title {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: rgba(248, 250, 252, 0.9);
+}
+
+.label-why {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  font-size: 0.65rem;
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  color: rgba(148, 163, 184, 0.9);
+  cursor: help;
+}
+
+.label-right {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.value-badge {
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 3px 7px;
+  border-radius: 999px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border: 1px solid transparent;
+}
+
+.value-yes {
+  color: #6EE7B7;
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(16, 185, 129, 0.25);
+}
+
+.value-no {
+  color: rgba(148, 163, 184, 0.9);
+  background: rgba(148, 163, 184, 0.12);
+  border-color: rgba(148, 163, 184, 0.25);
+}
+
+.value-unknown {
+  color: #FCD34D;
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.25);
+}
+
+.label-evidence {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.evidence-chip {
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(148, 163, 184, 0.08);
+  color: rgba(248, 250, 252, 0.75);
+  font-size: 0.65rem;
+  padding: 2px 6px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.evidence-chip:hover {
+  border-color: rgba(34, 211, 238, 0.5);
+  color: rgba(34, 211, 238, 0.9);
+}
+
+@media (max-width: 640px) {
+  .safety-label-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+

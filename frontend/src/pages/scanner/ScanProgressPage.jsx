@@ -126,6 +126,7 @@ const ScanProgressPage = () => {
   const [gameOver, setGameOver] = useState(false);
   const [scanProgress, setScanProgress] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
+  const [userChoseKeepPlaying, setUserChoseKeepPlaying] = useState(false);
   const completionShownRef = useRef(false);
   
   // Detect mobile
@@ -259,6 +260,7 @@ const ScanProgressPage = () => {
       setUserExited(false);
       // Also reset scanComplete when starting a new scan
       setScanComplete(false);
+      setUserChoseKeepPlaying(false);
       completionShownRef.current = false;
     }
   }, [scanId]);
@@ -383,6 +385,7 @@ const ScanProgressPage = () => {
   // Handle continue playing after completion
   const handleContinuePlaying = () => {
     setShowCompletionModal(false);
+    setUserChoseKeepPlaying(true);
   };
 
   // Always render something - never show blank page
@@ -427,8 +430,8 @@ const ScanProgressPage = () => {
                 {scanComplete ? "SCAN COMPLETE" : "Scan in progress — game mode."}
               </span>
             </h1>
-            {/* Exit button appears when scan is complete */}
-            {scanComplete && (
+            {/* Exit button appears when scan is complete, but hidden if user chose to keep playing */}
+            {scanComplete && !userChoseKeepPlaying && (
               <div className="retro-exit-container">
                 <Button
                   onClick={handleViewResults}

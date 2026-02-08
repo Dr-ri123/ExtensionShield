@@ -17,6 +17,7 @@ from langchain_core.output_parsers import JsonOutputParser
 
 from extension_shield.llm.prompts import get_prompts
 from extension_shield.llm.clients.fallback import invoke_with_fallback
+from extension_shield.llm.validators import validate_impact
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -375,6 +376,43 @@ class ImpactAnalyzer:
 
             parser = JsonOutputParser()
             impact = parser.parse(response.content if hasattr(response, "content") else str(response))
+            
+            # Validate against authoritative signals
+            host_access_summary = self._classify_host_access_scope(manifest)
+            external_domains = self._extract_external_domains(analysis_results)
+            network_evidence = self._extract_network_evidence_from_sast(
+                analysis_results.get("javascript_analysis")
+            )
+            capability_flags = self._compute_capability_flags(
+                manifest=manifest,
+                analysis_results=analysis_results,
+                host_access_summary=host_access_summary,
+                external_domains=external_domains,
+                network_evidence=network_evidence,
+            )
+            
+            if isinstance(impact, dict):
+                validation = validate_impact(
+                    output=impact,
+                    capability_flags=capability_flags,
+                    external_domains=external_domains,
+                    network_evidence=network_evidence,
+                )
+                
+                if not validation.ok:
+                    logger.warning(
+                        "LLM impact analysis validation failed, using fallback. Reasons: %s",
+                        "; ".join(validation.reasons),
+                    )
+                    # Return deterministic fallback
+                    from extension_shield.core.report_view_model import _fallback_impact_from_capability_flags
+                    return _fallback_impact_from_capability_flags(
+                        capability_flags=capability_flags,
+                        external_domains=external_domains,
+                        network_evidence=network_evidence,
+                        has_externally_connectable=bool(manifest.get("externally_connectable")),
+                    )
+            
             logger.info("Impact analysis generated successfully")
             return impact
         except Exception as exc:

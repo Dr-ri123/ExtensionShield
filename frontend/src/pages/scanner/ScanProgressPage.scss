@@ -509,27 +509,101 @@
   color: rgba(226, 232, 240, 0.9) !important;
 }
 
-/* Completion Modal Styles */
+/* Terminal/Pixel Font Import */
+@import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
+
+/* Completion Modal Styles - Minimal Retro Theme */
 .completion-modal-content {
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(34, 197, 94, 0.05) 100%);
-  border: 2px solid rgba(34, 197, 94, 0.3);
-  box-shadow: 0 8px 32px rgba(34, 197, 94, 0.2);
+  background: rgba(10, 15, 26, 0.98);
+  border: 3px solid rgba(34, 197, 94, 0.6);
+  box-shadow: 
+    0 0 30px rgba(34, 197, 94, 0.5),
+    0 0 60px rgba(34, 197, 94, 0.3);
 }
 
 .completion-modal-title {
+  font-family: 'VT323', 'Courier New', 'Monaco', 'Menlo', monospace;
   color: #22c55e;
-  font-size: 1.5rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  font-size: calc(1.75rem + 2px);
+  font-weight: 400;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  text-shadow: 
+    0 0 10px rgba(34, 197, 94, 0.8),
+    0 0 20px rgba(34, 197, 94, 0.6);
+  margin-bottom: 1.5rem;
 }
 
 .completion-modal-description {
-  color: hsl(var(--color-foreground-muted));
-  font-size: 0.9375rem;
-  line-height: 1.6;
-  margin-top: 0.5rem;
+  font-family: 'VT323', 'Courier New', 'Monaco', 'Menlo', monospace;
+  color: rgba(226, 232, 240, 0.9);
+  font-size: calc(1.125rem + 2px);
+  letter-spacing: 0.05em;
+}
+
+/* Completion Modal Footer - Buttons */
+.completion-modal-content .dialog-footer {
+  border-top: 2px solid rgba(34, 197, 94, 0.3);
+  padding-top: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+/* Retro Button Styling - Keep Playing (Outline) */
+.completion-modal-content .dialog-footer button:first-child {
+  font-family: 'VT323', 'Courier New', 'Monaco', 'Menlo', monospace;
+  font-size: 1rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: rgba(255, 255, 255, 0.05);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  color: rgba(226, 232, 240, 0.95);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.completion-modal-content .dialog-footer button:first-child:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 
+    0 0 15px rgba(255, 255, 255, 0.2),
+    0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.completion-modal-content .dialog-footer button:first-child:active {
+  transform: translateY(0);
+}
+
+/* Retro Button Styling - View Results (Primary Green) */
+.completion-modal-content .dialog-footer button:last-child {
+  font-family: 'VT323', 'Courier New', 'Monaco', 'Menlo', monospace;
+  font-size: 1rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  border: 2px solid rgba(34, 197, 94, 0.5);
+  color: white;
+  box-shadow: 
+    0 0 20px rgba(34, 197, 94, 0.4),
+    0 4px 12px rgba(0, 0, 0, 0.3);
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.completion-modal-content .dialog-footer button:last-child:hover {
+  background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+  border-color: rgba(34, 197, 94, 0.8);
+  box-shadow: 
+    0 0 30px rgba(34, 197, 94, 0.6),
+    0 6px 16px rgba(0, 0, 0, 0.4);
+  transform: translateY(-2px);
+}
+
+.completion-modal-content .dialog-footer button:last-child:active {
+  transform: translateY(0);
+  box-shadow: 
+    0 0 15px rgba(34, 197, 94, 0.4),
+    0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .back-link {

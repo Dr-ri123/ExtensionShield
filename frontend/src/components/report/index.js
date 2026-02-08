@@ -11,4 +11,7 @@ export { default as EvidenceDrawer } from './EvidenceDrawer';
 export { default as PermissionsPanel } from './PermissionsPanel';
 export { default as ExecutiveSummary } from './ExecutiveSummary';
 export { default as WhyThisScore } from './WhyThisScore';
+export { default as TopDriversRow } from './TopDriversRow';
+export { default as SafetyLabelCard } from './SafetyLabelCard';
+export { default as ScenarioGrid } from './ScenarioGrid';
 

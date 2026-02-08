@@ -605,6 +605,21 @@ async def run_analysis_workflow(url: str, extension_id: str):
                 "LLM service connection error. Please verify your LLM provider configuration. "
                 "Check LLM_FALLBACK_CHAIN in your environment variables."
             )
+        elif "token_quota_reached" in error_str.lower() or ("403" in error_str and "quota" in error_str.lower()):
+            # WatsonX quota exceeded
+            error_code = 403
+            error_message = (
+                "WatsonX token quota has been reached. Your monthly token limit has been exceeded. "
+                "Options: 1) Wait for quota reset, 2) Upgrade your WatsonX plan, or "
+                "3) Add OpenAI as fallback by setting LLM_FALLBACK_CHAIN=watsonx,openai in your .env file."
+            )
+        elif "403" in error_str and ("forbidden" in error_str.lower() or "quota" in error_str.lower()):
+            # Generic 403/quota error
+            error_code = 403
+            error_message = (
+                "LLM service quota exceeded. Your API quota has been reached. "
+                "Please check your LLM provider account limits or add a fallback provider."
+            )
         
         scan_results[extension_id] = {
             "extension_id": extension_id,

@@ -10,3 +10,4 @@ class LLMProviderType(Enum):
     WATSONX = "watsonx"
     RITS = "rits"
     OPENAI = "openai"
+    GROQ = "groq"

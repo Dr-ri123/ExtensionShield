@@ -37,8 +37,8 @@ const ScanHUD = ({
   const [isExpanded, setIsExpanded] = useState(false); // Collapsed by default
   const [showCursor, setShowCursor] = useState(true); // For blinking cursor
   
-  // Check if overlay is visible (game over or scan complete)
-  const hasOverlay = gameOver || scanComplete;
+  // Check if overlay is visible (only game over, not scan complete - allow interaction after scan completes)
+  const hasOverlay = gameOver;
 
   const handleCopyId = async () => {
     try {
