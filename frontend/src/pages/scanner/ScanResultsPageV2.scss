@@ -219,6 +219,23 @@
   gap: 1.25rem;
 }
 
+/* Coming soon placeholder for unpopulated score cards */
+.score-card-coming-soon {
+  opacity: 0.55;
+  pointer-events: none;
+
+  .score-card-main {
+    .score-value {
+      font-size: 1.5rem;
+      line-height: 1;
+    }
+    .score-band {
+      font-style: italic;
+      font-size: 0.8rem;
+    }
+  }
+}
+
 /* Findings Section */
 .findings-section {
   margin-top: 0.5rem;
