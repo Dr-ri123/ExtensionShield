@@ -5,7 +5,6 @@ import { Badge } from "../../components/ui/badge";
 import {
   RiskDial,
   ReportScoreCard,
-  KeyFindings,
   FactorBars,
   EvidenceDrawer,
   PermissionsPanel,
@@ -16,7 +15,7 @@ import FileViewerModal from "../../components/FileViewerModal";
 import StatusMessage from "../../components/StatusMessage";
 import { useScan } from "../../context/ScanContext";
 import realScanService from "../../services/realScanService";
-import { normalizeScanResultSafe, validateEvidenceIntegrity, gateIdToLayer } from "../../utils/normalizeScanResult";
+import { normalizeScanResultSafe, validateEvidenceIntegrity, gateIdToLayer, extractFindingsByLayer } from "../../utils/normalizeScanResult";
 import "./ScanResultsPageV2.scss";
 
 /**
@@ -297,14 +296,45 @@ const ScanResultsPageV2 = () => {
     evidenceIndex: {}
   };
 
+  // Extract all findings by layer from raw scan results (includes SAST, factors, gates, etc.)
+  const findingsByLayer = extractFindingsByLayer(scanResults);
+  
+  // Combine keyFindings with extracted findings, deduplicating by title
+  const allSecurityFindings = [
+    ...(keyFindings?.filter(f => f.layer === 'security') || []),
+    ...findingsByLayer.security,
+  ];
+  const allPrivacyFindings = [
+    ...(keyFindings?.filter(f => f.layer === 'privacy') || []),
+    ...findingsByLayer.privacy,
+  ];
+  const allGovernanceFindings = [
+    ...(keyFindings?.filter(f => f.layer === 'governance') || []),
+    ...findingsByLayer.governance,
+  ];
+
+  // Deduplicate findings by title
+  const dedupeFindings = (findings) => {
+    const seen = new Set();
+    return findings.filter(f => {
+      const key = f.title?.toLowerCase() || '';
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  };
+
   // ── TEMP DEBUG (3): booleans for UI banner ──
-  const _dbgHasRawCI = !!rawData?.report_view_model?.consumer_insights;
-  const _dbgHasNormCI = !!viewModel?.consumerInsights;
-  const _dbgHasScanId = !!scanId;
-  const _dbgHasReportViewModel = !!rawData?.report_view_model;
-  const _dbgHasScoringV2 = !!rawData?.scoring_v2 || !!rawData?.governance_bundle?.scoring_v2;
-  const _dbgLastFetchStatus = scanResults ? "success" : (error ? "error" : "pending");
-  const _dbgErrorMessage = error || null;
+  // Commented out debug panel - uncomment to re-enable
+  // For API reference, see: docs/SCORING_ENGINE_DOCUMENTATION.md (API Response Structure section)
+  // API endpoint: GET /api/scan/results/{extension_id}
+  // const _dbgHasRawCI = !!rawData?.report_view_model?.consumer_insights;
+  // const _dbgHasNormCI = !!viewModel?.consumerInsights;
+  // const _dbgHasScanId = !!scanId;
+  // const _dbgHasReportViewModel = !!rawData?.report_view_model;
+  // const _dbgHasScoringV2 = !!rawData?.scoring_v2 || !!rawData?.governance_bundle?.scoring_v2;
+  // const _dbgLastFetchStatus = scanResults ? "success" : (error ? "error" : "pending");
+  // const _dbgErrorMessage = error || null;
 
   // Safety check - if viewModel is null but we have scanResults, show a message
   if (!viewModel && scanResults) {
@@ -331,6 +361,9 @@ const ScanResultsPageV2 = () => {
   return (
     <div className="results-v2">
       {/* ── TEMP DEBUG BANNER ── */}
+      {/* Commented out debug panel - uncomment to re-enable
+          For API reference, see: docs/SCORING_ENGINE_DOCUMENTATION.md (API Response Structure section)
+          API endpoint: GET /api/scan/results/{extension_id}
       <div style={{
         position: 'sticky', top: 0, zIndex: 9999,
         background: '#1e293b', border: '2px solid #f59e0b',
@@ -353,6 +386,7 @@ const ScanResultsPageV2 = () => {
           </div>
         )}
       </div>
+      */}
 
       {/* Navigation Bar */}
       <nav className="results-v2-nav">
@@ -452,90 +486,60 @@ const ScanResultsPageV2 = () => {
 
       {/* Main Content */}
       <main className="results-v2-main">
-        {/* Summary Panel - Single merged summary */}
+        {/* Summary Panel - Single merged summary with key findings */}
         <SummaryPanel 
           scores={scores}
           factorsByLayer={factorsByLayer}
           rawScanResult={scanResults}
-          onOpenModal={openLayerModal}
+          keyFindings={keyFindings}
+          onViewEvidence={openEvidenceDrawer}
         />
 
         {/* Score Cards Row - Clickable tiles */}
         <section className="scores-section">
-          <div 
-            className="score-card-wrapper"
+          <ReportScoreCard 
+            title="Security"
+            score={scores?.security?.score}
+            band={scores?.security?.band || 'NA'}
+            confidence={scores?.security?.confidence}
+            contributors={factorsByLayer?.security?.slice(0, 2) || []}
             onClick={() => scores?.security?.score != null && openLayerModal('security')}
-            style={{ cursor: scores?.security?.score != null ? 'pointer' : 'default' }}
-          >
-            <ReportScoreCard 
-              title="Security"
-              score={scores?.security?.score}
-              band={scores?.security?.band || 'NA'}
-              confidence={scores?.security?.confidence}
-              contributors={factorsByLayer?.security?.slice(0, 2) || []}
-            />
-          </div>
+          />
           {scores?.privacy?.score != null ? (
-            <div 
-              className="score-card-wrapper"
+            <ReportScoreCard 
+              title="Privacy"
+              score={scores.privacy.score}
+              band={scores.privacy.band || 'NA'}
+              confidence={scores.privacy.confidence}
+              contributors={factorsByLayer?.privacy?.slice(0, 2) || []}
               onClick={() => openLayerModal('privacy')}
-              style={{ cursor: 'pointer' }}
-            >
-              <ReportScoreCard 
-                title="Privacy"
-                score={scores.privacy.score}
-                band={scores.privacy.band || 'NA'}
-                confidence={scores.privacy.confidence}
-                contributors={factorsByLayer?.privacy?.slice(0, 2) || []}
-              />
-            </div>
+            />
           ) : (
-            <div className="report-score-card band-na score-card-coming-soon">
-              <div className="score-card-header">
-                <span className="score-card-icon">🔒</span>
-                <span className="score-card-title">Privacy</span>
-              </div>
-              <div className="score-card-main">
-                <div className="score-value" style={{ color: '#6B7280' }}>—</div>
-                <div className="score-band" style={{ color: '#6B7280' }}>Coming soon</div>
-              </div>
-            </div>
+            <ReportScoreCard 
+              title="Privacy"
+              score={null}
+              band="NA"
+              icon="🔒"
+            />
           )}
           {scores?.governance?.score != null ? (
-            <div 
-              className="score-card-wrapper"
+            <ReportScoreCard 
+              title="Governance"
+              score={scores.governance.score}
+              band={scores.governance.band || 'NA'}
+              confidence={scores.governance.confidence}
+              contributors={factorsByLayer?.governance?.slice(0, 2) || []}
               onClick={() => openLayerModal('governance')}
-              style={{ cursor: 'pointer' }}
-            >
-              <ReportScoreCard 
-                title="Governance"
-                score={scores.governance.score}
-                band={scores.governance.band || 'NA'}
-                confidence={scores.governance.confidence}
-                contributors={factorsByLayer?.governance?.slice(0, 2) || []}
-              />
-            </div>
+            />
           ) : (
-            <div className="report-score-card band-na score-card-coming-soon">
-              <div className="score-card-header">
-                <span className="score-card-icon">📋</span>
-                <span className="score-card-title">Governance</span>
-              </div>
-              <div className="score-card-main">
-                <div className="score-value" style={{ color: '#6B7280' }}>—</div>
-                <div className="score-band" style={{ color: '#6B7280' }}>Coming soon</div>
-              </div>
-            </div>
+            <ReportScoreCard 
+              title="Governance"
+              score={null}
+              band="NA"
+              icon="📋"
+            />
           )}
         </section>
-
-        {/* Key Findings - Top 2-3 items only */}
-        {keyFindings && keyFindings.length > 0 && (
-          <KeyFindings 
-            findings={keyFindings}
-            onViewEvidence={openEvidenceDrawer}
-          />
-        )}
       </main>
 
       {/* Evidence Drawer - Global, mounted once */}
@@ -570,7 +574,7 @@ const ScanResultsPageV2 = () => {
             ),
             ...(permissions?.broadHostPatterns || []),
           ]}
-          keyFindings={keyFindings?.filter(f => f.layer === 'security') || []}
+          keyFindings={dedupeFindings(allSecurityFindings)}
           gateResults={scanResults?.scoring_v2?.gate_results?.filter(g => g.triggered && gateIdToLayer(g.gate_id) === 'security') || []}
           layerReasons={scores?.reasons?.filter(r => r.toLowerCase().includes('security') || r.toLowerCase().includes('sast') || r.toLowerCase().includes('malware')) || []}
           onViewEvidence={openEvidenceDrawer}
@@ -586,7 +590,7 @@ const ScanResultsPageV2 = () => {
           band={scores?.privacy?.band || 'NA'}
           factors={factorsByLayer?.privacy || []}
           permissions={permissions}
-          keyFindings={keyFindings?.filter(f => f.layer === 'privacy') || []}
+          keyFindings={dedupeFindings(allPrivacyFindings)}
           gateResults={scanResults?.scoring_v2?.gate_results?.filter(g => g.triggered && gateIdToLayer(g.gate_id) === 'privacy') || []}
           layerReasons={scores?.reasons?.filter(r => r.toLowerCase().includes('privacy') || r.toLowerCase().includes('exfil') || r.toLowerCase().includes('tracking')) || []}
           onViewEvidence={openEvidenceDrawer}
@@ -601,7 +605,7 @@ const ScanResultsPageV2 = () => {
           score={scores?.governance?.score}
           band={scores?.governance?.band || 'NA'}
           factors={factorsByLayer?.governance || []}
-          keyFindings={keyFindings?.filter(f => f.layer === 'governance') || []}
+          keyFindings={dedupeFindings(allGovernanceFindings)}
           gateResults={scanResults?.scoring_v2?.gate_results?.filter(g => g.triggered && gateIdToLayer(g.gate_id) === 'governance') || []}
           layerReasons={scores?.reasons?.filter(r => r.toLowerCase().includes('governance') || r.toLowerCase().includes('policy') || r.toLowerCase().includes('tos') || r.toLowerCase().includes('disclosure')) || []}
           onViewEvidence={openEvidenceDrawer}

@@ -40,12 +40,6 @@ import type {
   PermissionsVM,
   EvidenceItemVM,
   ConsumerInsights,
-  MetaVM,
-  ScoresVM,
-  FactorsByLayerVM,
-  KeyFindingVM,
-  PermissionsVM,
-  EvidenceItemVM,
 } from './reportTypes';
 
 /**
@@ -190,6 +184,178 @@ export function gateIdToLayer(gateId: string): 'security' | 'privacy' | 'governa
   }
   // Default to security for unknown gates
   return 'security';
+}
+
+/**
+ * Extract all findings by layer from raw scan results
+ * Includes SAST findings, factors, gates, and other analysis results
+ */
+export function extractFindingsByLayer(raw: RawScanResult | null | undefined): {
+  security: KeyFindingVM[];
+  privacy: KeyFindingVM[];
+  governance: KeyFindingVM[];
+} {
+  const result = {
+    security: [] as KeyFindingVM[],
+    privacy: [] as KeyFindingVM[],
+    governance: [] as KeyFindingVM[],
+  };
+
+  if (!raw) return result;
+
+  // Get scoring_v2 from best source
+  const scoringV2 = raw.scoring_v2 || raw.governance_bundle?.scoring_v2 || null;
+  const sastResults = raw.sast_results;
+  const permsAnalysis = raw.permissions_analysis;
+
+  // 1. Extract SAST findings for Security layer (prioritize high severity)
+  if (sastResults) {
+    const sastFindings = sastResults.sast_findings || sastResults.sastFindings || {};
+    const sastFindingsList: Array<{ severity: FindingSeverity; title: string; summary: string }> = [];
+    
+    if (typeof sastFindings === 'object' && !Array.isArray(sastFindings)) {
+      Object.entries(sastFindings).forEach(([filePath, findings]) => {
+        if (Array.isArray(findings)) {
+          findings.forEach((finding: any) => {
+            const extra = finding.extra || {};
+            const severity = (extra.severity || 'INFO').toUpperCase();
+            const message = extra.message || finding.check_id || 'SAST finding';
+            const checkId = finding.check_id || 'unknown';
+            const lineNum = finding.start?.line;
+            
+            // Map severity to finding level
+            let findingSeverity: FindingSeverity = 'low';
+            if (severity === 'CRITICAL' || severity === 'ERROR') {
+              findingSeverity = 'high';
+            } else if (severity === 'HIGH' || severity === 'WARNING') {
+              findingSeverity = 'medium';
+            }
+
+            sastFindingsList.push({
+              severity: findingSeverity,
+              title: checkId,
+              summary: lineNum ? `${filePath}:${lineNum} - ${message}` : `${filePath} - ${message}`,
+            });
+          });
+        }
+      });
+    }
+    
+    // Sort by severity (high > medium > low) and take top 10
+    sastFindingsList.sort((a, b) => {
+      const order = { high: 3, medium: 2, low: 1 };
+      return (order[b.severity] || 0) - (order[a.severity] || 0);
+    });
+    
+    sastFindingsList.slice(0, 10).forEach(f => {
+      result.security.push({
+        title: f.title,
+        severity: f.severity,
+        layer: 'security',
+        summary: f.summary.length > 100 ? `${f.summary.substring(0, 97)}...` : f.summary,
+        evidenceIds: [],
+      });
+    });
+  }
+
+  // 2. Extract factors from scoring_v2 (already categorized by layer)
+  // Only include factors with significant severity (>= 0.3) to avoid noise
+  if (scoringV2) {
+    // Security factors
+    if (scoringV2.security_layer?.factors) {
+      scoringV2.security_layer.factors.forEach((f: RawFactorScore) => {
+        if ((f.severity ?? 0) >= 0.3) {
+          result.security.push({
+            title: safeGet(f.name, 'Unknown'),
+            severity: severityToFindingLevel(f.severity),
+            layer: 'security',
+            summary: `Contribution: ${Math.round((f.contribution || 0) * 100)}%`,
+            evidenceIds: safeGet(f.evidence_ids, []),
+          });
+        }
+      });
+    }
+
+    // Privacy factors
+    if (scoringV2.privacy_layer?.factors) {
+      scoringV2.privacy_layer.factors.forEach((f: RawFactorScore) => {
+        if ((f.severity ?? 0) >= 0.3) {
+          result.privacy.push({
+            title: safeGet(f.name, 'Unknown'),
+            severity: severityToFindingLevel(f.severity),
+            layer: 'privacy',
+            summary: `Contribution: ${Math.round((f.contribution || 0) * 100)}%`,
+            evidenceIds: safeGet(f.evidence_ids, []),
+          });
+        }
+      });
+    }
+
+    // Governance factors
+    if (scoringV2.governance_layer?.factors) {
+      scoringV2.governance_layer.factors.forEach((f: RawFactorScore) => {
+        if ((f.severity ?? 0) >= 0.3) {
+          result.governance.push({
+            title: safeGet(f.name, 'Unknown'),
+            severity: severityToFindingLevel(f.severity),
+            layer: 'governance',
+            summary: `Contribution: ${Math.round((f.contribution || 0) * 100)}%`,
+            evidenceIds: safeGet(f.evidence_ids, []),
+          });
+        }
+      });
+    }
+
+    // Extract gates by layer
+    const gateResults = scoringV2.gate_results || [];
+    gateResults.forEach((gate: any) => {
+      if (gate.triggered) {
+        const layer = gateIdToLayer(gate.gate_id);
+        result[layer].push({
+          title: gate.gate_id,
+          severity: gate.decision === 'BLOCK' ? 'high' : 'medium',
+          layer: layer,
+          summary: gate.reasons?.join(', ') || 'Gate triggered',
+          evidenceIds: [],
+        });
+      }
+    });
+  }
+
+  // 3. Extract privacy-specific findings (permissions, exfil)
+  if (permsAnalysis) {
+    const permsDetails = permsAnalysis.permissions_details || {};
+    Object.entries(permsDetails).forEach(([permName, details]: [string, any]) => {
+      if (details && details.is_reasonable === false) {
+        result.privacy.push({
+          title: `Unreasonable permission: ${permName}`,
+          severity: 'medium',
+          layer: 'privacy',
+          summary: details.reason || 'Permission may not be necessary for stated functionality',
+          evidenceIds: [],
+        });
+      }
+    });
+  }
+
+  // 4. Extract governance findings (policy, disclosure)
+  const privacyCompliance = raw.privacy_compliance || raw.report_view_model?.raw?.privacy_compliance;
+  if (privacyCompliance) {
+    const governanceChecks = privacyCompliance.governance_checks || [];
+    governanceChecks.forEach((check: any) => {
+      if (typeof check === 'object' && check.status && check.status !== 'PASS') {
+        result.governance.push({
+          title: check.check || 'Governance check',
+          severity: check.status === 'FAIL' ? 'high' : 'medium',
+          layer: 'governance',
+          summary: check.note || check.reason || '',
+          evidenceIds: [],
+        });
+      }
+    });
+  }
+
+  return result;
 }
 
 /**

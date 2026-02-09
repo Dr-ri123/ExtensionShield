@@ -17,7 +17,8 @@ import {
   normalizeScanResultSafe, 
   validateEvidenceIntegrity,
   isDevelopmentMode,
-  gateIdToLayer
+  gateIdToLayer,
+  extractFindingsByLayer
 } from "../../utils/normalizeScanResult";
 import "./ReportDetailPage.scss";
 
@@ -69,6 +70,33 @@ const ReportViewModelDetail = ({ report, rawScanResult, extensionId, onExportPdf
     overall: { score: report?.scorecard?.score, band: report?.scorecard?.score_label },
     reasons: report?.scorecard?.reasons || []
   };
+
+  // Extract all findings by layer from raw scan results (includes SAST, factors, gates, etc.)
+  const findingsByLayer = extractFindingsByLayer(rawScanResult);
+  
+  // Combine keyFindings with extracted findings, deduplicating by title
+  const dedupeFindings = (findings) => {
+    const seen = new Set();
+    return findings.filter(f => {
+      const key = f.title?.toLowerCase() || '';
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  };
+
+  const allSecurityFindings = dedupeFindings([
+    ...(report?.keyFindings?.filter(f => f.layer === 'security') || []),
+    ...findingsByLayer.security,
+  ]);
+  const allPrivacyFindings = dedupeFindings([
+    ...(report?.keyFindings?.filter(f => f.layer === 'privacy') || []),
+    ...findingsByLayer.privacy,
+  ]);
+  const allGovernanceFindings = dedupeFindings([
+    ...(report?.keyFindings?.filter(f => f.layer === 'governance') || []),
+    ...findingsByLayer.governance,
+  ]);
 
   return (
     <div className="report-detail-page">
@@ -133,36 +161,34 @@ const ReportViewModelDetail = ({ report, rawScanResult, extensionId, onExportPdf
             scores={scores}
             factorsByLayer={factorsByLayer}
             rawScanResult={rawScanResult}
-            onOpenModal={openLayerModal}
+            keyFindings={report?.keyFindings || []}
+            onViewEvidence={handleEvidenceClick}
           />
         </div>
 
         {/* Layer Tiles Row */}
         <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "1rem", marginTop: "1rem" }}>
-          <div onClick={() => openLayerModal('security')} style={{ cursor: 'pointer' }}>
-            <ReportScoreCard 
-              title="Security"
-              score={scores.security?.score}
-              band={scores.security?.band || 'NA'}
-              contributors={factorsByLayer.security?.slice(0, 2)}
-            />
-          </div>
-          <div onClick={() => openLayerModal('privacy')} style={{ cursor: 'pointer' }}>
-            <ReportScoreCard 
-              title="Privacy"
-              score={scores.privacy?.score}
-              band={scores.privacy?.band || 'NA'}
-              contributors={factorsByLayer.privacy?.slice(0, 2)}
-            />
-          </div>
-          <div onClick={() => openLayerModal('governance')} style={{ cursor: 'pointer' }}>
-            <ReportScoreCard 
-              title="Governance"
-              score={scores.governance?.score}
-              band={scores.governance?.band || 'NA'}
-              contributors={factorsByLayer.governance?.slice(0, 2)}
-            />
-          </div>
+          <ReportScoreCard 
+            title="Security"
+            score={scores.security?.score}
+            band={scores.security?.band || 'NA'}
+            contributors={factorsByLayer.security?.slice(0, 2)}
+            onClick={() => openLayerModal('security')}
+          />
+          <ReportScoreCard 
+            title="Privacy"
+            score={scores.privacy?.score}
+            band={scores.privacy?.band || 'NA'}
+            contributors={factorsByLayer.privacy?.slice(0, 2)}
+            onClick={() => openLayerModal('privacy')}
+          />
+          <ReportScoreCard 
+            title="Governance"
+            score={scores.governance?.score}
+            band={scores.governance?.band || 'NA'}
+            contributors={factorsByLayer.governance?.slice(0, 2)}
+            onClick={() => openLayerModal('governance')}
+          />
         </div>
 
         {consumer && (
@@ -311,9 +337,10 @@ const ReportViewModelDetail = ({ report, rawScanResult, extensionId, onExportPdf
             score={scores.security?.score}
             band={scores.security?.band}
             factors={factorsByLayer.security}
-            keyFindings={report?.keyFindings?.filter(f => f.layer === 'security') || []}
+            keyFindings={allSecurityFindings}
             gateResults={rawScanResult?.scoring_v2?.gate_results?.filter(g => g.triggered && gateIdToLayer(g.gate_id) === 'security') || []}
             layerReasons={scores.reasons?.filter(r => r.toLowerCase().includes('security') || r.toLowerCase().includes('sast')) || []}
+            layerDetails={report?.layer_details}
             onViewEvidence={handleEvidenceClick}
           />
         )}
@@ -327,9 +354,10 @@ const ReportViewModelDetail = ({ report, rawScanResult, extensionId, onExportPdf
             band={scores.privacy?.band}
             factors={factorsByLayer.privacy}
             permissions={report?.permissions}
-            keyFindings={report?.keyFindings?.filter(f => f.layer === 'privacy') || []}
+            keyFindings={allPrivacyFindings}
             gateResults={rawScanResult?.scoring_v2?.gate_results?.filter(g => g.triggered && gateIdToLayer(g.gate_id) === 'privacy') || []}
             layerReasons={scores.reasons?.filter(r => r.toLowerCase().includes('privacy') || r.toLowerCase().includes('exfil')) || []}
+            layerDetails={report?.layer_details}
             onViewEvidence={handleEvidenceClick}
           />
         )}
@@ -342,9 +370,10 @@ const ReportViewModelDetail = ({ report, rawScanResult, extensionId, onExportPdf
             score={scores.governance?.score}
             band={scores.governance?.band}
             factors={factorsByLayer.governance}
-            keyFindings={report?.keyFindings?.filter(f => f.layer === 'governance') || []}
+            keyFindings={allGovernanceFindings}
             gateResults={rawScanResult?.scoring_v2?.gate_results?.filter(g => g.triggered && gateIdToLayer(g.gate_id) === 'governance') || []}
             layerReasons={scores.reasons?.filter(r => r.toLowerCase().includes('governance') || r.toLowerCase().includes('policy')) || []}
+            layerDetails={report?.layer_details}
             onViewEvidence={handleEvidenceClick}
           />
         )}
