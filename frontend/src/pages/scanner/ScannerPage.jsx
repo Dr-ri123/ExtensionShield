@@ -201,77 +201,57 @@ const ScannerPage = () => {
   const [deepScanLimit, setDeepScanLimit] = useState(null);
   const [cachedAvailable, setCachedAvailable] = useState(false);
 
-  // Load all scans on mount
-  useEffect(() => {
-    let isMounted = true;
-    const loadScans = async () => {
-      setLoading(true);
-      
-      try {
-        // Reduced initial limit for faster load - load 25 initially instead of 100
-        // This reduces the number of API calls significantly
-        const initialLimit = 25;
-        const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error("Request timeout")), 10000)
-        );
-        
-        console.log(`[ScannerPage] Fetching ${initialLimit} recent scans...`);
-        const historyPromise = databaseService.getRecentScans(initialLimit);
-        const history = await Promise.race([historyPromise, timeoutPromise]);
+  const initialLimit = 25;
 
-        console.log(`[ScannerPage] Loaded ${history?.length || 0} scans from API`);
-        
-        if (history && history.length > 0) {
-          console.log(`[ScannerPage] Sample scan keys:`, Object.keys(history[0] || {}));
-        }
-
-        if (!history || history.length === 0) {
-          console.warn("[ScannerPage] No scans found in API response - this could mean:");
-          console.warn("  1. No scans have been completed yet");
-          console.warn("  2. API endpoint is not working");
-          console.warn("  3. Database connection issue");
-          if (isMounted) {
-            setAllScans([]);
-            setLoading(false);
-          }
-          return;
-        }
-
-        // Always try to use metadata first (skipFullFetch=true) for faster loading
-        // This avoids N+1 queries and makes the table render immediately
-        // The enrichment function now handles missing scoring_v2 gracefully
-        const enrichedScans = await enrichScans(history, { skipFullFetch: true });
-        
-        if (isMounted) {
-          console.log(`[ScannerPage] Enriched ${enrichedScans.length} of ${history.length} scans`);
-          
-          // Always set the scans, even if some failed to enrich
-          // This ensures the table displays if we have any valid scans
-          if (enrichedScans.length > 0) {
-            setAllScans(enrichedScans);
-          } else {
-            // If all enrichments failed, try without skipFullFetch as fallback
-            console.warn("[ScannerPage] All scans failed enrichment with skipFullFetch, trying full fetch");
-            const fallbackScans = await enrichScans(history, { skipFullFetch: false });
-            setAllScans(fallbackScans.length > 0 ? fallbackScans : []);
-          }
-          setLoading(false);
-        }
-      } catch (error) {
-        console.error("Failed to load scans:", error);
-        if (isMounted) {
-          setAllScans([]);
-          setLoading(false);
-        }
+  // Shared load so we can refetch for live updates (visibility + polling)
+  const loadScans = React.useCallback(async (showLoading = true) => {
+    if (showLoading) setLoading(true);
+    try {
+      const timeoutPromise = new Promise((_, reject) =>
+        setTimeout(() => reject(new Error("Request timeout")), 10000)
+      );
+      const history = await Promise.race([
+        databaseService.getRecentScans(initialLimit),
+        timeoutPromise,
+      ]);
+      if (!history || history.length === 0) {
+        setAllScans([]);
+        return;
       }
-    };
-    loadScans();
-    
-    // Cleanup function to prevent state updates after unmount
-    return () => {
-      isMounted = false;
-    };
+      const enrichedScans = await enrichScans(history, { skipFullFetch: true });
+      if (enrichedScans.length > 0) {
+        setAllScans(enrichedScans);
+      } else {
+        const fallbackScans = await enrichScans(history, { skipFullFetch: false });
+        setAllScans(fallbackScans.length > 0 ? fallbackScans : []);
+      }
+    } catch (error) {
+      console.error("Failed to load scans:", error);
+      setAllScans([]);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  // Load on mount
+  useEffect(() => {
+    loadScans(true);
+  }, [loadScans]);
+
+  // Live update: refetch when user returns to this tab or navigates back to /scan
+  useEffect(() => {
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") loadScans(false);
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", onVisibilityChange);
+  }, [loadScans]);
+
+  // Live update: poll every 20s so new scans appear shortly after completion
+  useEffect(() => {
+    const interval = setInterval(() => loadScans(false), 20000);
+    return () => clearInterval(interval);
+  }, [loadScans]);
 
   // Load deep-scan limit status (best-effort)
   useEffect(() => {
@@ -449,6 +429,11 @@ const ScannerPage = () => {
       sorted.sort((a, b) => {
         let aVal = a[sortConfig.key];
         let bVal = b[sortConfig.key];
+        // For timestamp, use fallback chain (API maps scanned_at→timestamp)
+        if (sortConfig.key === "timestamp" || sortConfig.key === "scanned_at") {
+          aVal = a.timestamp ?? a.scanned_at ?? a.created_at ?? a.updated_at;
+          bVal = b.timestamp ?? b.scanned_at ?? b.created_at ?? b.updated_at;
+        }
 
         // Handle null/undefined values
         if (aVal == null) return 1;
@@ -458,7 +443,7 @@ const ScannerPage = () => {
         if (sortConfig.key === "extension_name") {
           aVal = (aVal || "").toLowerCase();
           bVal = (bVal || "").toLowerCase();
-        } else if (sortConfig.key === "timestamp") {
+        } else if (sortConfig.key === "timestamp" || sortConfig.key === "scanned_at") {
           aVal = new Date(aVal).getTime();
           bVal = new Date(bVal).getTime();
         } else if (sortConfig.key === "score" || sortConfig.key === "findings_count") {
@@ -730,7 +715,7 @@ const ScannerPage = () => {
                                 {scan.extension_name || scan.extension_id}
                               </span>
                               <span className="extension-scanned">
-                                {formatTimeAgo(scan.timestamp)}
+                                {formatTimeAgo(scan.timestamp ?? scan.scanned_at ?? scan.created_at ?? scan.updated_at)}
                               </span>
                             </div>
                           </div>

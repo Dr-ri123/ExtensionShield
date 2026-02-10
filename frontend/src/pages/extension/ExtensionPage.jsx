@@ -2,6 +2,7 @@ import React from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { normalizeExtensionId } from "../../utils/extensionId";
+import databaseService from "../../services/databaseService";
 import "./ExtensionPage.scss";
 
 /**
@@ -50,21 +51,17 @@ const ExtensionPage = () => {
           setTimeout(() => reject(new Error('Request timeout')), 5000)
         );
         
-        const fetchPromise = fetch(`/api/extension/${extensionId}`);
-        const response = await Promise.race([fetchPromise, timeoutPromise]);
-        
-        if (!response.ok) {
-          if (response.status === 404) {
-            if (isMounted) {
-              setError("Extension not found. It may not have been scanned yet.");
-            }
-          } else {
-            throw new Error("Failed to fetch extension data");
+        // Canonical API: GET /api/scan/results/:id (single source of truth)
+        const data = await Promise.race([
+          databaseService.getScanResult(extensionId),
+          timeoutPromise
+        ]);
+        if (data === undefined || data === null) {
+          if (isMounted) {
+            setError("Extension not found. It may not have been scanned yet.");
           }
           return;
         }
-        
-        const data = await response.json();
         if (isMounted) {
           setExtension(data);
         }

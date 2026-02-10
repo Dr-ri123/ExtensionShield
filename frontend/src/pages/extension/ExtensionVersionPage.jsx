@@ -1,11 +1,13 @@
 import React from "react";
 import { useParams, Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
+import databaseService from "../../services/databaseService";
 import "./ExtensionVersionPage.scss";
 
 /**
  * ExtensionVersionPage - Shows the report for a specific build hash
  * Route: /extension/:extensionId/version/:buildHash
+ * Uses canonical GET /api/scan/results/:id (versioned by hash not yet supported; shows latest scan).
  */
 const ExtensionVersionPage = () => {
   const { extensionId, buildHash } = useParams();
@@ -17,17 +19,14 @@ const ExtensionVersionPage = () => {
     const fetchReport = async () => {
       try {
         setLoading(true);
-        const response = await fetch(`/api/extension/${extensionId}/version/${buildHash}`);
-        if (!response.ok) {
-          if (response.status === 404) {
-            setError("Report not found for this version.");
-          } else {
-            throw new Error("Failed to fetch report");
-          }
-          return;
+        setError(null);
+        // Canonical API: GET /api/scan/results/:id (version hash not yet in backend; return latest)
+        const data = await databaseService.getScanResult(extensionId);
+        if (data) {
+          setReport(data);
+        } else {
+          setError("Report not found for this version.");
         }
-        const data = await response.json();
-        setReport(data);
       } catch (err) {
         setError("Failed to load report. Please try again.");
       } finally {

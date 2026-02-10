@@ -644,6 +644,17 @@ RESULTS_DIR = _settings.paths.results_dir  # Convert to absolute path
 RESULTS_DIR.mkdir(parents=True, exist_ok=True)
 
 
+def _storage_relative_extracted_path(extension_dir: Optional[str]) -> Optional[str]:
+    """
+    Return extracted_path in a form resolvable on any backend: basename of the
+    extracted directory (e.g. extracted_<id>.crx_123). Icon endpoint joins this
+    with extension_storage_path so icons work when DB is Supabase and storage is local.
+    """
+    if not extension_dir:
+        return None
+    return os.path.basename(extension_dir.rstrip(os.sep))
+
+
 def extract_extension_id(url: str) -> Optional[str]:
     """Extract extension ID from Chrome Web Store URL."""
     import re
@@ -808,7 +819,7 @@ async def run_analysis_workflow(url: str, extension_id: str):
                 "extension_id": extension_id,
                 "extension_name": extension_name,
                 "url": url,
-                "timestamp": datetime.now().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "status": "completed",
                 "metadata": metadata,
                 "manifest": manifest,
@@ -820,7 +831,7 @@ async def run_analysis_workflow(url: str, extension_id: str):
                 "summary": final_state.get("executive_summary") or {},
                 "impact_analysis": analysis_results.get("impact_analysis") or {},
                 "privacy_compliance": analysis_results.get("privacy_compliance") or {},
-                "extracted_path": final_state.get("extension_dir"),
+                "extracted_path": _storage_relative_extracted_path(final_state.get("extension_dir")),
                 "extracted_files": extracted_files,
                 "icon_path": icon_path,  # Relative path to icon (e.g., "icons/128.png")
                 # UI-first payload (production) - handle LLM failures gracefully

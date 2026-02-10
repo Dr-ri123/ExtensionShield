@@ -762,14 +762,71 @@ class SupabaseDatabase:
             risk_dist = result.get("risk_distribution", {}) or {}
             extracted_files = result.get("extracted_files") or []
 
-            # Map timestamp to scanned_at (Supabase column name)
+            # Use UTC for all timestamps (fixes "6h ago" timezone bug)
+            now_utc = datetime.now(timezone.utc).isoformat()
             timestamp_value = result.get("timestamp")
-            # Convert ISO string to timestamptz if needed, or use current time
-            if timestamp_value:
-                scanned_at = timestamp_value
+            scanned_at = timestamp_value if timestamp_value else now_utc
+
+            # Fetch existing row to determine first vs re-scan and preserve previous state
+            # (graceful if migration 20260210200000 not yet applied - no first_scanned_at etc.)
+            existing = None
+            try:
+                existing_resp = (
+                    self.client.table(self.table_scan_results)
+                    .select("extension_id, scanned_at, first_scanned_at, metadata, webstore_analysis, total_findings, risk_level, security_score")
+                    .eq("extension_id", extension_id)
+                    .limit(1)
+                    .execute()
+                )
+                existing = (getattr(existing_resp, "data", None) or [None])[0]
+            except Exception as _e:
+                # May fail if new columns not yet in schema; fall back to basic select
+                try:
+                    existing_resp = (
+                        self.client.table(self.table_scan_results)
+                        .select("extension_id, scanned_at, metadata, webstore_analysis, total_findings, risk_level, security_score")
+                        .eq("extension_id", extension_id)
+                        .limit(1)
+                        .execute()
+                    )
+                    existing = (getattr(existing_resp, "data", None) or [None])[0]
+                except Exception:
+                    pass
+
+            first_scanned_at = None
+            previous_scanned_at = None
+            previous_scan_state = None
+
+            if existing:
+                # Re-scan: preserve first_scanned_at, capture previous state for Hot extensions analytics
+                first_scanned_at = existing.get("first_scanned_at")  # keep original
+                previous_scanned_at = existing.get("scanned_at")
+                # Structured metadata snapshot for graphing (user_count, rating, etc.)
+                prev_meta = existing.get("metadata") or {}
+                prev_web = existing.get("webstore_analysis") or {}
+                if isinstance(prev_meta, str):
+                    try:
+                        prev_meta = json.loads(prev_meta) if prev_meta else {}
+                    except Exception:
+                        prev_meta = {}
+                if isinstance(prev_web, str):
+                    try:
+                        prev_web = json.loads(prev_web) if prev_web else {}
+                    except Exception:
+                        prev_web = {}
+                previous_scan_state = {
+                    "scanned_at": previous_scanned_at,
+                    "user_count": prev_meta.get("user_count") or prev_web.get("user_count"),
+                    "rating": prev_meta.get("rating") or prev_web.get("rating"),
+                    "rating_count": prev_meta.get("ratings_count") or prev_meta.get("rating_count") or prev_web.get("ratings_count"),
+                    "total_findings": existing.get("total_findings"),
+                    "risk_level": existing.get("risk_level"),
+                    "security_score": existing.get("security_score"),
+                }
             else:
-                scanned_at = datetime.now(timezone.utc).isoformat()
-            
+                # First scan: set first_scanned_at
+                first_scanned_at = scanned_at
+
             # Enhance summary with modern fields for signals and risk calculation
             summary_data = result.get("summary", {}) or {}
             if not isinstance(summary_data, dict):
@@ -790,7 +847,10 @@ class SupabaseDatabase:
                 "extension_id": extension_id,
                 "extension_name": extension_name,
                 "url": result.get("url"),
-                "scanned_at": scanned_at,  # Renamed from timestamp → scanned_at
+                "scanned_at": scanned_at,  # Last scan time (always updated)
+                "first_scanned_at": first_scanned_at,
+                "previous_scanned_at": previous_scanned_at,
+                "previous_scan_state": previous_scan_state,
                 "status": result.get("status"),
                 "security_score": result.get("overall_security_score"),
                 "risk_level": result.get("overall_risk"),
@@ -899,7 +959,7 @@ class SupabaseDatabase:
             scans_resp = (
                 self.client.table(self.table_scan_results)
                 .select(
-                    "extension_id, extension_name, url, scanned_at, status, security_score, risk_level, total_findings, total_files, high_risk_count, medium_risk_count, low_risk_count, metadata, sast_results, permissions_analysis, manifest, summary"
+                    "extension_id, extension_name, url, scanned_at, created_at, updated_at, status, security_score, risk_level, total_findings, total_files, high_risk_count, medium_risk_count, low_risk_count, metadata, sast_results, permissions_analysis, manifest, summary"
                 )
                 .in_("extension_id", ext_ids)
                 .execute()
@@ -907,9 +967,13 @@ class SupabaseDatabase:
             scans = getattr(scans_resp, "data", None) or []
             by_id = {}
             for r in scans:
-                # Map scanned_at → timestamp for API compatibility
-                if "scanned_at" in r:
-                    r["timestamp"] = r.pop("scanned_at")
+                # Map scanned_at → timestamp for API compatibility (prefer scanned_at > updated_at > created_at)
+                ts = r.get("scanned_at") or r.get("updated_at") or r.get("created_at")
+                if ts:
+                    r["timestamp"] = ts
+                r.pop("scanned_at", None)
+                r.pop("updated_at", None)
+                r.pop("created_at", None)
                 
                 # Extract modern fields from summary JSONB if present
                 summary = r.get("summary", {})
@@ -949,10 +1013,12 @@ class SupabaseDatabase:
             if not data:
                 return None
             
-            # Map scanned_at → timestamp for API compatibility
+            # Map scanned_at → timestamp for API compatibility (prefer scanned_at > updated_at > created_at)
             result = data[0]
-            if "scanned_at" in result:
-                result["timestamp"] = result.pop("scanned_at")
+            ts = result.get("scanned_at") or result.get("updated_at") or result.get("created_at")
+            if ts:
+                result["timestamp"] = ts
+            result.pop("scanned_at", None)
             
             # Extract modern fields from summary JSONB if present
             # Also check top-level in case they were stored there (backward compatibility)
@@ -984,18 +1050,21 @@ class SupabaseDatabase:
             resp = (
                 self.client.table(self.table_scan_results)
                 .select(
-                    "extension_id, extension_name, url, scanned_at, status, security_score, risk_level, total_findings, total_files, high_risk_count, medium_risk_count, low_risk_count, metadata, sast_results, permissions_analysis, manifest, summary"
+                    "extension_id, extension_name, url, scanned_at, created_at, updated_at, status, security_score, risk_level, total_findings, total_files, high_risk_count, medium_risk_count, low_risk_count, metadata, sast_results, permissions_analysis, manifest, summary"
                 )
                 .order("scanned_at", desc=True)
                 .limit(limit)
                 .execute()
             )
             rows = getattr(resp, "data", None) or []
-            # Map scanned_at → timestamp for API compatibility
-            # Extract modern fields from summary for frontend compatibility
+            # Map scanned_at → timestamp for API compatibility (prefer scanned_at > updated_at > created_at)
             for row in rows:
-                if "scanned_at" in row:
-                    row["timestamp"] = row.pop("scanned_at")
+                ts = row.get("scanned_at") or row.get("updated_at") or row.get("created_at")
+                if ts:
+                    row["timestamp"] = ts
+                row.pop("scanned_at", None)
+                row.pop("updated_at", None)
+                row.pop("created_at", None)
                 
                 # Extract modern fields from summary JSONB if present
                 summary = row.get("summary", {})
@@ -1018,7 +1087,7 @@ class SupabaseDatabase:
         try:
             q = (
                 self.client.table(self.table_scan_results)
-                .select("extension_id, extension_name, scanned_at, security_score, risk_level, total_findings, total_files, high_risk_count, medium_risk_count, low_risk_count, metadata, webstore_analysis, sast_results, permissions_analysis, manifest, summary")
+                .select("extension_id, extension_name, scanned_at, created_at, updated_at, security_score, risk_level, total_findings, total_files, high_risk_count, medium_risk_count, low_risk_count, metadata, webstore_analysis, sast_results, permissions_analysis, manifest, summary")
                 .eq("status", "completed")
                 .order("scanned_at", desc=True)
             )
@@ -1030,12 +1099,16 @@ class SupabaseDatabase:
             rows = getattr(resp, "data", None) or []
             print(f"[get_recent_scans Supabase] Retrieved {len(rows)} scans from database")
             
-            # Map scanned_at → timestamp for API compatibility
-            # Extract modern fields from summary for frontend compatibility
+            # Map scanned_at → timestamp for API compatibility. Use most accurate time for "recently scanned" display.
+            # Prefer: scanned_at (actual scan time) > updated_at > created_at
             for row in rows:
                 try:
-                    if "scanned_at" in row:
-                        row["timestamp"] = row.pop("scanned_at")
+                    ts = row.get("scanned_at") or row.get("updated_at") or row.get("created_at")
+                    if ts:
+                        row["timestamp"] = ts
+                    row.pop("scanned_at", None)
+                    row.pop("updated_at", None)
+                    row.pop("created_at", None)
                     
                     # Extract modern fields from summary JSONB if present
                     summary = row.get("summary", {})

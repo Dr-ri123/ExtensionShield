@@ -332,6 +332,11 @@ const ScanHistoryPage = () => {
       sorted.sort((a, b) => {
         let aVal = a[sortConfig.key];
         let bVal = b[sortConfig.key];
+        // For timestamp, use fallback chain (API maps scanned_at→timestamp)
+        if (sortConfig.key === "timestamp" || sortConfig.key === "scanned_at") {
+          aVal = a.timestamp ?? a.scanned_at ?? a.created_at ?? a.updated_at;
+          bVal = b.timestamp ?? b.scanned_at ?? b.created_at ?? b.updated_at;
+        }
 
         if (aVal == null) return 1;
         if (bVal == null) return -1;
@@ -339,7 +344,7 @@ const ScanHistoryPage = () => {
         if (sortConfig.key === "extension_name") {
           aVal = (aVal || "").toLowerCase();
           bVal = (bVal || "").toLowerCase();
-        } else if (sortConfig.key === "timestamp") {
+        } else if (sortConfig.key === "timestamp" || sortConfig.key === "scanned_at") {
           aVal = new Date(aVal).getTime();
           bVal = new Date(bVal).getTime();
         } else if (sortConfig.key === "score" || sortConfig.key === "findings_count") {
@@ -577,7 +582,7 @@ const ScanHistoryPage = () => {
                               {scan.extension_name || scan.extension_id}
                             </span>
                             <span className="extension-scanned">
-                              {formatTimeAgo(scan.timestamp)}
+                              {formatTimeAgo(scan.timestamp ?? scan.scanned_at ?? scan.created_at ?? scan.updated_at)}
                             </span>
                           </div>
                         </div>
