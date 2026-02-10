@@ -103,7 +103,7 @@ class Settings:
     # Environment
     env: EnvName
 
-    # Backends (present for future-proofing; current code uses local FS + sqlite/supabase)
+    # Backends: Postgres (Supabase) is primary for prod; SQLite is dev fallback
     storage_backend: StorageBackend
     db_backend: DbBackend
 
@@ -171,11 +171,11 @@ def get_settings() -> Settings:
     Env vars recognized (current + forward-looking):
     - ENV / APP_ENV / EXTENSION_SHIELD_ENV: local|dev|prod
     - EXTENSION_STORAGE_PATH: local filesystem root for artifacts/backups
-    - DATABASE_PATH: sqlite file path
+    - DATABASE_PATH: SQLite file path (dev fallback only; not used when Supabase)
     - SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, SUPABASE_SCAN_RESULTS_TABLE
     - ADMIN_API_KEY, TELEMETRY_ADMIN_KEY (optional, for admin endpoints)
     - STORAGE_BACKEND: local|supabase (currently only local FS is used)
-    - DB_BACKEND: sqlite|supabase|postgres (postgres not supported yet)
+    - DB_BACKEND: sqlite|supabase (Postgres via Supabase; sqlite is dev fallback)
     """
 
     env = _parse_env_name(
@@ -218,14 +218,13 @@ def get_settings() -> Settings:
             db_backend = "sqlite"
     else:
         # Auto-select based on environment:
-        # - Production: Use Supabase if URL + key exist, else SQLite
-        # - Local/Dev: Always use SQLite (unless explicitly set via DB_BACKEND)
+        # - Production: Use Postgres (Supabase) if URL + key exist, else SQLite fallback
+        # - Local/Dev: Prefer Supabase if configured (validate against prod); else SQLite
         if env == "prod":
-            # Production: prefer Supabase if configured
             db_backend = "supabase" if (supabase_url and supabase_key) else "sqlite"
         else:
-            # Local/Dev: always use SQLite for easier local development
-            db_backend = "sqlite"
+            # Local/Dev: use Supabase when configured for prod parity; else SQLite
+            db_backend = "supabase" if (supabase_url and supabase_key) else "sqlite"
 
     settings = Settings(
         env=env,
