@@ -412,7 +412,9 @@ class FactsBuilder:
             
             if not findings.sast_risk_level:
                 # Fall back to text parsing from LLM summary
-                sast_text = sast_results.get("sast_analysis", "")
+                sast_text = sast_results.get("sast_analysis") or ""
+                if not isinstance(sast_text, str):
+                    sast_text = str(sast_text) if sast_text else ""
                 if "[RISK: HIGH]" in sast_text or "[RISK: CRITICAL]" in sast_text:
                     findings.sast_risk_level = "high"
                 elif "[RISK: MEDIUM]" in sast_text:

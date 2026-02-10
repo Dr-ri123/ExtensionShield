@@ -28,7 +28,7 @@ from extension_shield.core.report_generator import ReportGenerator
 
 from extension_shield.workflow.graph import build_graph
 from extension_shield.workflow.state import WorkflowState, WorkflowStatus
-from extension_shield.api.database import db
+from extension_shield.api.database import db, SupabaseDatabase
 from extension_shield.api.supabase_auth import get_current_user_id as _get_current_user_id
 from extension_shield.core.config import get_settings
 from extension_shield.api.csp_middleware import CSPMiddleware
@@ -38,6 +38,13 @@ from extension_shield.scoring.engine import ScoringEngine
 
 # Initialize logger
 logger = logging.getLogger(__name__)
+
+# Import safe JSON utilities from shared module
+from extension_shield.utils.json_encoder import (
+    safe_json_dumps,
+    safe_json_dump,
+    sanitize_for_json,
+)
 
 
 def _build_report_view_model_safe(
@@ -789,7 +796,8 @@ async def run_analysis_workflow(url: str, extension_id: str):
                 "explanation": scoring_result.explanation,
             }
 
-            scan_results[extension_id] = {
+            # Build scan results - sanitize complex objects to prevent circular references
+            raw_results = {
                 "extension_id": extension_id,
                 "extension_name": extension_name,
                 "url": url,
@@ -832,19 +840,25 @@ async def run_analysis_workflow(url: str, extension_id: str):
                 "risk_distribution": calculate_risk_distribution(final_state),
                 "overall_risk": scoring_result.risk_level.value,  # Use v2 risk level
                 "total_risk_score": calculate_total_risk_score(final_state),
-                # Governance data (Pipeline B: Stages 2-8)
+                # Governance data (Pipeline B: Stages 2-8) - sanitize to prevent circular refs
                 "governance_verdict": final_state.get("governance_verdict"),
-                "governance_bundle": final_state.get("governance_bundle"),
-                "governance_report": final_state.get("governance_report"),
+                "governance_bundle": sanitize_for_json(final_state.get("governance_bundle")),
+                "governance_report": sanitize_for_json(final_state.get("governance_report")),
                 "governance_error": final_state.get("governance_error"),
             }
+            
+            # Final sanitization pass to ensure JSON-serializability
+            scan_results[extension_id] = sanitize_for_json(raw_results)
             scan_status[extension_id] = "completed"
             logger.info("[TIMELINE] report_view_model_built → extension_id=%s, has_rvm=%s", extension_id, bool(scan_results[extension_id].get("report_view_model")))
 
             # Save to database
             logger.info("[TIMELINE] saving_to_database → extension_id=%s", extension_id)
-            db.save_scan_result(scan_results[extension_id])
-            logger.info("[TIMELINE] saved_to_database → extension_id=%s", extension_id)
+            save_success = db.save_scan_result(scan_results[extension_id])
+            if not save_success:
+                logger.error("[TIMELINE] FAILED to save to database → extension_id=%s", extension_id)
+            else:
+                logger.info("[TIMELINE] saved_to_database → extension_id=%s, success=%s", extension_id, save_success)
 
             # Save to user history (best-effort; anonymous scans are not saved)
             user_id = scan_user_ids.pop(extension_id, None)
@@ -854,12 +868,19 @@ async def run_analysis_workflow(url: str, extension_id: str):
                 except Exception:
                     pass
 
-            # Save to file (backup)
+            # Save to file (backup) - use safe JSON encoder to handle circular references
             logger.info("[TIMELINE] saving_to_file → extension_id=%s", extension_id)
             result_file = RESULTS_DIR / f"{extension_id}_results.json"
-            with open(result_file, "w", encoding="utf-8") as f:
-                json.dump(scan_results[extension_id], f, indent=2)
-            logger.info("[TIMELINE] saved_to_file → extension_id=%s, file=%s", extension_id, result_file)
+            try:
+                with open(result_file, "w", encoding="utf-8") as f:
+                    success = safe_json_dump(scan_results[extension_id], f, indent=2)
+                if success:
+                    logger.info("[TIMELINE] saved_to_file → extension_id=%s, file=%s", extension_id, result_file)
+                else:
+                    logger.warning("[TIMELINE] file_save_partial → extension_id=%s, file=%s", extension_id, result_file)
+            except Exception as file_error:
+                logger.error("[TIMELINE] file_save_failed → extension_id=%s, error=%s", extension_id, str(file_error))
+                # Don't fail the scan if file save fails - database is the primary storage
             
             workflow_duration = (datetime.now() - workflow_start).total_seconds()
             logger.info("[TIMELINE] scan_complete → extension_id=%s, duration=%.2fs", extension_id, workflow_duration)
@@ -2056,14 +2077,54 @@ async def get_scan_status(extension_id: str) -> ScanStatusResponse:
     if not status:
         return ScanStatusResponse(scanned=False)
 
-    result = scan_results.get(extension_id, {})
+    # Safely extract error and error_code to avoid circular reference issues
+    # Only extract simple types (str, int, None) to prevent serialization problems
+    error = None
+    error_code = None
+    
+    try:
+        result = scan_results.get(extension_id, {})
+    except Exception as e:
+        logger.warning(f"[get_scan_status] Failed to access scan_results for {extension_id}: {e}")
+        result = {}
+    
+    try:
+        error_val = result.get("error")
+        # Ensure error is a string or None, not a complex object
+        if error_val is not None:
+            if isinstance(error_val, str):
+                error = error_val
+            else:
+                # Convert to string if it's not already
+                error = str(error_val)
+    except Exception as e:
+        # If there's any issue accessing error (e.g., circular reference), set to None
+        logger.warning(f"[get_scan_status] Failed to extract error for {extension_id}: {e}")
+        error = None
+    
+    try:
+        error_code_val = result.get("error_code")
+        # Ensure error_code is an int or None
+        if error_code_val is not None:
+            if isinstance(error_code_val, int):
+                error_code = error_code_val
+            elif isinstance(error_code_val, (str, float)):
+                # Try to convert to int if possible
+                try:
+                    error_code = int(error_code_val)
+                except (ValueError, TypeError):
+                    error_code = None
+    except Exception as e:
+        # If there's any issue accessing error_code, set to None
+        logger.warning(f"[get_scan_status] Failed to extract error_code for {extension_id}: {e}")
+        error_code = None
 
     return ScanStatusResponse(
         scanned=status == "completed",
         status=status,
         extension_id=extension_id,
-        error=result.get("error"),
-        error_code=result.get("error_code"),
+        error=error,
+        error_code=error_code,
     )
 
 
@@ -2139,13 +2200,12 @@ async def get_scan_results(extension_id: str, http_request: Request):
             "overall_risk": results.get("risk_level", "unknown"),
             "total_risk_score": results.get("total_findings", 0),
         }
-        # Preserve existing modern fields if present
-        if results.get("report_view_model"):
-            formatted_results["report_view_model"] = results.get("report_view_model")
-        if results.get("scoring_v2"):
-            formatted_results["scoring_v2"] = results.get("scoring_v2")
-        if results.get("governance_bundle"):
-            formatted_results["governance_bundle"] = results.get("governance_bundle")
+        # Extract signal/risk fields: DB stores scoring_v2, report_view_model, governance_bundle in summary JSON
+        summary = results.get("summary") or {}
+        summary = summary if isinstance(summary, dict) else {}
+        formatted_results["report_view_model"] = results.get("report_view_model") or summary.get("report_view_model")
+        formatted_results["scoring_v2"] = results.get("scoring_v2") or summary.get("scoring_v2")
+        formatted_results["governance_bundle"] = results.get("governance_bundle") or summary.get("governance_bundle")
 
         # Upgrade legacy payload and ensure consumer_insights
         payload = _upgrade_legacy_payload(formatted_results, extension_id)
@@ -2163,16 +2223,25 @@ async def get_scan_results(extension_id: str, http_request: Request):
     result_file = RESULTS_DIR / f"{extension_id}_results.json"
     if result_file.exists():
         logger.info("[DEBUG get_scan_results] File exists: %s", result_file)
-        with open(result_file, "r", encoding="utf-8") as f:
-            payload = json.load(f)
-        # Upgrade legacy payload and ensure consumer_insights
-        payload = _upgrade_legacy_payload(payload, extension_id)
-        payload = _ensure_consumer_insights(payload)
-        # Add risk and signals mapping
-        payload["risk_and_signals"] = _extract_risk_and_signals(payload)
-        scan_results[extension_id] = payload  # Cache in memory
-        _log_get_scan_results_return_shape("file", payload)
-        return payload
+        try:
+            with open(result_file, "r", encoding="utf-8") as f:
+                payload = json.load(f)
+            # Upgrade legacy payload and ensure consumer_insights
+            payload = _upgrade_legacy_payload(payload, extension_id)
+            payload = _ensure_consumer_insights(payload)
+            # Add risk and signals mapping
+            payload["risk_and_signals"] = _extract_risk_and_signals(payload)
+            scan_results[extension_id] = payload  # Cache in memory
+            _log_get_scan_results_return_shape("file", payload)
+            return payload
+        except json.JSONDecodeError as e:
+            logger.error("[DEBUG get_scan_results] JSON file is corrupted for %s: %s", extension_id, str(e))
+            # Delete the corrupted file
+            try:
+                result_file.unlink()
+                logger.info("[DEBUG get_scan_results] Deleted corrupted JSON file: %s", result_file)
+            except Exception as delete_err:
+                logger.warning("[DEBUG get_scan_results] Failed to delete corrupted file: %s", str(delete_err))
     else:
         logger.warning("[DEBUG get_scan_results] File does NOT exist: %s", result_file)
 
@@ -2454,11 +2523,11 @@ async def get_history(http_request: Request, limit: int = 50):
     """
     user_id = getattr(getattr(http_request, "state", None), "user_id", None)
     if not user_id:
-        # In local/dev, allow global history for easier testing without auth.
-        if _settings.env != "prod":
-            history = db.get_scan_history(limit=limit)
-            return {"history": history, "total": len(history)}
-        raise HTTPException(status_code=401, detail="Sign in to view history")
+        # When using Supabase (staging or prod), require auth. SQLite/local allows global history for testing.
+        if isinstance(db, SupabaseDatabase):
+            raise HTTPException(status_code=401, detail="Sign in to view history")
+        history = db.get_scan_history(limit=limit)
+        return {"history": history, "total": len(history)}
 
     history = db.get_user_scan_history(user_id=user_id, limit=limit)
     return {"history": history, "total": len(history)}
@@ -2495,33 +2564,162 @@ async def get_recent_scans(limit: int = 10):
     Returns:
         List of recent scans with risk_and_signals mapping
     """
-    recent = db.get_recent_scans(limit=limit)
+    try:
+        logger.info(f"[get_recent_scans] Fetching {limit} recent scans")
+        recent = db.get_recent_scans(limit=limit)
+        logger.info(f"[get_recent_scans] Retrieved {len(recent)} scans from database")
 
-    # Add risk_and_signals mapping to each scan.
-    # If legacy recent rows are missing layer scores, backfill from full scan result dynamically.
-    for scan in recent:
-        mapping = _extract_risk_and_signals(scan)
-        signals = mapping.get("signals", {})
-        missing_layers = any(k not in signals for k in ("security", "privacy", "gov"))
+        if len(recent) == 0:
+            logger.warning("[get_recent_scans] No scans found in database - checking if any scans exist with different status")
+            # Diagnostic: Check if scans exist but with wrong status
+            try:
+                if hasattr(db, 'get_connection'):
+                    # SQLite path
+                    with db.get_connection() as conn:
+                        cursor = conn.cursor()
+                        cursor.execute("SELECT COUNT(*) as total, status, COUNT(*) as count FROM scan_results GROUP BY status")
+                        status_counts = cursor.fetchall()
+                        logger.info(f"[get_recent_scans] Diagnostic - Status counts: {status_counts}")
+            except Exception as diag_error:
+                logger.warning(f"[get_recent_scans] Diagnostic check failed: {diag_error}")
 
-        if missing_layers:
-            extension_id = scan.get("extension_id")
-            if extension_id:
+        # Add risk_and_signals mapping to each scan.
+        # If legacy recent rows are missing layer scores, backfill from full scan result dynamically.
+        for scan in recent:
+            try:
+                mapping = _extract_risk_and_signals(scan)
+                signals = mapping.get("signals", {})
+                missing_layers = any(k not in signals for k in ("security", "privacy", "gov"))
+
+                if missing_layers:
+                    extension_id = scan.get("extension_id")
+                    if extension_id:
+                        try:
+                            full_scan = db.get_scan_result(extension_id)
+                        except Exception as e:
+                            logger.warning(f"[get_recent_scans] Failed to fetch full scan for {extension_id}: {e}")
+                            full_scan = None
+                        if isinstance(full_scan, dict):
+                            backfilled = _extract_risk_and_signals(full_scan)
+                            if len(backfilled.get("signals", {})) > len(signals):
+                                mapping = backfilled
+                            # Expose scoring_v2 on recent rows when available to keep frontend consistent.
+                            if isinstance(full_scan.get("scoring_v2"), dict):
+                                scan["scoring_v2"] = full_scan.get("scoring_v2")
+
+                scan["risk_and_signals"] = mapping
+            except Exception as e:
+                logger.error(f"[get_recent_scans] Error processing scan {scan.get('extension_id')}: {e}")
+                # Continue processing other scans even if one fails
+                scan["risk_and_signals"] = {"risk": 0, "signals": {}}
+
+        logger.info(f"[get_recent_scans] Returning {len(recent)} enriched scans")
+        return {"recent": recent}
+    except Exception as e:
+        logger.error(f"[get_recent_scans] Error fetching recent scans: {e}", exc_info=True)
+        # Return empty list instead of raising to prevent frontend crashes
+        return {"recent": []}
+
+
+@app.get("/api/diagnostic/scans")
+async def diagnostic_scans():
+    """
+    Diagnostic endpoint to check scan data flow.
+    Returns information about scans in memory, database, and their status.
+    Useful for debugging why scans aren't appearing in the UI.
+    """
+    try:
+        diagnostic_info = {
+            "memory_scans": {
+                "count": len(scan_results),
+                "extension_ids": list(scan_results.keys())[:10],  # First 10
+                "statuses": {}
+            },
+            "database_scans": {
+                "total_count": 0,
+                "completed_count": 0,
+                "failed_count": 0,
+                "other_statuses": {},
+                "sample_extension_ids": []
+            },
+            "recent_endpoint_test": {
+                "limit_10": 0,
+                "limit_25": 0
+            },
+            "errors": []
+        }
+        
+        # Check memory scans
+        for ext_id, status in scan_status.items():
+            diagnostic_info["memory_scans"]["statuses"][ext_id] = status
+        
+        # Check database scans
+        try:
+            # Get total count and status breakdown
+            if hasattr(db, 'get_connection'):
+                # SQLite path
+                with db.get_connection() as conn:
+                    cursor = conn.cursor()
+                    # Total count
+                    cursor.execute("SELECT COUNT(*) FROM scan_results")
+                    diagnostic_info["database_scans"]["total_count"] = cursor.fetchone()[0]
+                    
+                    # Status breakdown
+                    cursor.execute("SELECT status, COUNT(*) as count FROM scan_results GROUP BY status")
+                    for row in cursor.fetchall():
+                        status_val = row[0] if row[0] else "NULL"
+                        count = row[1]
+                        if status_val == "completed":
+                            diagnostic_info["database_scans"]["completed_count"] = count
+                        elif status_val == "failed":
+                            diagnostic_info["database_scans"]["failed_count"] = count
+                        else:
+                            diagnostic_info["database_scans"]["other_statuses"][status_val] = count
+                    
+                    # Sample extension IDs
+                    cursor.execute("SELECT extension_id FROM scan_results WHERE status = 'completed' ORDER BY timestamp DESC LIMIT 5")
+                    diagnostic_info["database_scans"]["sample_extension_ids"] = [row[0] for row in cursor.fetchall()]
+            else:
+                # Supabase path
                 try:
-                    full_scan = db.get_scan_result(extension_id)
-                except Exception:
-                    full_scan = None
-                if isinstance(full_scan, dict):
-                    backfilled = _extract_risk_and_signals(full_scan)
-                    if len(backfilled.get("signals", {})) > len(signals):
-                        mapping = backfilled
-                    # Expose scoring_v2 on recent rows when available to keep frontend consistent.
-                    if isinstance(full_scan.get("scoring_v2"), dict):
-                        scan["scoring_v2"] = full_scan.get("scoring_v2")
-
-        scan["risk_and_signals"] = mapping
-
-    return {"recent": recent}
+                    resp = db.client.table(db.table_scan_results).select("extension_id, status", count="exact").limit(1000).execute()
+                    total = getattr(resp, "count", len(resp.data or []))
+                    diagnostic_info["database_scans"]["total_count"] = total
+                    
+                    # Count by status
+                    status_counts = {}
+                    for row in (resp.data or []):
+                        status = row.get("status", "NULL")
+                        status_counts[status] = status_counts.get(status, 0) + 1
+                    
+                    diagnostic_info["database_scans"]["completed_count"] = status_counts.get("completed", 0)
+                    diagnostic_info["database_scans"]["failed_count"] = status_counts.get("failed", 0)
+                    for status, count in status_counts.items():
+                        if status not in ["completed", "failed"]:
+                            diagnostic_info["database_scans"]["other_statuses"][status] = count
+                    
+                    # Sample extension IDs
+                    completed_resp = db.client.table(db.table_scan_results).select("extension_id").eq("status", "completed").order("scanned_at", desc=True).limit(5).execute()
+                    diagnostic_info["database_scans"]["sample_extension_ids"] = [row.get("extension_id") for row in (completed_resp.data or [])]
+                except Exception as supabase_error:
+                    diagnostic_info["errors"].append(f"Supabase query error: {str(supabase_error)}")
+        except Exception as db_error:
+            diagnostic_info["errors"].append(f"Database query error: {str(db_error)}")
+        
+        # Test recent endpoint
+        try:
+            recent_10 = db.get_recent_scans(limit=10)
+            diagnostic_info["recent_endpoint_test"]["limit_10"] = len(recent_10)
+            
+            recent_25 = db.get_recent_scans(limit=25)
+            diagnostic_info["recent_endpoint_test"]["limit_25"] = len(recent_25)
+        except Exception as recent_error:
+            diagnostic_info["errors"].append(f"Recent scans query error: {str(recent_error)}")
+        
+        return diagnostic_info
+    except Exception as e:
+        logger.error(f"[diagnostic_scans] Error: {e}", exc_info=True)
+        return {"error": str(e)}
 
 
 @app.delete("/api/scan/{extension_id}")
@@ -2925,53 +3123,47 @@ async def get_extension_icon(extension_id: str):
         extracted_path = results.get("extracted_path")
         icon_path = results.get("icon_path")  # Use stored icon_path from database
     else:
-        # Try loading from database if not in memory
+        # Try loading from database if not in memory (SQLite or Supabase)
         try:
-            with db.get_connection() as conn:
-                cursor = conn.cursor()
-                # Check if icon_path column exists (for backward compatibility)
-                cursor.execute("PRAGMA table_info(scan_results)")
-                columns = [row[1] for row in cursor.fetchall()]
-                has_icon_path = "icon_path" in columns
-                
-                if has_icon_path:
-                    cursor.execute(
-                        """
-                        SELECT extracted_path, icon_path
-                        FROM scan_results
-                        WHERE extension_id = ?
-                        LIMIT 1
-                        """,
-                        (extension_id,),
-                    )
-                    row = cursor.fetchone()
-                    if row:
-                        # Handle both dict-like (Row) and tuple results
-                        if hasattr(row, 'keys'):
-                            extracted_path = row.get("extracted_path")
-                            icon_path = row.get("icon_path")
-                        else:
+            if hasattr(db, "get_connection"):
+                # SQLite: use cursor
+                with db.get_connection() as conn:
+                    cursor = conn.cursor()
+                    cursor.execute("PRAGMA table_info(scan_results)")
+                    columns = [row[1] for row in cursor.fetchall()]
+                    has_icon_path = "icon_path" in columns
+                    if has_icon_path:
+                        cursor.execute(
+                            """
+                            SELECT extracted_path, icon_path
+                            FROM scan_results
+                            WHERE extension_id = ?
+                            LIMIT 1
+                            """,
+                            (extension_id,),
+                        )
+                        row = cursor.fetchone()
+                        if row:
                             extracted_path = row[0] if len(row) > 0 else None
                             icon_path = row[1] if len(row) > 1 else None
-                        if icon_path:
-                            logger.debug(f"Loaded icon_path from database: {icon_path}")
-                else:
-                    # Fallback: get extracted_path without icon_path
-                    cursor.execute(
-                        """
-                        SELECT extracted_path
-                        FROM scan_results
-                        WHERE extension_id = ?
-                        LIMIT 1
-                        """,
-                        (extension_id,),
-                    )
-                    row = cursor.fetchone()
-                    if row:
-                        if hasattr(row, 'keys'):
-                            extracted_path = row.get("extracted_path")
-                        else:
+                            if icon_path:
+                                logger.debug(f"Loaded icon_path from database: {icon_path}")
+                    else:
+                        cursor.execute(
+                            "SELECT extracted_path FROM scan_results WHERE extension_id = ? LIMIT 1",
+                            (extension_id,),
+                        )
+                        row = cursor.fetchone()
+                        if row:
                             extracted_path = row[0] if len(row) > 0 else None
+            else:
+                # Supabase: get_scan_result returns row with extracted_path, icon_path (relative path)
+                row = db.get_scan_result(extension_id)
+                if row:
+                    extracted_path = row.get("extracted_path")
+                    icon_path = row.get("icon_path")
+                    if icon_path:
+                        logger.debug(f"Loaded icon_path from database: {icon_path}")
         except Exception as e:
             logger.debug(f"Could not load from database: {e}")
         
@@ -3008,6 +3200,19 @@ async def get_extension_icon(extension_id: str):
                                     continue
                 except Exception as e:
                     logger.debug(f"Error searching for extracted extension: {e}")
+    
+    if not extracted_path:
+        # Search for extracted extension directory by extension_id in storage
+        settings = get_settings()
+        storage_path = Path(settings.extension_storage_path)
+        
+        if storage_path.exists():
+            # Look for directories containing the extension_id
+            for item in storage_path.iterdir():
+                if item.is_dir() and extension_id in item.name and item.name.startswith("extracted_"):
+                    extracted_path = str(item)
+                    logger.debug(f"[ICON] Found extracted extension by ID: {extracted_path}")
+                    break
     
     if not extracted_path:
         # Return 404 but don't log as error - this is expected during early scan stages
@@ -3111,6 +3316,23 @@ async def get_extension_icon(extension_id: str):
                     "Access-Control-Allow-Origin": "*"
                 }
             )
+    
+    # Try images directory (common for many extensions)
+    images_dir = os.path.join(extracted_path, "images")
+    if os.path.exists(images_dir):
+        # Look for icon files in images directory
+        for icon_name in ["icon128.png", "icon.png", "icon64.png", "icon48.png", "icon32.png", "icon16.png", "logo.png"]:
+            icon_path = os.path.join(images_dir, icon_name)
+            if os.path.exists(icon_path):
+                logger.debug(f"Found icon in images dir: {icon_path}")
+                return FileResponse(
+                    icon_path,
+                    media_type="image/png",
+                    headers={
+                        "Cache-Control": "public, max-age=86400",
+                        "Access-Control-Allow-Origin": "*"
+                    }
+                )
     
     # Try checking manifest for icon paths
     manifest_path = os.path.join(extracted_path, "manifest.json")

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """
 Lint Supabase migrations for filename patterns, ordering, and unsafe statements.
+Uses supabase/migrations/ with Supabase CLI timestamp format (14-digit prefix).
 """
 
 from __future__ import annotations
@@ -11,22 +12,20 @@ from pathlib import Path
 from typing import List, Sequence, Tuple
 
 
-MIGRATION_FILENAME_RE = re.compile(r"^\d{3}[a-z]?_.*\.sql$")
+# Supabase CLI format: 20260205000000_scan_results.sql
+MIGRATION_FILENAME_RE = re.compile(r"^\d{14}_.*\.sql$")
+# At least the first scan_results migration must exist
 REQUIRED_MIGRATIONS = {
-    "001_scan_results.sql",
-    "002_user_scan_history.sql",
-    "003_page_views_daily.sql",
+    "20260205000000_scan_results.sql",
 }
 CONCURRENTLY_RE = re.compile(r"\bCONCURRENTLY\b", re.IGNORECASE)
 
 
-def _migration_sort_key(name: str) -> Tuple[int, str, str]:
-    match = re.match(r"^(\d{3})([a-z]?)_", name)
+def _migration_sort_key(name: str) -> Tuple[int, str]:
+    match = re.match(r"^(\d{14})_", name)
     if not match:
-        return (10**9, "", name)
-    number = int(match.group(1))
-    suffix = match.group(2) or ""
-    return (number, suffix, name)
+        return (10**15, name)
+    return (int(match.group(1)), name)
 
 
 def _load_migration_files(migrations_dir: Path) -> List[Path]:
@@ -59,7 +58,7 @@ def _find_concurrently(paths: Sequence[Path]) -> List[str]:
 
 def main() -> int:
     repo_root = Path(__file__).resolve().parents[1]
-    migrations_dir = repo_root / "docs" / "supabase_migrations"
+    migrations_dir = repo_root / "supabase" / "migrations"
 
     errors: List[str] = []
     try:
@@ -73,7 +72,7 @@ def main() -> int:
     invalid = _validate_filenames(files)
     if invalid:
         errors.append(
-            "Invalid migration filenames (must match ^\\d{3}[a-z]?_.*\\.sql$): "
+            "Invalid migration filenames (must match ^\\d{14}_.*\\.sql$): "
             + ", ".join(invalid)
         )
 

@@ -1,0 +1,631 @@
+# ExtensionShield Data Flow Architecture Audit
+
+**Date:** 2026-02-09  
+**Purpose:** Complete line-by-line trace of where Summary, Security, Privacy, and Governance data originates and flows through the system.
+
+---
+
+## Executive Summary
+
+This document provides a **complete line-by-line audit** of:
+1. **Summary Section** - Where it comes from (API/LLM)
+2. **Security/Privacy/Governance Sections** - Where data originates and how it's displayed
+3. **LLM Integration Points** - Where human-readable explanations are generated
+4. **Current State** - What's working vs. what needs improvement
+
+---
+
+## 1. SUMMARY SECTION - Complete Data Flow
+
+### 1.1 API Endpoint Entry Point
+
+**File:** `src/extension_shield/api/main.py`  
+**Endpoint:** `GET /api/scan/results/{extension_id}`  
+**Line:** 1777-1881
+
+```python
+@app.get("/api/scan/results/{extension_id}")
+async def get_scan_results(extension_id: str, http_request: Request):
+    # Line 1805-1813: Check memory cache first
+    if extension_id in scan_results:
+        payload = scan_results[extension_id]
+        payload = _upgrade_legacy_payload(payload, extension_id)
+        payload = _ensure_consumer_insights(payload)
+        return payload
+    
+    # Line 1817-1860: Try database
+    results = db.get_scan_result(extension_id)
+    if results:
+        formatted_results = {
+            # ... includes "summary" field from database
+            "summary": results.get("summary", {}),
+            # Line 1848: Modern payload includes report_view_model
+            "report_view_model": results.get("report_view_model")
+        }
+        return formatted_results
+```
+
+**Key Finding:** The API returns `summary` (legacy) and `report_view_model` (modern) which contains the summary data.
+
+---
+
+### 1.2 Summary Generation During Scan
+
+**File:** `src/extension_shield/api/main.py`  
+**Function:** `run_analysis_workflow()`  
+**Line:** 630-770
+
+```python
+# Line 751: Summary is stored in scan_results
+"summary": final_state.get("executive_summary") or {},
+
+# Line 757-763: report_view_model is built (includes summary)
+"report_view_model": _build_report_view_model_safe(
+    manifest=manifest,
+    analysis_results={**analysis_results, "executive_summary": final_state.get("executive_summary") or {}},
+    metadata=metadata,
+    extension_id=extension_id,
+    scan_id=extension_id,
+),
+```
+
+**Key Finding:** Summary is generated during the workflow and stored in both `summary` (legacy) and `report_view_model` (modern format).
+
+---
+
+### 1.3 Summary Generation Logic
+
+**File:** `src/extension_shield/core/report_view_model.py`  
+**Function:** `build_report_view_model()`  
+**Line:** 913-960
+
+```python
+# Line 917-921: Check if summary already exists in analysis_results
+executive_summary_raw: Any = (
+    analysis_results.get("executive_summary")
+    or analysis_results.get("summary")
+    or analysis_results.get("executiveSummary")
+)
+
+# Line 922-932: If not found, generate using LLM
+if not (isinstance(executive_summary_raw, dict) and executive_summary_raw):
+    try:
+        executive_summary_raw = SummaryGenerator().generate(
+            analysis_results=analysis_results,
+            manifest=manifest,
+            metadata=metadata,
+            scan_id=scan_id,
+            extension_id=extension_id,
+        )
+    except Exception:
+        executive_summary_raw = None
+
+# Line 934-938: Use LLM result or fallback
+executive_summary = (
+    executive_summary_raw
+    if isinstance(executive_summary_raw, dict) and executive_summary_raw
+    else _fallback_executive_summary(score=score, score_label=score_label, host_scope_label=host_scope_label)
+)
+```
+
+**Key Finding:** Summary comes from:
+1. **LLM Generation** (via `SummaryGenerator`) - **PRIMARY SOURCE**
+2. **Fallback** (deterministic) - if LLM fails
+
+---
+
+### 1.4 LLM Summary Generator
+
+**File:** `src/extension_shield/core/summary_generator.py`  
+**Class:** `SummaryGenerator`  
+**Method:** `generate()`  
+**Line:** 262-410
+
+```python
+def generate(
+    self,
+    analysis_results: Dict,
+    manifest: Dict,
+    metadata: Optional[Dict] = None,
+    scan_id: Optional[str] = None,
+    extension_id: Optional[str] = None,
+) -> Optional[Dict]:
+    # Line 295-301: Build prompt template
+    prompt = self._get_summary_prompt_template(...)
+    
+    # Line 302: Get model name (DEFAULT: "gpt-4o" after our update)
+    model_name = os.getenv("LLM_MODEL", "gpt-4o")
+    
+    # Line 303-306: Model parameters
+    model_parameters = {
+        "temperature": 0.3,  # Updated for more natural language
+        "max_tokens": 4096,
+    }
+    
+    # Line 314-318: Invoke LLM with fallback
+    response = invoke_with_fallback(
+        messages=messages,
+        model_name=model_name,
+        model_parameters=model_parameters,
+    )
+    
+    # Line 321-322: Parse JSON response
+    parser = JsonOutputParser()
+    summary = parser.parse(response.content if hasattr(response, "content") else str(response))
+```
+
+**Key Finding:** Summary is generated by **OpenAI 4-1 (gpt-4o)** using the prompt template in `src/extension_shield/llm/prompts/summary_generation.yaml`.
+
+---
+
+### 1.5 Summary Prompt Template
+
+**File:** `src/extension_shield/llm/prompts/summary_generation.yaml`  
+**Line:** 1-64
+
+```yaml
+summary_generation: |
+  system: |
+    You are ExtensionShield generating a human-readable, easy-to-understand report summary...
+    - Use clear, natural language that non-technical users can understand.
+    - Write in a conversational but professional tone.
+    - LENGTH LIMITS: one_liner <= 150 chars, bullets <= 120 chars (more natural length).
+  
+  user: |
+    Instructions:
+    - one_liner: 1-2 sentences (<= 150 chars). Write a clear, human-readable summary...
+    - why_this_score: exactly 3 bullets (each <= 120 chars). Write complete sentences...
+    - what_to_watch: up to 2 bullets (each <= 120 chars). Write actionable warnings...
+```
+
+**Key Finding:** The prompt is designed for human-readable output, but may still contain technical jargon.
+
+---
+
+### 1.6 Summary Data Structure in report_view_model
+
+**File:** `src/extension_shield/core/report_view_model.py`  
+**Line:** 1126-1135
+
+```python
+"scorecard": {
+    "score": score,
+    "score_label": score_label,
+    "confidence": str(executive_summary.get("confidence") or "LOW"),
+    "one_liner": str(executive_summary.get("one_liner") or executive_summary.get("summary") or ""),
+},
+"highlights": {
+    "why_this_score": why_this_score,  # From executive_summary.why_this_score
+    "what_to_watch": what_to_watch,    # From executive_summary.what_to_watch
+},
+```
+
+**Key Finding:** Summary is exposed as:
+- `report_view_model.scorecard.one_liner` - Main summary text
+- `report_view_model.highlights.why_this_score` - 3 bullet points
+- `report_view_model.highlights.what_to_watch` - 2 watch items
+
+---
+
+## 2. SECURITY/PRIVACY/GOVERNANCE SECTIONS - Complete Data Flow
+
+### 2.1 Layer Scores (Numeric)
+
+**File:** `src/extension_shield/core/report_view_model.py`  
+**Function:** `build_report_view_model()`  
+**Line:** 878-896
+
+```python
+# Line 880-887: Build signal pack from analysis results
+signal_pack_builder = SignalPackBuilder()
+signal_pack = signal_pack_builder.build(...)
+
+# Line 890-896: Calculate scores using ScoringEngine
+scoring_engine = ScoringEngine(weights_version="v1")
+scoring_result = scoring_engine.calculate_scores(
+    signal_pack=signal_pack,
+    manifest=manifest,
+    user_count=user_count,
+    permissions_analysis=analysis_results.get("permissions_analysis"),
+)
+
+# scoring_result contains:
+# - security_score (int)
+# - privacy_score (int)
+# - governance_score (int)
+# - security_layer (LayerScore with factors)
+# - privacy_layer (LayerScore with factors)
+# - governance_layer (LayerScore with factors)
+```
+
+**Key Finding:** Layer scores come from **ScoringEngine** (deterministic calculation), NOT from LLM.
+
+---
+
+### 2.2 Layer Details (Human-Readable Explanations)
+
+**File:** `src/extension_shield/core/report_view_model.py`  
+**Function:** `build_report_view_model()`  
+**Line:** 1083-1115
+
+```python
+# Line 1084-1087: Check if layer_details already exist
+layer_details_raw: Any = (
+    analysis_results.get("layer_details")
+    or analysis_results.get("layerDetails")
+)
+
+# Line 1088-1103: If not found, generate using LLM
+if not (isinstance(layer_details_raw, dict) and layer_details_raw):
+    try:
+        gate_results = []
+        if scoring_result and hasattr(scoring_engine, '_last_gate_results'):
+            gate_results = scoring_engine._last_gate_results or []
+        
+        layer_details_generator = LayerDetailsGenerator()
+        layer_details_raw = layer_details_generator.generate(
+            scoring_result=scoring_result,
+            analysis_results=analysis_results,
+            manifest=manifest,
+            gate_results=gate_results,
+        )
+    except Exception:
+        layer_details_raw = None
+
+# Line 1106-1115: Use LLM result or fallback
+layer_details = (
+    layer_details_raw
+    if isinstance(layer_details_raw, dict) and layer_details_raw
+    else LayerHumanizer.generate_layer_details_fallback(...)
+)
+```
+
+**Key Finding:** Layer details (human-readable explanations) come from:
+1. **LLM Generation** (via `LayerDetailsGenerator`) - **PRIMARY SOURCE**
+2. **Fallback** (via `LayerHumanizer`) - if LLM fails
+
+---
+
+### 2.3 Layer Details LLM Generator
+
+**File:** `src/extension_shield/core/layer_details_generator.py`  
+**Class:** `LayerDetailsGenerator`  
+**Method:** `generate()`  
+**Line:** 233-319
+
+```python
+def generate(
+    self,
+    scoring_result: ScoringResult,
+    analysis_results: Dict,
+    manifest: Dict,
+    gate_results: Optional[List[GateResult]] = None,
+) -> Optional[Dict]:
+    # Line 270-275: Build prompt template
+    prompt = self._get_layer_details_prompt_template(...)
+    
+    # Line 277: Get model name (DEFAULT: "rits/openai/gpt-oss-120b" - NEEDS UPDATE!)
+    model_name = os.getenv("LLM_MODEL", "rits/openai/gpt-oss-120b")
+    
+    # Line 278-281: Model parameters
+    model_parameters = {
+        "temperature": 0.05,  # Very low - may produce technical output
+        "max_tokens": 4096,
+    }
+    
+    # Line 288-292: Invoke LLM with fallback
+    response = invoke_with_fallback(
+        messages=messages,
+        model_name=model_name,
+        model_parameters=model_parameters,
+    )
+    
+    # Line 295-296: Parse JSON response
+    parser = JsonOutputParser()
+    layer_details = parser.parse(response.content if hasattr(response, "content") else str(response))
+```
+
+**Key Finding:** 
+- **ISSUE:** Uses default model `"rits/openai/gpt-oss-120b"` instead of `"gpt-4o"`
+- **ISSUE:** Temperature is very low (0.05) which may produce technical jargon
+- **ISSUE:** Prompt template may need enhancement for more human-readable output
+
+---
+
+### 2.4 Layer Details Prompt Template
+
+**File:** `src/extension_shield/llm/prompts/layer_details_generation.yaml`  
+**Line:** 1-100
+
+```yaml
+layer_details_generation: |
+  system: |
+    You are ExtensionShield generating human-friendly explanations for each layer...
+    - NEVER use generic filler like "score is based on", "this analysis", etc.
+    - Every bullet point MUST cite a concrete input signal by name
+    - LENGTH LIMITS: one_liner <= 120 chars, bullets <= 90 chars each
+  
+  user: |
+    Generate explanations for each layer:
+    - one_liner: One sentence summary (<= 120 chars) of layer's main concern
+    - key_points: Up to 4 bullets (<= 90 chars each) explaining key findings
+    - what_to_watch: Up to 3 bullets (<= 90 chars each) highlighting what users should monitor
+```
+
+**Key Finding:** 
+- Prompt is designed for human-friendly output
+- **ISSUE:** Character limits are restrictive (90 chars per bullet)
+- **ISSUE:** May still produce technical jargon if model/temperature isn't optimal
+
+---
+
+### 2.5 Layer Details Data Structure
+
+**File:** `src/extension_shield/core/report_view_model.py`  
+**Line:** 1171
+
+```python
+"layer_details": layer_details,
+```
+
+**Structure:**
+```python
+layer_details = {
+    "security": {
+        "one_liner": str,      # Human-readable summary
+        "key_points": [str],   # Up to 4 bullets
+        "what_to_watch": [str] # Up to 3 bullets
+    },
+    "privacy": { ... },
+    "governance": { ... }
+}
+```
+
+**Key Finding:** Layer details are exposed as `report_view_model.layer_details.{security|privacy|governance}`.
+
+---
+
+### 2.6 Layer Details Fallback (Deterministic)
+
+**File:** `src/extension_shield/scoring/humanize.py`  
+**Class:** `LayerHumanizer`  
+**Method:** `generate_layer_details_fallback()`  
+**Line:** 81-106
+
+```python
+@classmethod
+def generate_layer_details_fallback(
+    cls,
+    scoring_result: ScoringResult,
+    analysis_results: Dict[str, Any],
+    manifest: Dict[str, Any],
+    gate_results: Optional[List[GateResult]] = None,
+) -> Dict[str, Any]:
+    return {
+        "security": cls._generate_security_layer(...),
+        "privacy": cls._generate_privacy_layer(...),
+        "governance": cls._generate_governance_layer(...),
+    }
+```
+
+**Key Finding:** Fallback uses deterministic mappings (e.g., `GATE_EXPLANATIONS`, `FACTOR_EXPLANATIONS`) which may still be technical.
+
+---
+
+## 3. CURRENT ISSUES & RECOMMENDATIONS
+
+### 3.1 Summary Section
+
+**Status:** ✅ **WORKING** - Uses OpenAI 4-1 (gpt-4o) with good prompt
+
+**Issues:**
+- None identified - summary generation is working well
+
+**Recommendations:**
+- ✅ Already updated to use `gpt-4o`
+- ✅ Prompt already enhanced for human-readable output
+- ✅ Character limits increased (150/120 chars)
+
+---
+
+### 3.2 Security/Privacy/Governance Sections
+
+**Status:** ⚠️ **NEEDS IMPROVEMENT** - Uses wrong model and low temperature
+
+**Issues:**
+1. **Wrong Default Model:**
+   - **File:** `src/extension_shield/core/layer_details_generator.py`
+   - **Line:** 277
+   - **Current:** `model_name = os.getenv("LLM_MODEL", "rits/openai/gpt-oss-120b")`
+   - **Should be:** `model_name = os.getenv("LLM_MODEL", "gpt-4o")`
+
+2. **Low Temperature:**
+   - **File:** `src/extension_shield/core/layer_details_generator.py`
+   - **Line:** 278-281
+   - **Current:** `"temperature": 0.05`
+   - **Should be:** `"temperature": 0.3` (for more natural language)
+
+3. **Restrictive Character Limits:**
+   - **File:** `src/extension_shield/llm/prompts/layer_details_generation.yaml`
+   - **Line:** 21, 46-47
+   - **Current:** `one_liner <= 120 chars, bullets <= 90 chars`
+   - **Should be:** `one_liner <= 150 chars, bullets <= 120 chars`
+
+4. **Prompt May Need Enhancement:**
+   - Add explicit instruction: "Use plain language, avoid technical jargon"
+   - Add examples of good vs. bad explanations
+
+---
+
+## 4. RECOMMENDED FIXES
+
+### Fix 1: Update Layer Details Generator Model
+
+**File:** `src/extension_shield/core/layer_details_generator.py`  
+**Line:** 277-281
+
+```python
+# BEFORE:
+model_name = os.getenv("LLM_MODEL", "rits/openai/gpt-oss-120b")
+model_parameters = {
+    "temperature": 0.05,
+    "max_tokens": 4096,
+}
+
+# AFTER:
+model_name = os.getenv("LLM_MODEL", "gpt-4o")  # Use OpenAI 4-1
+model_parameters = {
+    "temperature": 0.3,  # Higher for more natural language
+    "max_tokens": 4096,
+}
+```
+
+---
+
+### Fix 2: Update Layer Details Prompt Template
+
+**File:** `src/extension_shield/llm/prompts/layer_details_generation.yaml`  
+**Line:** 6-22
+
+```yaml
+system: |
+  You are ExtensionShield generating human-friendly explanations for each layer (Security, Privacy, Governance) based on analysis results.
+  
+  CRITICAL RULES:
+  - Use PLAIN LANGUAGE that non-technical users can understand
+  - AVOID technical jargon, code terms, and IT terminology
+  - Write like you're explaining to a friend, not a developer
+  - NEVER use generic filler like "score is based on", "this analysis", "capabilities indicate", "review the notes", etc.
+  - Every bullet point MUST cite a concrete input signal by name:
+    * Permission names (cookies, webRequest, activeTab, etc.)
+    * Host patterns (<all_urls>, https://*/*/*, etc.)
+    * Gate IDs (CRITICAL_SAST, SENSITIVE_EXFIL, PURPOSE_MISMATCH, etc.)
+    * Specific rule IDs or check names from analysis
+  - Tone MUST match the layer's risk level:
+    * LOW risk: calm, reassuring language
+    * MEDIUM/HIGH risk: direct, clear warnings
+    * BLOCK: urgent, serious language
+  - If no concrete signal exists for a bullet, return "" (empty string) - frontend will filter them out
+  - LENGTH LIMITS: one_liner <= 150 chars, bullets <= 120 chars each (more natural length)
+  - Output ONLY valid JSON
+  
+  EXAMPLES:
+  BAD: "The extension's code analysis reveals a dynamic code execution vulnerability in the background script."
+  GOOD: "The extension can run code dynamically, which could be dangerous if misused."
+  
+  BAD: "SAST findings indicate high severity issues in the codebase."
+  GOOD: "Code analysis found serious security problems that need attention."
+```
+
+**Line:** 44-50
+
+```yaml
+Generate explanations for each layer:
+- one_liner: One sentence summary (<= 150 chars) of layer's main concern in plain language
+- key_points: Up to 4 bullets (<= 120 chars each) explaining key findings with specific signals, using plain language
+- what_to_watch: Up to 3 bullets (<= 120 chars each) highlighting what users should monitor, using plain language
+
+For each bullet, MUST reference at least one concrete signal. If no signal available, use empty string.
+Write in a conversational, easy-to-understand style. Avoid technical terms unless necessary.
+```
+
+---
+
+### Fix 3: Update Response Schema Character Limits
+
+**File:** `src/extension_shield/llm/prompts/layer_details_generation.yaml`  
+**Line:** 59, 62, 74, 77, 89, 92
+
+```yaml
+# Update all maxLength values:
+one_liner: { type: string, maxLength: 150 }  # Was 120
+items: { type: string, maxLength: 120 }     # Was 90
+```
+
+---
+
+## 5. DATA FLOW SUMMARY
+
+### Summary Section Flow:
+```
+API Endpoint (/api/scan/results/{extension_id})
+  ↓
+report_view_model.scorecard.one_liner
+report_view_model.highlights.why_this_score
+report_view_model.highlights.what_to_watch
+  ↓
+Source: SummaryGenerator.generate() → OpenAI 4-1 (gpt-4o) → summary_generation.yaml prompt
+  ↓
+Frontend: SummaryPanel.jsx displays the data
+```
+
+### Security/Privacy/Governance Flow:
+```
+API Endpoint (/api/scan/results/{extension_id})
+  ↓
+report_view_model.layer_details.{security|privacy|governance}
+  ↓
+Source: LayerDetailsGenerator.generate() → CURRENTLY uses wrong model → layer_details_generation.yaml prompt
+  ↓
+Frontend: LayerModal.jsx displays the data
+```
+
+---
+
+## 6. ACTION ITEMS
+
+1. ✅ **DONE:** Summary uses OpenAI 4-1 (gpt-4o)
+2. ⚠️ **TODO:** Update LayerDetailsGenerator to use `gpt-4o` instead of `rits/openai/gpt-oss-120b`
+3. ⚠️ **TODO:** Increase temperature in LayerDetailsGenerator from 0.05 to 0.3
+4. ⚠️ **TODO:** Update layer_details_generation.yaml prompt to emphasize plain language
+5. ⚠️ **TODO:** Increase character limits in layer_details_generation.yaml (120→150, 90→120)
+
+---
+
+## 7. ARCHITECTURE DIAGRAM
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    API ENDPOINT                             │
+│         GET /api/scan/results/{extension_id}                │
+└──────────────────────┬──────────────────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────────────┐
+│              build_report_view_model()                      │
+│         (src/extension_shield/core/report_view_model.py)    │
+└──────────────────────┬──────────────────────────────────────┘
+                       │
+        ┌──────────────┼──────────────┐
+        │              │              │
+        ▼              ▼              ▼
+┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+│   SUMMARY    │ │   LAYERS     │ │   SCORES     │
+│              │ │              │ │              │
+│ LLM: gpt-4o  │ │ LLM: ❌ WRONG│ │ Deterministic│
+│ ✅ WORKING   │ │ ⚠️ NEEDS FIX │ │ ✅ WORKING   │
+└──────────────┘ └──────────────┘ └──────────────┘
+        │              │              │
+        └──────────────┼──────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────────────┐
+│              report_view_model                              │
+│  {                                                          │
+│    scorecard: { one_liner, ... },                          │
+│    highlights: { why_this_score, what_to_watch },          │
+│    layer_details: { security, privacy, governance }         │
+│  }                                                          │
+└──────────────────────┬──────────────────────────────────────┘
+                       │
+                       ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    FRONTEND                                 │
+│  SummaryPanel.jsx + LayerModal.jsx                          │
+└─────────────────────────────────────────────────────────────┘
+```
+
+---
+
+**End of Audit**
+

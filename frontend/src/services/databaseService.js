@@ -73,14 +73,34 @@ class DatabaseService {
    */
   async getRecentScans(limit = 10) {
     try {
-      const response = await fetch(`${this.API_BASE_URL}/recent?limit=${limit}`);
+      const url = `${this.API_BASE_URL}/recent?limit=${limit}`;
+      console.log(`[databaseService] Fetching recent scans from: ${url}`);
+      
+      const response = await fetch(url);
+      
       if (!response.ok) {
-        throw new Error("Failed to fetch recent scans");
+        const errorText = await response.text();
+        console.error(`[databaseService] API error (${response.status}):`, errorText);
+        throw new Error(`Failed to fetch recent scans: ${response.status} ${errorText}`);
       }
+      
       const data = await response.json();
+      console.log(`[databaseService] Received ${data.recent?.length || 0} recent scans`);
+      
+      if (!data.recent) {
+        console.warn("[databaseService] Response missing 'recent' field:", data);
+        return [];
+      }
+      
       return data.recent || [];
     } catch (error) {
-      console.error("Error fetching recent scans:", error);
+      console.error("[databaseService] Error fetching recent scans:", error);
+      console.error("[databaseService] Error details:", {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      });
+      // Return empty array to prevent UI crashes, but log the error
       return [];
     }
   }

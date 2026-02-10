@@ -8,12 +8,16 @@ import os
 import sqlite3
 import json
 import uuid
+import logging
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
 from typing import Optional, Dict, Any, List
 from contextlib import contextmanager
 
 from extension_shield.core.config import get_settings
+from extension_shield.utils.json_encoder import safe_json_dumps
+
+logger = logging.getLogger(__name__)
 
 
 class Database:
@@ -141,12 +145,12 @@ class Database:
             )
 
             # Create indexes for better query performance
-            cursor.execute(
-                """
-                CREATE INDEX IF NOT EXISTS idx_extension_id 
-                ON scan_results(extension_id)
-            """
-            )
+            # Note: idx_extension_id omitted - extension_id UNIQUE already creates sqlite_autoindex
+            # Migration: drop redundant idx_extension_id if it exists (duplicate of UNIQUE's autoindex)
+            try:
+                cursor.execute("DROP INDEX IF EXISTS idx_extension_id")
+            except Exception:
+                pass
             cursor.execute(
                 """
                 CREATE INDEX IF NOT EXISTS idx_timestamp 
@@ -234,14 +238,14 @@ class Database:
                         risk_dist.get("high", 0),
                         risk_dist.get("medium", 0),
                         risk_dist.get("low", 0),
-                        json.dumps(result.get("metadata", {})),
-                        json.dumps(result.get("manifest", {})),
-                        json.dumps(result.get("permissions_analysis", {})),
-                        json.dumps(result.get("sast_results", {})),
-                        json.dumps(result.get("webstore_analysis", {})),
-                        json.dumps(summary_data),
+                        safe_json_dumps(result.get("metadata", {})),
+                        safe_json_dumps(result.get("manifest", {})),
+                        safe_json_dumps(result.get("permissions_analysis", {})),
+                        safe_json_dumps(result.get("sast_results", {})),
+                        safe_json_dumps(result.get("webstore_analysis", {})),
+                        safe_json_dumps(summary_data),
                         result.get("extracted_path"),
-                        json.dumps(result.get("extracted_files", [])),
+                        safe_json_dumps(result.get("extracted_files", [])),
                         result.get("icon_path"),  # Relative path to icon (e.g., "icons/128.png")
                         result.get("error"),
                         datetime.now().isoformat(),
@@ -251,9 +255,12 @@ class Database:
                 # Update statistics
                 self._update_statistics()
 
+                print(f"[save_scan_result SQLite] Successfully saved scan for extension_id={extension_id}, status={result.get('status')}")
                 return True
         except Exception as e:
-            print(f"Error saving scan result: {e}")
+            import traceback
+            print(f"[save_scan_result SQLite] ERROR saving scan result for extension_id={result.get('extension_id')}: {e}")
+            print(f"[save_scan_result SQLite] Traceback: {traceback.format_exc()}")
             return False
 
     def increment_page_view(self, day: str, path: str) -> int:
@@ -545,25 +552,33 @@ class Database:
                 rows = cursor.fetchall()
                 result_rows = []
                 for row in rows:
-                    row_dict = self._row_to_dict(row)
-                    
-                    # Extract modern fields from summary JSON if present (for signal calculation)
-                    summary = row_dict.get("summary", {})
-                    if isinstance(summary, dict):
-                        if "scoring_v2" in summary:
-                            row_dict["scoring_v2"] = summary.get("scoring_v2")
-                        if "report_view_model" in summary:
-                            row_dict["report_view_model"] = summary.get("report_view_model")
-                        if "governance_bundle" in summary:
-                            row_dict["governance_bundle"] = summary.get("governance_bundle")
-                        if "virustotal_analysis" in summary:
-                            row_dict["virustotal_analysis"] = summary.get("virustotal_analysis")
-                    
-                    result_rows.append(row_dict)
+                    try:
+                        row_dict = self._row_to_dict(row)
+                        
+                        # Extract modern fields from summary JSON if present (for signal calculation)
+                        summary = row_dict.get("summary", {})
+                        if isinstance(summary, dict):
+                            if "scoring_v2" in summary:
+                                row_dict["scoring_v2"] = summary.get("scoring_v2")
+                            if "report_view_model" in summary:
+                                row_dict["report_view_model"] = summary.get("report_view_model")
+                            if "governance_bundle" in summary:
+                                row_dict["governance_bundle"] = summary.get("governance_bundle")
+                            if "virustotal_analysis" in summary:
+                                row_dict["virustotal_analysis"] = summary.get("virustotal_analysis")
+                        
+                        result_rows.append(row_dict)
+                    except Exception as row_error:
+                        print(f"Error processing row in get_recent_scans: {row_error}")
+                        # Continue processing other rows
+                        continue
                 
+                print(f"[get_recent_scans] Retrieved {len(result_rows)} scans from database")
                 return result_rows
         except Exception as e:
+            import traceback
             print(f"Error getting recent scans: {e}")
+            print(f"Traceback: {traceback.format_exc()}")
             return []
 
     def delete_scan_result(self, extension_id: str) -> bool:
@@ -777,9 +792,12 @@ class SupabaseDatabase:
 
             # Upsert on extension_id
             self.client.table(self.table_scan_results).upsert(row).execute()
+            print(f"[save_scan_result Supabase] Successfully saved scan for extension_id={extension_id}, status={result.get('status')}")
             return True
         except Exception as e:
-            print(f"Error saving scan result (Supabase): {e}")
+            import traceback
+            print(f"[save_scan_result Supabase] ERROR saving scan result for extension_id={result.get('extension_id')}: {e}")
+            print(f"[save_scan_result Supabase] Traceback: {traceback.format_exc()}")
             return False
 
     def add_user_scan_history(self, user_id: str, extension_id: str) -> bool:
@@ -976,33 +994,42 @@ class SupabaseDatabase:
         try:
             resp = (
                 self.client.table(self.table_scan_results)
-                .select("extension_id, extension_name, scanned_at, security_score, risk_level, total_findings, total_files, metadata, sast_results, permissions_analysis, manifest, summary")
+                .select("extension_id, extension_name, scanned_at, security_score, risk_level, total_findings, total_files, high_risk_count, medium_risk_count, low_risk_count, metadata, webstore_analysis, sast_results, permissions_analysis, manifest, summary")
                 .eq("status", "completed")
                 .order("scanned_at", desc=True)
                 .limit(limit)
                 .execute()
             )
             rows = getattr(resp, "data", None) or []
+            print(f"[get_recent_scans Supabase] Retrieved {len(rows)} scans from database")
+            
             # Map scanned_at → timestamp for API compatibility
             # Extract modern fields from summary for frontend compatibility
             for row in rows:
-                if "scanned_at" in row:
-                    row["timestamp"] = row.pop("scanned_at")
-                
-                # Extract modern fields from summary JSONB if present
-                summary = row.get("summary", {})
-                if isinstance(summary, dict):
-                    if "scoring_v2" in summary:
-                        row["scoring_v2"] = summary.get("scoring_v2")
-                    if "report_view_model" in summary:
-                        row["report_view_model"] = summary.get("report_view_model")
-                    if "governance_bundle" in summary:
-                        row["governance_bundle"] = summary.get("governance_bundle")
-                    if "virustotal_analysis" in summary:
-                        row["virustotal_analysis"] = summary.get("virustotal_analysis")
+                try:
+                    if "scanned_at" in row:
+                        row["timestamp"] = row.pop("scanned_at")
+                    
+                    # Extract modern fields from summary JSONB if present
+                    summary = row.get("summary", {})
+                    if isinstance(summary, dict):
+                        if "scoring_v2" in summary:
+                            row["scoring_v2"] = summary.get("scoring_v2")
+                        if "report_view_model" in summary:
+                            row["report_view_model"] = summary.get("report_view_model")
+                        if "governance_bundle" in summary:
+                            row["governance_bundle"] = summary.get("governance_bundle")
+                        if "virustotal_analysis" in summary:
+                            row["virustotal_analysis"] = summary.get("virustotal_analysis")
+                except Exception as row_error:
+                    print(f"Error processing row in get_recent_scans (Supabase): {row_error}")
+                    # Continue processing other rows
+                    continue
             return rows
         except Exception as e:
+            import traceback
             print(f"Error getting recent scans (Supabase): {e}")
+            print(f"Traceback: {traceback.format_exc()}")
             return []
 
     def delete_scan_result(self, extension_id: str) -> bool:

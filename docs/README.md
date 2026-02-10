@@ -65,11 +65,15 @@ This directory contains comprehensive documentation for the ExtensionShield proj
   - Testing and verification steps
   - Comparison with OpenAI setup (why WatsonX needs extra steps)
 
-### Database Migrations
+### Database & API
 
-- **[supabase_migrations/](./supabase_migrations/)** - Supabase database migrations
-  - SQL migration files for schema changes
-  - Versioned migration history
+- **[DATABASE_README.md](./DATABASE_README.md)** - Database schema, SQLite ↔ Postgres mapping, API routes
+  - Single source of truth: `supabase/migrations/` for Postgres
+  - Schema mapping (timestamp → scanned_at, icon_path, risk_level, etc.)
+  - Which API routes use which tables
+  - Env vars for dev / staging / prod
+
+- **[API_AND_SUPABASE_IMPLEMENTATION.md](./API_AND_SUPABASE_IMPLEMENTATION.md)** - What is implemented on prod (Supabase config, Task 1: User login & Get Two scans, full API list, data flow)
 
 ---
 
@@ -123,5 +127,5 @@ This directory contains comprehensive documentation for the ExtensionShield proj
 - **CSP_SECURITY_GUIDE.md** provides detailed CSP implementation and troubleshooting
 - **LLM_CONFIGURATION.md** provides comprehensive guide for configuring and switching between LLM providers
 - **WATSONX_SETUP_GUIDE.md** provides detailed setup instructions for WatsonX (more complex than OpenAI, requires IBM Cloud account and service setup)
-- Database migrations are versioned in `supabase_migrations/`
+- Database schema and migrations are documented in [DATABASE_README.md](./DATABASE_README.md); Postgres migrations live in `supabase/migrations/`
 

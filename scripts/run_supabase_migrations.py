@@ -2,8 +2,11 @@
 """
 Supabase migrations runner.
 
-Applies SQL files in docs/supabase_migrations/ in order, tracks applied
-migrations in public.schema_migrations, and is safe to run multiple times.
+Applies SQL files in supabase/migrations/ (timestamp-prefixed names, e.g. 20260205000000_*.sql)
+in order, tracks applied migrations in public.schema_migrations, and is safe to run multiple times.
+
+For production/staging, prefer: supabase link --project-ref <ref> && supabase db push
+This script is for environments where the Supabase CLI is not used (e.g. CI with DATABASE_URL).
 
 Requirements:
 - SUPABASE_URL + SUPABASE_SERVICE_ROLE_KEY must be set (server-side only)
@@ -21,7 +24,8 @@ from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Set, Tuple
 
 
-MIGRATION_FILENAME_RE = re.compile(r"^\d{3}[a-z]?_.*\.sql$")
+# Supabase CLI format: 14-digit timestamp + _ + name + .sql (e.g. 20260205000000_scan_results.sql)
+MIGRATION_FILENAME_RE = re.compile(r"^\d{14}_.*\.sql$")
 CONCURRENT_INDEX_RE = re.compile(r"\bcreate\s+index\s+concurrently\b", re.IGNORECASE)
 CONCURRENT_DROP_INDEX_RE = re.compile(r"\bdrop\s+index\s+concurrently\b", re.IGNORECASE)
 AUTOCOMMIT_STATEMENTS = [
@@ -214,7 +218,7 @@ def _print_summary(applied: List[str], skipped: List[str]) -> None:
 
 def main() -> int:
     repo_root = Path(__file__).resolve().parents[1]
-    migrations_dir = repo_root / "docs" / "supabase_migrations"
+    migrations_dir = repo_root / "supabase" / "migrations"
 
     try:
         migration_files = discover_migration_files(migrations_dir)

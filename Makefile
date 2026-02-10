@@ -1,4 +1,4 @@
-.PHONY: help format lint test api frontend clean install analyze docker-build docker-up docker-down docker-logs migrate start lint-migrations supabase-diff supabase-push supabase-start supabase-stop supabase-reset supabase-migration-up
+.PHONY: help format lint test api frontend clean install analyze docker-build docker-up docker-down docker-logs migrate start validate-postgres lint-migrations supabase-diff supabase-push supabase-start supabase-stop supabase-reset supabase-migration-up
 
 # Default target - show help
 help:
@@ -23,6 +23,7 @@ help:
 	@echo "  make frontend        - Start React frontend dev server (port 5173)"
 	@echo "  make migrate         - Run Supabase migrations (safe, prod only)"
 	@echo "  make start           - Run migrations (if Supabase) then start API"
+	@echo "  make validate-postgres - Validate local dev pulls from Supabase Postgres"
 	@echo "  make analyze URL=... - Analyze extension from Chrome Web Store URL"
 	@echo "  make analyze-file FILE=... - Analyze local CRX/ZIP file"
 	@echo ""
@@ -82,6 +83,11 @@ api:
 	@echo "Access at: http://localhost:8007"
 	@echo "API docs at: http://localhost:8007/docs"
 	uv run extension-shield serve --reload
+
+# Validate local dev is pulling from Supabase Postgres (requires DB_BACKEND=supabase + Supabase env)
+validate-postgres:
+	@echo "Validating Supabase Postgres connection and scan_results..."
+	python scripts/validate_postgres_local.py
 
 # Run Supabase migrations (prod only, safe to run multiple times)
 migrate:

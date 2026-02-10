@@ -212,16 +212,24 @@ const ScannerPage = () => {
         // This reduces the number of API calls significantly
         const initialLimit = 25;
         const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error("Request timeout")), 5000)
+          setTimeout(() => reject(new Error("Request timeout")), 10000)
         );
         
+        console.log(`[ScannerPage] Fetching ${initialLimit} recent scans...`);
         const historyPromise = databaseService.getRecentScans(initialLimit);
         const history = await Promise.race([historyPromise, timeoutPromise]);
 
         console.log(`[ScannerPage] Loaded ${history?.length || 0} scans from API`);
+        
+        if (history && history.length > 0) {
+          console.log(`[ScannerPage] Sample scan keys:`, Object.keys(history[0] || {}));
+        }
 
         if (!history || history.length === 0) {
-          console.warn("[ScannerPage] No scans found in API response");
+          console.warn("[ScannerPage] No scans found in API response - this could mean:");
+          console.warn("  1. No scans have been completed yet");
+          console.warn("  2. API endpoint is not working");
+          console.warn("  3. Database connection issue");
           if (isMounted) {
             setAllScans([]);
             setLoading(false);
