@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { Button } from "../../components/ui/button";
 import RocketGame from "../../components/RocketGame";
 import { useScan } from "../../context/ScanContext";
-import { EXTENSION_ICON_PLACEHOLDER } from "../../utils/constants";
+import { EXTENSION_ICON_PLACEHOLDER, getExtensionIconUrl } from "../../utils/constants";
 import realScanService from "../../services/realScanService";
 import ScanHUD from "../../components/ScanHUD";
 import { normalizeExtensionId } from "../../utils/extensionId";
@@ -143,8 +143,7 @@ const ScanProgressPage = () => {
   useEffect(() => {
     if (!scanId) return;
     
-    const API_BASE_URL = import.meta.env.VITE_API_URL || "";
-    const iconUrl = `${API_BASE_URL}/api/scan/icon/${scanId}`;
+    const iconUrl = getExtensionIconUrl(scanId);
     
     // Try to load the icon with error handling
     try {

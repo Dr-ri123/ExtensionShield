@@ -8,7 +8,7 @@ import {
   getSignalColorClass,
 } from "../utils/signalMapper";
 import { enrichScans } from "../utils/scanEnrichment";
-import { EXTENSION_ICON_PLACEHOLDER } from "../utils/constants";
+import { EXTENSION_ICON_PLACEHOLDER, getExtensionIconUrl } from "../utils/constants";
 import SEOHead from "../components/SEOHead";
 import "./ScanHistoryPage.scss";
 
@@ -140,8 +140,6 @@ const ScanHistoryPage = () => {
   const navigate = useNavigate();
   const { isAuthenticated, openSignInModal, accessToken } = useAuth();
 
-  // API base URL - use environment variable or same-origin
-  const API_BASE_URL = import.meta.env.VITE_API_URL || "";
   const supabaseConfigured = Boolean(import.meta.env.VITE_SUPABASE_URL);
   const canLoadHistory = isAuthenticated || !supabaseConfigured || SHOW_TABLE_WITHOUT_SIGN_IN;
 
@@ -151,13 +149,7 @@ const ScanHistoryPage = () => {
     return () => clearTimeout(t);
   }, [searchTerm]);
 
-  // Helper function to get proper image source
-  const getIconSrc = (extensionId) => {
-    if (extensionId) {
-      return `${API_BASE_URL}/api/scan/icon/${extensionId}`;
-    }
-    return EXTENSION_ICON_PLACEHOLDER;
-  };
+  const getIconSrc = (extensionId) => getExtensionIconUrl(extensionId);
 
   useEffect(() => {
     let isMounted = true;

@@ -9,7 +9,7 @@ import {
   getSignalColorClass,
 } from "../../utils/signalMapper";
 import { enrichScans } from "../../utils/scanEnrichment";
-import { EXTENSION_ICON_PLACEHOLDER } from "../../utils/constants";
+import { EXTENSION_ICON_PLACEHOLDER, getExtensionIconUrl } from "../../utils/constants";
 import SEOHead from "../../components/SEOHead";
 import "./ScannerPage.scss";
 
@@ -176,17 +176,8 @@ const ScannerPage = () => {
     handleFileUpload,
   } = useScan();
 
-  // API base URL - use environment variable or same-origin
-  const API_BASE_URL = import.meta.env.VITE_API_URL || "";
-
-  // Helper function to get proper image source from extension data
-  const getIconSrc = (extensionId) => {
-    // Use the icon from extracted extension via API, fallback to placeholder
-    if (extensionId) {
-      return `${API_BASE_URL}/api/scan/icon/${extensionId}`;
-    }
-    return EXTENSION_ICON_PLACEHOLDER;
-  };
+  // Helper: icon URL from API (same-origin or VITE_API_URL); placeholder used on error
+  const getIconSrc = (extensionId) => getExtensionIconUrl(extensionId);
 
   const [allScans, setAllScans] = useState([]);
   const [loading, setLoading] = useState(true);

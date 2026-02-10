@@ -16,6 +16,7 @@ import StatusMessage from "../../components/StatusMessage";
 import { useScan } from "../../context/ScanContext";
 import realScanService from "../../services/realScanService";
 import { normalizeScanResultSafe, validateEvidenceIntegrity, gateIdToLayer, extractFindingsByLayer } from "../../utils/normalizeScanResult";
+import { getExtensionIconUrl, EXTENSION_ICON_PLACEHOLDER } from "../../utils/constants";
 import "./ScanResultsPageV2.scss";
 
 /**
@@ -192,16 +193,8 @@ const ScanResultsPageV2 = () => {
     setLayerModal({ open: false, layer: null });
   };
 
-  const baseURL = import.meta.env.VITE_API_URL || "";
   const extensionIdForIcon = viewModel?.meta?.extensionId || scanId;
-  // Construct icon URL - use full URL if baseURL is set, otherwise use relative path
-  const heroIconUrl =
-    viewModel?.meta?.iconUrl ||
-    (extensionIdForIcon 
-      ? (baseURL 
-          ? `${baseURL}/api/scan/icon/${extensionIdForIcon}` 
-          : `/api/scan/icon/${extensionIdForIcon}`)
-      : null);
+  const heroIconUrl = extensionIdForIcon ? getExtensionIconUrl(extensionIdForIcon) : null;
 
   // Reset icon visibility when viewing a different extension
   useEffect(() => {
@@ -432,9 +425,8 @@ const ScanResultsPageV2 = () => {
                 className="hero-icon"
                 loading="lazy"
                 onError={(e) => {
-                  // Try to fallback to placeholder or hide icon
                   e.target.onerror = null;
-                  setShowHeroIcon(false);
+                  e.target.src = EXTENSION_ICON_PLACEHOLDER;
                 }}
               />
             )}

@@ -2207,6 +2207,7 @@ async def get_scan_results(extension_id: str, http_request: Request):
             "impact_analysis": results.get("impact_analysis", {}),
             "privacy_compliance": results.get("privacy_compliance", {}),
             "extracted_path": results.get("extracted_path"),
+            "icon_path": results.get("icon_path"),
             "extracted_files": results.get("extracted_files", []),
             "overall_security_score": results.get("security_score", 0),
             "total_findings": results.get("total_findings", 0),
