@@ -660,7 +660,9 @@ def _extension_icon_placeholder_response() -> Response:
         content=svg_bytes,
         media_type="image/svg+xml",
         headers={
-            "Cache-Control": "public, max-age=3600",
+            # Don't cache placeholders aggressively; icon may become available moments later.
+            "Cache-Control": "no-store, max-age=0",
+            "Pragma": "no-cache",
             "Access-Control-Allow-Origin": "*",
             "X-Extension-Icon-Source": "placeholder",
         },
@@ -695,6 +697,7 @@ def _extension_icon_response_from_base64(
         headers={
             "Cache-Control": "public, max-age=86400",
             "Access-Control-Allow-Origin": "*",
+            "X-Extension-Icon-Source": "db_blob",
         },
     )
 
@@ -708,6 +711,7 @@ def _extension_icon_file_response(icon_file_path: str) -> FileResponse:
         headers={
             "Cache-Control": "public, max-age=86400",
             "Access-Control-Allow-Origin": "*",
+            "X-Extension-Icon-Source": "filesystem",
         },
     )
 
@@ -857,6 +861,135 @@ def extract_icon_path(manifest: Dict[str, Any], extracted_path: Optional[str]) -
     return None
 
 
+def _relpath_from_extracted(extracted_path: str, abs_path: str) -> Optional[str]:
+    """Return a safe, normalized (POSIX) relpath within extracted_path."""
+    try:
+        rel = os.path.relpath(abs_path, start=extracted_path)
+    except Exception:
+        return None
+    # Guard: must stay within extracted_path
+    if rel.startswith(".."):
+        return None
+    return rel.replace(os.sep, "/")
+
+
+def _find_icon_path_on_disk(
+    extracted_path: Optional[str], manifest: Optional[Dict[str, Any]] = None
+) -> Optional[str]:
+    """
+    Find a real icon file path inside an extracted extension directory.
+
+    This is used at scan completion to persist icon bytes even when manifest.icons is missing
+    or points to a non-existent file. It intentionally mirrors the icon endpoint's fallback
+    search strategy, but returns a relative path suitable for DB storage (e.g. "icons/128.png").
+    """
+    if not extracted_path:
+        return None
+    if not os.path.isdir(extracted_path):
+        return None
+
+    ex = extracted_path
+    ex_abs = os.path.abspath(ex)
+
+    def _candidate(rel_parts: list[str]) -> Optional[str]:
+        abs_path = os.path.abspath(os.path.join(ex, *rel_parts))
+        if os.path.commonpath([ex_abs, abs_path]) != ex_abs:
+            return None
+        if os.path.isfile(abs_path):
+            return _relpath_from_extracted(ex, abs_path)
+        return None
+
+    # 1) If manifest provides icon paths, try all of them (largest-first if keys are numeric).
+    icons = (manifest or {}).get("icons") if isinstance(manifest, dict) else None
+    if isinstance(icons, dict) and icons:
+        def _key_to_int(k: Any) -> int:
+            try:
+                return int(str(k))
+            except Exception:
+                return -1
+
+        # Prefer numeric keys (sizes) descending; otherwise preserve insertion order.
+        icon_items = list(icons.items())
+        if any(_key_to_int(k) >= 0 for k, _ in icon_items):
+            icon_items.sort(key=lambda kv: _key_to_int(kv[0]), reverse=True)
+
+        for _, rel in icon_items:
+            if isinstance(rel, str) and rel:
+                found = _candidate([rel])
+                if found:
+                    return found
+
+    # 2) Common conventions (icons/, root, images/)
+    icon_sizes = ["256", "128", "96", "64", "48", "32", "16"]
+    exts = [".png", ".jpg", ".jpeg", ".webp", ".svg"]
+
+    # icons/<size>.(png|...)
+    for size in icon_sizes:
+        for ext in exts:
+            found = _candidate(["icons", f"{size}{ext}"])
+            if found:
+                return found
+            found = _candidate(["icons", f"icon{size}{ext}"])
+            if found:
+                return found
+
+    # root icon files
+    for size in icon_sizes:
+        for ext in exts:
+            for name in (f"icon{size}{ext}", f"{size}{ext}", f"icon_{size}{ext}"):
+                found = _candidate([name])
+                if found:
+                    return found
+
+    # images/ common names
+    for name in (
+        "icon256.png",
+        "icon128.png",
+        "icon96.png",
+        "icon64.png",
+        "icon48.png",
+        "icon32.png",
+        "icon16.png",
+        "icon.png",
+        "logo.png",
+        "logo.svg",
+    ):
+        found = _candidate(["images", name])
+        if found:
+            return found
+
+    # 3) Last resort: pick the largest-looking image in icons/ or images/
+    for folder in ("icons", "images"):
+        folder_abs = os.path.join(ex, folder)
+        if not os.path.isdir(folder_abs):
+            continue
+        try:
+            candidates = []
+            for item in os.listdir(folder_abs):
+                lower = item.lower()
+                if not any(lower.endswith(ext) for ext in exts):
+                    continue
+                abs_path = os.path.abspath(os.path.join(folder_abs, item))
+                if os.path.commonpath([ex_abs, abs_path]) != ex_abs:
+                    continue
+                if not os.path.isfile(abs_path):
+                    continue
+                try:
+                    size_bytes = os.path.getsize(abs_path)
+                except Exception:
+                    size_bytes = 0
+                candidates.append((size_bytes, abs_path))
+            if candidates:
+                candidates.sort(key=lambda t: t[0], reverse=True)
+                rel = _relpath_from_extracted(ex, candidates[0][1])
+                if rel:
+                    return rel
+        except Exception:
+            continue
+
+    return None
+
+
 async def run_analysis_workflow(url: str, extension_id: str):
     """Run the analysis workflow in the background."""
     workflow_start = datetime.now()
@@ -924,6 +1057,8 @@ async def run_analysis_workflow(url: str, extension_id: str):
             # Extract icon path from manifest
             extracted_path = final_state.get("extension_dir")
             icon_path = extract_icon_path(manifest, extracted_path)
+            if not icon_path and extracted_path:
+                icon_path = _find_icon_path_on_disk(extracted_path, manifest)
             icon_base64, icon_media_type = _extract_icon_blob_for_storage(
                 icon_path=icon_path,
                 extracted_path=extracted_path,
