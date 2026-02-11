@@ -119,7 +119,18 @@ class LayerDetailsGenerator:
         if not prompt_text:
             raise ValueError("layer_details_generation prompt not found")
         
-        template = PromptTemplate.from_template(prompt_text)
+        # Use jinja2 format since YAML templates use {{ variable }} syntax
+        template = PromptTemplate(
+            input_variables=[
+                "security_score", "security_risk_level", "security_factors_json", "security_gates_json",
+                "privacy_score", "privacy_risk_level", "privacy_factors_json", "privacy_gates_json",
+                "governance_score", "governance_risk_level", "governance_factors_json", "governance_gates_json",
+                "permissions_summary_json", "host_access_summary_json", "sast_result_json",
+                "network_evidence_json", "manifest_json",
+            ],
+            template=prompt_text,
+            template_format="jinja2",
+        )
         
         # Fill in template variables
         template = template.partial(

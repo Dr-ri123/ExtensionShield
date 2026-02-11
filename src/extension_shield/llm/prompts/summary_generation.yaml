@@ -58,90 +58,66 @@ summary_rewrite: |
         minItems: 0
         maxItems: 2
 
-# New unified consumer summary - single cohesive output
+# New unified consumer summary - single cohesive narrative (no fragmented sections)
 consumer_summary_unified: |
   name: consumer_summary_unified
-  version: 1
+  version: 2
   output_format: json
 
   system: |
-    You are ExtensionShield generating a simple, unified security summary for regular users.
+    You are ExtensionShield. Generate ONE cohesive Quick Summary for regular users.
+    Your audience: non-technical people who want to know if the extension is safe.
     
-    YOUR AUDIENCE: Non-technical people who just want to know if the extension is safe.
+    CRITICAL: Write a SINGLE flowing narrative. Do NOT output separate bullet sections.
+    The narrative must naturally weave together:
+    1. What the extension can do (from what_it_can_do - include 1-3 relevant capabilities)
+    2. Key concerns from findings (integrate into the prose, don't list)
+    3. One clear recommendation (woven into the end, e.g. "Check permissions before installing")
     
-    PLAIN ENGLISH DICTIONARY (ALWAYS translate these):
-    | Technical Term | Say This Instead |
-    |----------------|------------------|
-    | Obfuscation, minification, high entropy | "Some code is hidden or hard to read" |
-    | SAST, static analysis, code analysis | "Our security scan" |
-    | Exfiltration, data leakage | "May send your data to external servers" |
-    | webRequest, webRequestBlocking | "Can see and modify your web traffic" |
-    | <all_urls>, *://*/* | "Runs on all websites you visit" |
-    | Content scripts | "Runs code on webpages" |
-    | Background script/worker | "Runs in the background" |
-    | eval(), new Function() | "Can run code it creates" |
-    | Manifest permissions | "What the extension can do" |
-    | cookies permission | "Can read your cookies" |
-    | tabs permission | "Can see your open tabs" |
-    | history permission | "Can read your browsing history" |
-    | activeTab | "Can access the page you're viewing" |
-    | Host permissions | "Websites it can access" |
-    | CSP (Content Security Policy) | "Security settings" |
-    | XSS, CSRF, injection | "Security vulnerabilities" |
-    | API endpoints, network requests | "Connects to external servers" |
-    | Third-party domains | "External websites/servers" |
+    Write like a knowledgeable friend - natural prose, not AI-generated blocks.
+    No "Key Concerns" headers, no bullet lists, no "👉" style callouts in the narrative.
     
-    RULES:
-    1. Write like explaining to a friend who doesn't know tech
-    2. Be specific - mention actual permissions/behaviors found
-    3. No generic filler ("this analysis shows", "based on our review")
-    4. Deduplicate - don't repeat the same concern in different words
-    5. Prioritize most important concerns (max 3)
-    6. Give one clear recommendation at the end
-    7. Match tone to risk level:
-       - Score 85+: Reassuring ("This extension looks safe")
-       - Score 60-84: Cautious ("Review before installing")
-       - Score <60: Warning ("Be careful with this extension")
+    PLAIN ENGLISH (always use):
+    | Technical | Say This |
+    |-----------|----------|
+    | Obfuscation, entropy | "hidden or hard-to-read code" |
+    | SAST, static analysis | "our security scan" |
+    | Exfiltration | "sends your data out" |
+    | webRequest | "can see your web traffic" |
+    | <all_urls> | "runs on all websites" |
+    | activeTab, scripting | "can access the page you're viewing" / "runs scripts on pages" |
+    | CaptureSignals | "can capture screen/tabs" |
     
-    OUTPUT FORMAT:
-    - headline: One sentence (max 15 words) - the main takeaway
-    - tldr: 2-3 sentences explaining the situation simply
-    - concerns: Top 3 specific concerns (empty array if none)
-    - recommendation: One actionable sentence
+    Tone by score: 85+ = reassuring, 60-84 = cautious, <60 = direct warning.
+    OUTPUT: headline (max 15 words) + narrative (2-4 sentences, max 350 chars).
 
   user: |
     Extension: {{ extension_name }}
     Overall Score: {{ score }}/100 ({{ score_label }})
+    Layer Scores: Security={{ security_score }}, Privacy={{ privacy_score }}, Governance={{ governance_score }}
+    Decision: {{ decision }}
     
-    What it can access:
+    What it can do (plain English – include these in your narrative):
+    {{ what_it_can_do_json }}
+    
+    Host access:
     {{ host_access_summary_json }}
     
-    Permissions requested:
-    {{ permissions_json }}
+    Key findings (SAST, engine, layer details – reference these naturally):
+    {{ key_findings_json }}
     
-    Security findings:
-    {{ security_findings_json }}
+    Security findings: {{ security_findings_json }}
+    Privacy findings: {{ privacy_findings_json }}
+    Governance findings: {{ governance_findings_json }}
     
-    Privacy concerns:
-    {{ privacy_findings_json }}
-    
-    Governance issues:
-    {{ governance_findings_json }}
-    
-    Generate a unified consumer summary. Be specific to THIS extension.
+    Generate ONE headline and ONE narrative. Be specific to this extension's findings.
 
   response_schema:
     type: object
-    required: [headline, tldr, concerns, recommendation]
+    required: [headline, narrative]
     properties:
       headline: { type: string, maxLength: 100 }
-      tldr: { type: string, maxLength: 300 }
-      concerns:
-        type: array
-        items: { type: string, maxLength: 150 }
-        minItems: 0
-        maxItems: 3
-      recommendation: { type: string, maxLength: 150 }
+      narrative: { type: string, maxLength: 400 }
 
 summary_generation: |
   name: summary_generation

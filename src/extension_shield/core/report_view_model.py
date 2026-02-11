@@ -38,6 +38,63 @@ PERMISSION_TO_PLAIN = {
 }
 
 
+def _build_what_it_can_do(
+    manifest: Optional[Dict[str, Any]],
+    analysis_results: Optional[Dict[str, Any]],
+    host_access: Dict[str, Any],
+) -> List[str]:
+    """Build human-readable 'What It Can Do' list for LLM prompt. Deduplicated."""
+    seen: set = set()
+    out: List[str] = []
+    manifest = manifest or {}
+    perms = list(manifest.get("permissions", []))
+    hosts = list(manifest.get("host_permissions", []))
+
+    # High-risk first
+    perm_analysis = (analysis_results or {}).get("permissions_analysis", {})
+    high_risk = perm_analysis.get("high_risk", []) or perm_analysis.get("highRiskPermissions", [])
+    for p in high_risk:
+        label = PERMISSION_TO_PLAIN.get(p, f"can use {p}")
+        key = label.lower()
+        if key not in seen:
+            seen.add(key)
+            out.append(label)
+
+    for p in perms:
+        if p in high_risk:
+            continue
+        label = PERMISSION_TO_PLAIN.get(p, f"can use {p}")
+        key = label.lower()
+        if key not in seen:
+            seen.add(key)
+            out.append(label)
+
+    for h in hosts:
+        if h in LayerHumanizer.HOST_EXPLANATIONS:
+            label = LayerHumanizer.HOST_EXPLANATIONS[h]
+        elif "://" in str(h):
+            try:
+                from urllib.parse import urlparse
+                parsed = urlparse(h.replace("*", "x"))
+                domain = parsed.netloc or parsed.path.split("/")[0] or "specific sites"
+                label = f"access {domain}"
+            except Exception:
+                label = f"access {h}"
+        else:
+            label = f"access {h}"
+        key = label.lower()
+        if key not in seen:
+            seen.add(key)
+            out.append(label)
+
+    host_scope = host_access.get("host_scope_label", "")
+    if host_scope == "ALL_WEBSITES" and "runs on all websites" not in seen:
+        seen.add("runs on all websites")
+        out.insert(0, "runs on all websites")
+
+    return out[:12]
+
+
 logger = logging.getLogger(__name__)
 
 
@@ -342,26 +399,46 @@ def build_unified_consumer_summary(
                 elif layer_name == "governance":
                     governance_findings.extend([p for p in key_points if p])
             
-            # From scoring factors
+            # From scoring factors (scoring_v2 uses security_layer, privacy_layer, governance_layer)
             if scoring_v2:
-                for layer in scoring_v2.get("layers", {}).values():
-                    if isinstance(layer, dict):
-                        for factor in layer.get("factors", []):
-                            if isinstance(factor, dict) and factor.get("severity", 0) >= 0.3:
-                                finding = factor.get("name", "")
-                                details = factor.get("details", {})
-                                if isinstance(details, dict):
-                                    desc = details.get("description", "")
-                                    if desc:
-                                        finding = f"{finding}: {desc}"
-                                # Add to appropriate layer
-                                layer_name = layer.get("name", "").lower()
-                                if "security" in layer_name:
-                                    security_findings.append(finding)
-                                elif "privacy" in layer_name:
-                                    privacy_findings.append(finding)
-                                elif "governance" in layer_name:
-                                    governance_findings.append(finding)
+                # Security layer factors
+                sec_layer = scoring_v2.get("security_layer") or {}
+                for factor in sec_layer.get("factors", []):
+                    if isinstance(factor, dict) and factor.get("severity", 0) >= 0.3:
+                        finding = factor.get("name", "")
+                        details = factor.get("details", {})
+                        if isinstance(details, dict):
+                            desc = details.get("description", "")
+                            if desc:
+                                finding = f"{finding}: {desc}"
+                        if finding and finding not in security_findings:
+                            security_findings.append(finding)
+
+                # Privacy layer factors
+                priv_layer = scoring_v2.get("privacy_layer") or {}
+                for factor in priv_layer.get("factors", []):
+                    if isinstance(factor, dict) and factor.get("severity", 0) >= 0.3:
+                        finding = factor.get("name", "")
+                        details = factor.get("details", {})
+                        if isinstance(details, dict):
+                            desc = details.get("description", "")
+                            if desc:
+                                finding = f"{finding}: {desc}"
+                        if finding and finding not in privacy_findings:
+                            privacy_findings.append(finding)
+
+                # Governance layer factors
+                gov_layer = scoring_v2.get("governance_layer") or {}
+                for factor in gov_layer.get("factors", []):
+                    if isinstance(factor, dict) and factor.get("severity", 0) >= 0.3:
+                        finding = factor.get("name", "")
+                        details = factor.get("details", {})
+                        if isinstance(details, dict):
+                            desc = details.get("description", "")
+                            if desc:
+                                finding = f"{finding}: {desc}"
+                        if finding and finding not in governance_findings:
+                            governance_findings.append(finding)
             
             # Permissions summary
             permissions_data = {
@@ -374,15 +451,73 @@ def build_unified_consumer_summary(
             if analysis_results:
                 perm_analysis = analysis_results.get("permissions_analysis", {})
                 permissions_data["high_risk"] = perm_analysis.get("high_risk", []) or perm_analysis.get("highRiskPermissions", [])
+
+            # What It Can Do – human-readable for Quick Summary (no duplication with modal)
+            what_it_can_do = _build_what_it_can_do(manifest, analysis_results, host_access)
+
+            # Get layer-specific scores for context
+            security_score = None
+            privacy_score = None
+            governance_score = None
+            decision = None
+            if scoring_v2:
+                sec_layer = scoring_v2.get("security_layer") or {}
+                priv_layer = scoring_v2.get("privacy_layer") or {}
+                gov_layer = scoring_v2.get("governance_layer") or {}
+                security_score = sec_layer.get("score")
+                privacy_score = priv_layer.get("score")
+                governance_score = gov_layer.get("score")
+                decision = scoring_v2.get("decision")
             
-            # Create prompt
-            template = PromptTemplate.from_template(template_str)
-            template = template.partial(
+            # Log gathered findings for debugging
+            logger.info(
+                "Unified summary LLM context: sec=%d findings, priv=%d findings, gov=%d findings",
+                len(security_findings), len(privacy_findings), len(governance_findings)
+            )
+
+            # Merge all key findings for single aggregated prompt (SAST, engine, layer_details)
+            all_key_findings = (
+                security_findings[:3]
+                + privacy_findings[:3]
+                + governance_findings[:3]
+            )
+            # Add hard gates if present
+            if scoring_v2:
+                for gate in scoring_v2.get("hard_gates_triggered", [])[:2]:
+                    all_key_findings.insert(0, f"Gate: {gate}")
+
+            # Create prompt - use jinja2 format since YAML templates use {{ variable }} syntax
+            template = PromptTemplate(
+                input_variables=[
+                    "extension_name",
+                    "score",
+                    "score_label",
+                    "security_score",
+                    "privacy_score",
+                    "governance_score",
+                    "decision",
+                    "host_access_summary_json",
+                    "permissions_json",
+                    "what_it_can_do_json",
+                    "key_findings_json",
+                    "security_findings_json",
+                    "privacy_findings_json",
+                    "governance_findings_json",
+                ],
+                template=template_str,
+                template_format="jinja2",
+            ).partial(
                 extension_name=ext_name,
                 score=score,
                 score_label=score_label,
+                security_score=security_score if security_score is not None else "N/A",
+                privacy_score=privacy_score if privacy_score is not None else "N/A",
+                governance_score=governance_score if governance_score is not None else "N/A",
+                decision=decision or "N/A",
                 host_access_summary_json=json.dumps(host_access, indent=2),
                 permissions_json=json.dumps(permissions_data, indent=2),
+                what_it_can_do_json=json.dumps(what_it_can_do, indent=2),
+                key_findings_json=json.dumps(all_key_findings[:8], indent=2),
                 security_findings_json=json.dumps(security_findings[:5], indent=2),
                 privacy_findings_json=json.dumps(privacy_findings[:5], indent=2),
                 governance_findings_json=json.dumps(governance_findings[:5], indent=2),
@@ -403,20 +538,28 @@ def build_unified_consumer_summary(
             parser = JsonOutputParser()
             result = parser.parse(response.content if hasattr(response, "content") else str(response))
             
-            if isinstance(result, dict) and result.get("headline") and result.get("tldr"):
+            if isinstance(result, dict) and (result.get("headline") or result.get("narrative")):
+                # Prefer unified narrative; fall back to tldr+concerns+recommendation
+                headline = result.get("headline", "")
+                narrative = result.get("narrative", "")
+                tldr = result.get("tldr", "")
+                concerns = result.get("concerns", [])[:3]
+                recommendation = result.get("recommendation", "")
+
                 # Validate tone matches score
-                headline_lower = result.get("headline", "").lower()
-                if score_label == "LOW RISK" and any(x in headline_lower for x in ["high risk", "dangerous", "avoid"]):
-                    raise ValueError("Headline contradicts LOW RISK score")
-                if score_label == "HIGH RISK" and any(x in headline_lower for x in ["safe", "low risk", "no concerns"]):
-                    raise ValueError("Headline contradicts HIGH RISK score")
-                
+                text_to_check = (headline + " " + narrative + " " + tldr).lower()
+                if score_label == "LOW RISK" and any(x in text_to_check for x in ["high risk", "dangerous", "avoid"]):
+                    raise ValueError("Summary contradicts LOW RISK score")
+                if score_label == "HIGH RISK" and any(x in text_to_check for x in ["safe", "low risk", "no concerns"]):
+                    raise ValueError("Summary contradicts HIGH RISK score")
+
                 logger.info("Unified consumer summary generated via LLM")
                 return {
-                    "headline": result.get("headline", ""),
-                    "tldr": result.get("tldr", ""),
-                    "concerns": result.get("concerns", [])[:3],
-                    "recommendation": result.get("recommendation", ""),
+                    "headline": headline,
+                    "narrative": narrative,
+                    "tldr": tldr,
+                    "concerns": concerns,
+                    "recommendation": recommendation,
                     "source": "llm",
                 }
     except Exception as exc:
@@ -516,8 +659,18 @@ def _fallback_unified_consumer_summary(
     else:
         recommendation = "Keep the extension updated and review after major version changes."
     
+    # Build unified narrative for consistent display (no separate sections)
+    narrative_parts = [tldr]
+    if concerns[:3]:
+        narrative_parts.append(" " + " ".join(concerns[:3]))
+    narrative_parts.append(" " + recommendation)
+    narrative = "".join(narrative_parts).strip()
+    if len(narrative) > 400:
+        narrative = narrative[:397] + "..."
+
     return {
         "headline": headline,
+        "narrative": narrative,
         "tldr": tldr,
         "concerns": concerns[:3],
         "recommendation": recommendation,
