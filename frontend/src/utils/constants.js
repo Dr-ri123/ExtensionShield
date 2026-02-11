@@ -57,3 +57,25 @@ export function getExtensionIconUrl(extensionId) {
   return base ? `${base}/api/scan/icon/${extensionId}` : `/api/scan/icon/${extensionId}`;
 }
 
+/**
+ * Single source of truth for GET /api/scan/results/{extensionId} URL.
+ * Use this in services and context to avoid duplicate path strings.
+ * @param {string} extensionId - Chrome extension ID
+ * @returns {string} Full or relative URL for scan results
+ */
+export function getScanResultsUrl(extensionId) {
+  if (!extensionId) return "";
+  let base = import.meta.env.VITE_API_URL || "";
+  if (import.meta.env.DEV && (!base || _isLoopbackOrigin(base))) {
+    return `/api/scan/results/${extensionId}`;
+  }
+  if (
+    typeof window !== "undefined" &&
+    base &&
+    _isLoopbackOrigin(base) &&
+    !_isLoopbackHostname(window.location.hostname)
+  ) {
+    base = "";
+  }
+  return base ? `${base}/api/scan/results/${extensionId}` : `/api/scan/results/${extensionId}`;
+}

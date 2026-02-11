@@ -3335,7 +3335,7 @@ async def database_health_check(request: Request):
             if tables_info.get("scan_results", {}).get("exists", False):
                 try:
                     # Try to query scanned_at column (should exist after migration 001b)
-                    test_resp = db.client.table("scan_results").select("scanned_at").limit(1).execute()
+                    test_resp = db.client.table(db.table_scan_results).select("scanned_at").limit(1).execute()
                     scan_results_columns_ok = True
                 except Exception:
                     # Column might not exist or table structure is wrong

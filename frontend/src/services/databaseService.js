@@ -5,6 +5,8 @@
  * Backend uses Postgres (Supabase) in production; SQLite is a dev fallback.
  */
 
+import { getScanResultsUrl } from "../utils/constants";
+
 class DatabaseService {
   constructor() {
     // Use environment variable for API URL, default to empty string for same-origin (production)
@@ -107,15 +109,15 @@ class DatabaseService {
   }
 
   /**
-   * Get scan result by extension ID
-   * UNIFIED: Always calls GET /api/scan/results/${extensionId}
-   * Returns payload as-is from backend (no transformation)
+   * Get scan result by extension ID.
+   * Single API: GET /api/scan/results/{extensionId} (URL from constants).
+   * Returns payload as-is from backend (no transformation).
    */
   async getScanResult(extensionId) {
     try {
-      const url = `${this.API_BASE_URL}/scan/results/${extensionId}`;
-      // console.log("RESULTS_ENDPOINT", url); // prod: no console
-      
+      const url = getScanResultsUrl(extensionId);
+      if (!url) return null;
+
       const response = await fetch(url, {
         headers: {
           ...this._authHeaders(),

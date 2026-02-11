@@ -1,3 +1,5 @@
+import { getScanResultsUrl } from "../utils/constants";
+
 class RealScanService {
   constructor() {
     // Use environment variable for API URL, default to empty string for same-origin (production)
@@ -64,11 +66,11 @@ class RealScanService {
 
   async hasCachedResults(extensionId) {
     try {
-      const response = await fetch(`${this.baseURL}/api/scan/results/${extensionId}`, {
+      const url = getScanResultsUrl(extensionId);
+      if (!url) return false;
+      const response = await fetch(url, {
         method: "GET",
-        headers: {
-          ...this.getRequestHeaders(),
-        },
+        headers: { ...this.getRequestHeaders() },
       });
       return response.ok;
     } catch (e) {
@@ -145,11 +147,12 @@ class RealScanService {
     }
   }
 
-  // Get real scan results from CLI analysis
-  // UNIFIED: Returns payload as-is from backend (no legacy transformation)
-  // Backend already upgrades legacy payloads and ensures consumer_insights
+  // Get real scan results from CLI analysis.
+  // Single API: GET /api/scan/results/{extensionId} (URL from constants).
+  // Returns payload as-is from backend (no legacy transformation).
   async getRealScanResults(extensionId) {
-    const url = `${this.baseURL}/api/scan/results/${extensionId}`;
+    const url = getScanResultsUrl(extensionId);
+    if (!url) return null;
     try {
       // console.log("RESULTS_ENDPOINT", url); // prod: no console
       
@@ -197,7 +200,6 @@ class RealScanService {
     }
   }
 
-  // Check scan status
   async checkScanStatus(extensionId) {
     const url = `${this.baseURL}/api/scan/status/${extensionId}`;
     try {
@@ -555,12 +557,12 @@ class RealScanService {
   // COMPLIANCE METHODS
   // ============================================================================
 
-  // Get compliance report (report.json)
+  // Get compliance report (report.json) - uses same GET /api/scan/results/:id
   async getComplianceReport(scanId) {
     try {
-      const response = await fetch(
-        `${this.baseURL}/api/scan/results/${scanId}`
-      );
+      const url = getScanResultsUrl(scanId);
+      if (!url) throw new Error("Invalid scan id");
+      const response = await fetch(url);
       if (response.ok) {
         const data = await response.json();
         return this.formatComplianceResults(data);
