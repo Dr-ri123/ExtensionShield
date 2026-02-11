@@ -491,12 +491,6 @@ const ScanResultsPageV2 = () => {
           score={scores?.security?.score}
           band={scores?.security?.band || 'NA'}
           factors={factorsByLayer?.security || []}
-          powerfulPermissions={[
-            ...(permissions?.highRiskPermissions || []).filter(p => 
-              ['debugger', 'webRequestBlocking', 'nativeMessaging', 'proxy'].includes(p)
-            ),
-            ...(permissions?.broadHostPatterns || []),
-          ]}
           keyFindings={dedupeFindings(allSecurityFindings)}
           gateResults={scanResults?.scoring_v2?.gate_results?.filter(g => g.triggered && gateIdToLayer(g.gate_id) === 'security') || []}
           layerReasons={scores?.reasons?.filter(r => r.toLowerCase().includes('security') || r.toLowerCase().includes('sast') || r.toLowerCase().includes('malware')) || []}
@@ -513,7 +507,6 @@ const ScanResultsPageV2 = () => {
           score={scores?.privacy?.score}
           band={scores?.privacy?.band || 'NA'}
           factors={factorsByLayer?.privacy || []}
-          permissions={permissions}
           keyFindings={dedupeFindings(allPrivacyFindings)}
           gateResults={scanResults?.scoring_v2?.gate_results?.filter(g => g.triggered && gateIdToLayer(g.gate_id) === 'privacy') || []}
           layerReasons={scores?.reasons?.filter(r => r.toLowerCase().includes('privacy') || r.toLowerCase().includes('exfil') || r.toLowerCase().includes('tracking')) || []}

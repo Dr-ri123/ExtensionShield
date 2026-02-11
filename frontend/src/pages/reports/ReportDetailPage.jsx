@@ -353,7 +353,6 @@ const ReportViewModelDetail = ({ report, rawScanResult, extensionId, onExportPdf
             score={scores.privacy?.score}
             band={scores.privacy?.band}
             factors={factorsByLayer.privacy}
-            permissions={report?.permissions}
             keyFindings={allPrivacyFindings}
             gateResults={rawScanResult?.scoring_v2?.gate_results?.filter(g => g.triggered && gateIdToLayer(g.gate_id) === 'privacy') || []}
             layerReasons={scores.reasons?.filter(r => r.toLowerCase().includes('privacy') || r.toLowerCase().includes('exfil')) || []}
