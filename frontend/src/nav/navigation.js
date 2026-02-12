@@ -73,12 +73,12 @@ export const topNavItems = [
 
 /**
  * Mega Menu Configuration
- * Resources dropdown - Open Source section only
+ * Resources dropdown - Open Source, Community, About
  */
 export const megaMenuConfig = {
   trigger: {
     label: "Resources",
-    matchPaths: ["/open-source", "/gsoc", "/contribute", "/about"]
+    matchPaths: ["/open-source", "/community", "/about"]
   },
   items: [
     {
@@ -88,29 +88,16 @@ export const megaMenuConfig = {
       path: "/open-source"
     },
     {
-      icon: "☀️",
-      label: "GSoC Ideas",
-      description: "Summer of Code projects",
-      path: "/gsoc/ideas"
-    },
-    {
-      icon: "🤝",
-      label: "Contribute",
-      description: "Get started guide",
-      path: "/contribute"
+      icon: "💬",
+      label: "Community",
+      description: "Safety notes & alternatives",
+      path: "/community"
     },
     {
       icon: "👤",
       label: "About",
       description: "Founder's story",
       path: "/about"
-    },
-    {
-      icon: "github",
-      label: "GitHub",
-      description: "View source code",
-      href: "https://github.com/Stanzin7/ExtensionShield",
-      external: true
     }
   ]
 };
