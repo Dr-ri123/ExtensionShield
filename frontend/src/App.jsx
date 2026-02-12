@@ -388,14 +388,29 @@ function MainMegamenu() {
   );
 }
 
+// Scroll threshold (px) after which homepage header becomes solid
+const HEADER_SCROLL_THRESHOLD = 40;
+
 // App Header Component
 function AppHeader() {
   const location = useLocation();
   const { user, isAuthenticated, openSignInModal, isLoading } = useAuth();
   const isHomePage = location.pathname === "/";
+  const [scrolled, setScrolled] = React.useState(false);
+
+  React.useEffect(() => {
+    if (!isHomePage) return;
+    const handleScroll = () => setScrolled(window.scrollY > HEADER_SCROLL_THRESHOLD);
+    handleScroll(); // set initial state
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [isHomePage]);
+
+  const headerSolid = !isHomePage || scrolled;
+  const headerClass = headerSolid ? "solid" : "transparent";
 
   return (
-    <header className={`atlas-header ${isHomePage ? "transparent" : "solid"}`}>
+    <header className={`atlas-header ${headerClass}`}>
       <div className="header-container">
         <NavLink to="/" className="header-logo">
           <img 

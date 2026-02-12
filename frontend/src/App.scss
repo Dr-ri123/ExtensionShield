@@ -69,19 +69,28 @@ body {
   top: 0;
   left: 0;
   right: 0;
-  z-index: 100;
+  z-index: 1000;
   height: var(--atlas-header-height);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Always reserve border so no flash when toggling; only color transitions */
+  border-bottom: 1px solid transparent;
+  transition:
+    background-color 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    border-color 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    box-shadow 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94),
+    backdrop-filter 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 
   &.transparent {
-    background: transparent;
-    border-bottom: none;
+    background-color: transparent;
+    border-bottom-color: transparent;
+    backdrop-filter: none;
+    box-shadow: none;
   }
 
   &.solid {
-    background: rgba(10, 15, 26, 0.95);
+    background-color: rgba(10, 15, 26, 0.95);
     backdrop-filter: blur(20px);
-    border-bottom: 1px solid var(--atlas-border);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom-color: var(--atlas-border);
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
   }
 }
