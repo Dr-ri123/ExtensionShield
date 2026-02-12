@@ -60,9 +60,9 @@
 
 .retro-title {
   margin: 0;
-  font-family: 'Courier New', 'Monaco', 'Menlo', monospace;
+  font-family: var(--font-mono);
   font-size: 1.75rem;
-  font-weight: 700;
+  font-weight: var(--weight-strong, 700);
   letter-spacing: 0.08em;
   text-transform: none;
   text-align: center;
@@ -124,7 +124,7 @@
 
 .retro-subtitle {
   margin-top: 0.5rem;
-  font-family: 'Courier New', 'Monaco', 'Menlo', monospace;
+  font-family: var(--font-mono);
   font-size: 0.875rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -136,7 +136,7 @@
   padding: 0.5rem 1rem;
   border: 1px solid rgba(34, 197, 94, 0.3);
   border-radius: 4px;
-  font-family: 'Courier New', 'Monaco', 'Menlo', monospace;
+  font-family: var(--font-mono);
   font-size: 0.75rem;
   letter-spacing: 0.05em;
   display: inline-block;
@@ -154,8 +154,8 @@
 }
 
 .retro-exit-button {
-  font-family: 'Courier New', 'Monaco', 'Menlo', monospace;
-  font-weight: 700;
+  font-family: var(--font-mono);
+  font-weight: var(--weight-strong, 700);
   font-size: 0.875rem;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -509,7 +509,7 @@
   color: rgba(226, 232, 240, 0.9) !important;
 }
 
-/* Terminal/Pixel Font Import */
+/* VT323: Display font for scan-progress modals only. Rest of page uses var(--font-mono). */
 @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
 
 /* Completion Modal Styles - Minimal Retro Theme */

@@ -66,20 +66,34 @@
   --radius-2xl: 3rem;
   --radius-full: 9999px;
 
-  /* Typography – single source of truth (matches HomePage) */
+  /* Typography – single source of truth */
   --font-sans: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', Consolas, monospace;
 
-  /* Report / Scan results typography – uses same family as site */
+  /* Canonical weights – do not change on hover/focus */
+  --weight-body: 400;
+  --weight-ui: 500;
+  --weight-heading: 600;
+  --weight-strong: 700;
+
+  /* Line heights */
+  --leading-tight: 1.4;
+  --leading-normal: 1.6;
+  --leading-relaxed: 1.7;
+
+  /* Report / Scan results – aligned with SCSS scale (base 16px, sm 14px, etc.) */
   --report-font: var(--font-sans);
   --report-text-base: 1rem;       /* 16px body */
-  --report-text-sm: 0.9375rem;   /* 15px secondary */
-  --report-text-xs: 0.875rem;    /* 14px captions */
+  --report-text-sm: 0.875rem;     /* 14px secondary */
+  --report-text-xs: 0.875rem;     /* 14px captions */
   --report-text-lg: 1.125rem;     /* 18px headings */
-  --report-text-xl: 1.25rem;     /* 20px titles */
-  --report-line-tight: 1.4;
-  --report-line-normal: 1.6;
-  --report-line-relaxed: 1.7;
+  --report-text-xl: 1.25rem;      /* 20px titles */
+  --report-text-2xl: 1.5rem;      /* 24px */
+  --report-text-3xl: 1.875rem;    /* 30px */
+  --report-text-4xl: 2.25rem;     /* 36px */
+  --report-line-tight: var(--leading-tight);
+  --report-line-normal: var(--leading-normal);
+  --report-line-relaxed: var(--leading-relaxed);
 
   /* ============================================================================
      Legacy Atlas tokens (used by HomePage/marketing surfaces)
@@ -266,7 +280,9 @@ body {
   background: #0a0f1a !important;
   color: hsl(var(--color-foreground)) !important;
   font-family: var(--font-sans);
-  line-height: 1.6;
+  font-size: 16px;
+  line-height: var(--leading-normal);
+  font-weight: var(--weight-body);
   min-height: 100vh;
 }
 

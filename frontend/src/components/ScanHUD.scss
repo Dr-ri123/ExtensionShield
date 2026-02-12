@@ -1,4 +1,4 @@
-/* Terminal/Pixel Font */
+/* VT323: Display font for scan HUD only. Do not use elsewhere; use var(--font-sans) or var(--font-mono). */
 @import url('https://fonts.googleapis.com/css2?family=VT323&display=swap');
 
 .scan-hud {

@@ -135,7 +135,7 @@
   top: 1.5rem;
   right: 1.5rem;
   font-size: 3rem;
-  font-weight: 900;
+  font-weight: var(--weight-strong, 700);
   color: rgba(148, 163, 184, 0.08);
   line-height: 1;
   user-select: none;
@@ -372,7 +372,7 @@
 .formula-plus {
   font-size: 1.25rem;
   color: var(--atlas-text-muted, #64748b);
-  font-weight: 300;
+  font-weight: var(--weight-body, 400);
 }
 
 /* ============================================================================

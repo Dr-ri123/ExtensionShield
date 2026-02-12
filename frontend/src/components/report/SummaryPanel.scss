@@ -229,7 +229,7 @@
         .concern-bullet {
           color: #f87171;
           font-size: 18px;
-          font-weight: bold;
+          font-weight: var(--weight-strong, 700);
           line-height: 1.4;
           flex-shrink: 0;
         }
@@ -297,7 +297,7 @@
       line-height: var(--report-line-relaxed, 1.7);
       color: rgba(248, 250, 252, 0.92);
       margin: 0;
-      font-weight: 450;
+      font-weight: var(--weight-body, 400);
     }
 
     .summary-tldr-wrapper {

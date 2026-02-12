@@ -307,7 +307,7 @@ const ReportViewModelDetail = ({ report, rawScanResult, extensionId, onExportPdf
                       marginTop: "0.75rem",
                       whiteSpace: "pre-wrap",
                       wordBreak: "break-word",
-                      fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace",
+                      fontFamily: "var(--font-mono)",
                       fontSize: "0.85rem",
                       opacity: 0.95
                     }}

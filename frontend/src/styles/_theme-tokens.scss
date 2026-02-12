@@ -66,22 +66,23 @@ $radius-2xl: 1.5rem;    /* 24px */
 $radius-full: 9999px;   /* Fully rounded */
 
 /* ============================================================================
-   TYPOGRAPHY SCALE - Compact & readable
+   TYPOGRAPHY SCALE - Aligned with index.css --report-text-* and weight tokens
+   Weights: body 400, UI 500, heading 600, strong 700. Do not change on hover.
    ============================================================================ */
 $font-size-xs: 0.75rem;     /* 12px */
-$font-size-sm: 0.875rem;    /* 14px */
-$font-size-base: 1rem;      /* 16px */
-$font-size-lg: 1.125rem;    /* 18px */
-$font-size-xl: 1.25rem;     /* 20px */
+$font-size-sm: 0.875rem;    /* 14px = --report-text-sm */
+$font-size-base: 1rem;      /* 16px = --report-text-base */
+$font-size-lg: 1.125rem;    /* 18px = --report-text-lg */
+$font-size-xl: 1.25rem;     /* 20px = --report-text-xl */
 $font-size-2xl: 1.5rem;     /* 24px */
 $font-size-3xl: 1.875rem;   /* 30px */
 $font-size-4xl: 2.25rem;    /* 36px */
 
-$font-weight-normal: 400;
-$font-weight-medium: 500;
-$font-weight-semibold: 600;
-$font-weight-bold: 700;
-$font-weight-extrabold: 800;
+$font-weight-normal: 400;   /* = --weight-body */
+$font-weight-medium: 500;   /* = --weight-ui */
+$font-weight-semibold: 600; /* = --weight-heading */
+$font-weight-bold: 700;     /* = --weight-strong */
+$font-weight-extrabold: 800; /* Rare display/hero only */
 
 /* ============================================================================
    RISK LEVEL MAP

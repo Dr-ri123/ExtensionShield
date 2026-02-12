@@ -92,12 +92,12 @@
 
 .enterprise-back .arrow {
   color: var(--atlas-accent);
-  font-weight: 800;
+  font-weight: var(--weight-strong, 700);
 }
 
 .enterprise-header h1 {
   font-size: clamp(1.9rem, 4.5vw, 2.75rem);
-  font-weight: 800;
+  font-weight: var(--weight-heading, 600);
   letter-spacing: -0.02em;
   margin: 0 0 0.75rem 0;
 }
@@ -126,7 +126,7 @@
 .enterprise-card h3 {
   margin: 0 0 1rem 0;
   font-size: 1rem;
-  font-weight: 800;
+  font-weight: var(--weight-heading, 600);
 }
 
 .enterprise-features {
@@ -149,7 +149,7 @@
 .enterprise-features li::before {
   content: "✓";
   color: var(--atlas-accent);
-  font-weight: 900;
+  font-weight: var(--weight-strong, 700);
   opacity: 0.95;
 }
 
@@ -163,7 +163,7 @@
 .enterprise-form h3 {
   margin: 0 0 1rem 0;
   font-size: 1rem;
-  font-weight: 800;
+  font-weight: var(--weight-heading, 600);
 }
 
 .form-grid {
@@ -179,7 +179,7 @@
 .field label {
   display: block;
   font-size: 0.75rem;
-  font-weight: 700;
+  font-weight: var(--weight-ui, 500);
   letter-spacing: 0.06em;
   text-transform: uppercase;
   color: var(--atlas-text-muted);
@@ -239,7 +239,7 @@
   border-radius: 12px;
   background: linear-gradient(135deg, var(--atlas-accent) 0%, #16a34a 100%);
   color: #030712;
-  font-weight: 800;
+  font-weight: var(--weight-ui, 500);
   font-size: 0.95rem;
   cursor: pointer;
   transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
