@@ -111,6 +111,9 @@ class ExtensionDownloader:
         """
         try:
             extension_id = extract_extension_id_by_url(extension_url)
+            if not extension_id:
+                logger.warning("Could not extract valid extension ID from URL: %s", extension_url[:80])
+                return None
             download_url = self._get_download_url(extension_id)
             file_info = self._download(extension_id, download_url)
             if not file_info:
