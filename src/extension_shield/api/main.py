@@ -25,7 +25,8 @@ from fastapi import FastAPI, HTTPException, BackgroundTasks, Response, UploadFil
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, RedirectResponse
-from pydantic import BaseModel
+from enum import Enum
+from pydantic import BaseModel, Field, model_validator
 import shutil
 
 from slowapi import Limiter
@@ -702,6 +703,34 @@ class EnterprisePilotRequest(BaseModel):
 
 
 enterprise_pilot_requests: list[Dict[str, Any]] = []
+
+
+# -----------------------------------------------------------------------------
+# Scan result feedback (per-scan user feedback)
+# -----------------------------------------------------------------------------
+class FeedbackReason(str, Enum):
+    """Reasons for negative feedback on scan results."""
+    FALSE_POSITIVE = "false_positive"
+    FALSE_NEGATIVE = "false_negative"
+    SCORE_OFF = "score_off"
+    UNCLEAR = "unclear"
+    OTHER = "other"
+
+
+class FeedbackRequest(BaseModel):
+    """Request model for scan result feedback."""
+    scan_id: str
+    helpful: bool
+    reason: Optional[FeedbackReason] = None
+    suggested_score: Optional[int] = Field(None, ge=0, le=100)
+    comment: Optional[str] = Field(None, max_length=280)
+
+    @model_validator(mode="after")
+    def validate_feedback(self) -> "FeedbackRequest":
+        """Validate that negative feedback includes a reason."""
+        if not self.helpful and self.reason is None:
+            raise ValueError("reason is required when helpful=false")
+        return self
 
 
 # Load existing results from database on startup
@@ -2288,6 +2317,36 @@ async def create_enterprise_pilot_request(request: EnterprisePilotRequest, http_
     }
     enterprise_pilot_requests.append(item)
     return {"ok": True, "received_at": now}
+
+
+@app.post("/api/feedback")
+async def submit_feedback(feedback: FeedbackRequest, http_request: Request):
+    """
+    Submit feedback for a scan result.
+    
+    Allows users to indicate whether a scan result was helpful, and optionally
+    provide details about why it wasn't (false positive, score issues, etc.).
+    """
+    user_id = _get_user_id(http_request)
+    
+    # If helpful=true, ignore reason/suggested_score/comment
+    reason = None if feedback.helpful else (feedback.reason.value if feedback.reason else None)
+    suggested_score = None if feedback.helpful else feedback.suggested_score
+    comment = None if feedback.helpful else feedback.comment
+    
+    # Save feedback to database (SQLite or Supabase)
+    db.save_feedback(
+        scan_id=feedback.scan_id,
+        helpful=feedback.helpful,
+        reason=reason,
+        suggested_score=suggested_score,
+        comment=comment,
+        user_id=user_id,
+        model_version=None,  # TODO: Extract from scan result metadata
+        ruleset_version=None,  # TODO: Extract from scan result metadata
+    )
+    
+    return {"ok": True}
 
 
 @app.post("/api/scan/trigger")

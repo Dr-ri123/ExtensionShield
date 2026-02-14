@@ -8,6 +8,7 @@ import {
   EvidenceDrawer,
   SummaryPanel,
   LayerModal,
+  ResultFeedback,
 } from "../../components/report";
 import FileViewerModal from "../../components/FileViewerModal";
 import StatusMessage from "../../components/StatusMessage";
@@ -396,28 +397,6 @@ const ScanResultsPageV2 = () => {
         <Link to="/scan" className="nav-back">
           ← Back
         </Link>
-        <div className="nav-actions">
-          <Button variant="default" size="sm" onClick={() => navigate("/scan")}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
-            </svg>
-            New scan
-          </Button>
-          <Button variant="outline" size="sm" onClick={() => navigator.clipboard?.writeText(window.location.href)}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
-              <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
-            </svg>
-            Share
-          </Button>
-          <Button variant="outline" size="sm">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z" />
-              <polyline points="17 21 17 13 7 13 7 21" /><polyline points="7 3 7 8 15 8" />
-            </svg>
-            Save
-          </Button>
-        </div>
       </nav>
 
       {/* Status Messages */}
@@ -500,6 +479,8 @@ const ScanResultsPageV2 = () => {
                   />
                 </div>
               </div>
+              {/* Per-scan feedback */}
+              <ResultFeedback scanId={scanId} />
             </div>
 
             {/* Quick Summary + Top 3 findings */}

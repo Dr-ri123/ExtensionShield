@@ -17,4 +17,4 @@ export { default as InputModal } from './InputModal';
 export { default as TopDriversRow } from './TopDriversRow';
 export { default as SafetyLabelCard } from './SafetyLabelCard';
 export { default as ScenarioGrid } from './ScenarioGrid';
-
+export { default as ResultFeedback } from './ResultFeedback';

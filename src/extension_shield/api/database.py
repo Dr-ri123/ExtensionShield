@@ -220,6 +220,36 @@ class Database:
             """
             )
 
+            # Scan result feedback (per-scan user feedback)
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS scan_feedback (
+                    id TEXT PRIMARY KEY,
+                    scan_id TEXT NOT NULL,
+                    helpful INTEGER NOT NULL,
+                    reason TEXT,
+                    suggested_score INTEGER,
+                    comment TEXT,
+                    user_id TEXT,
+                    model_version TEXT,
+                    ruleset_version TEXT,
+                    created_at TEXT DEFAULT CURRENT_TIMESTAMP
+                )
+            """
+            )
+            cursor.execute(
+                """
+                CREATE INDEX IF NOT EXISTS idx_scan_feedback_scan_id
+                ON scan_feedback(scan_id)
+            """
+            )
+            cursor.execute(
+                """
+                CREATE INDEX IF NOT EXISTS idx_scan_feedback_created_at
+                ON scan_feedback(created_at DESC)
+            """
+            )
+
     def save_scan_result(self, result: Dict[str, Any]) -> bool:
         """Save or update scan result."""
         try:
@@ -416,6 +446,76 @@ class Database:
         except Exception as e:
             print(f"Error adding user scan history: {e}")
             return False
+
+    def save_feedback(
+        self,
+        scan_id: str,
+        helpful: bool,
+        reason: Optional[str] = None,
+        suggested_score: Optional[int] = None,
+        comment: Optional[str] = None,
+        user_id: Optional[str] = None,
+        model_version: Optional[str] = None,
+        ruleset_version: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Save scan result feedback.
+
+        Args:
+            scan_id: Extension/scan identifier (slug or ID)
+            helpful: Whether the user found the result helpful
+            reason: Reason for negative feedback (required if helpful=False)
+            suggested_score: User's suggested score (0-100)
+            comment: Optional comment (max 280 chars)
+            user_id: Anonymous user identifier
+            model_version: AI model version (future-proofing)
+            ruleset_version: Ruleset version (future-proofing)
+
+        Returns:
+            The saved feedback record
+        """
+        try:
+            now = datetime.now(timezone.utc).isoformat()
+            row_id = str(uuid.uuid4())
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    INSERT INTO scan_feedback (
+                        id, scan_id, helpful, reason, suggested_score, comment,
+                        user_id, model_version, ruleset_version, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                    (
+                        row_id,
+                        scan_id,
+                        1 if helpful else 0,
+                        reason,
+                        suggested_score,
+                        comment,
+                        user_id,
+                        model_version,
+                        ruleset_version,
+                        now,
+                    ),
+                )
+            record = {
+                "id": row_id,
+                "scan_id": scan_id,
+                "helpful": helpful,
+                "reason": reason,
+                "suggested_score": suggested_score,
+                "comment": comment,
+                "user_id": user_id,
+                "model_version": model_version,
+                "ruleset_version": ruleset_version,
+                "created_at": now,
+            }
+            logger.info("Saved feedback for scan %s: helpful=%s, reason=%s", scan_id, helpful, reason)
+            return record
+        except Exception as e:
+            logger.error("Error saving feedback: %s", e)
+            raise
 
     def get_user_scan_history(self, user_id: str, limit: int = 50) -> List[Dict[str, Any]]:
         """
@@ -991,7 +1091,57 @@ class SupabaseDatabase:
         except Exception as e:
             print(f"Error adding user scan history (Supabase): {e}")
             return False
-    
+
+    def save_feedback(
+        self,
+        scan_id: str,
+        helpful: bool,
+        reason: Optional[str] = None,
+        suggested_score: Optional[int] = None,
+        comment: Optional[str] = None,
+        user_id: Optional[str] = None,
+        model_version: Optional[str] = None,
+        ruleset_version: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        """
+        Save scan result feedback to scan_feedback table.
+
+        Args:
+            scan_id: Extension/scan identifier (slug or ID)
+            helpful: Whether the user found the result helpful
+            reason: Reason for negative feedback (required if helpful=False)
+            suggested_score: User's suggested score (0-100)
+            comment: Optional comment (max 280 chars)
+            user_id: Anonymous user identifier
+            model_version: AI model version (future-proofing)
+            ruleset_version: Ruleset version (future-proofing)
+
+        Returns:
+            The saved feedback record
+        """
+        try:
+            row = {
+                "scan_id": scan_id,
+                "helpful": helpful,
+                "reason": reason,
+                "suggested_score": suggested_score,
+                "comment": comment,
+                "user_id": user_id,
+                "model_version": model_version,
+                "ruleset_version": ruleset_version,
+            }
+            resp = self.client.table("scan_feedback").insert(row).execute()
+            data = getattr(resp, "data", None) or []
+            record = data[0] if data else row
+            record["created_at"] = record.get("created_at") or datetime.now(timezone.utc).isoformat()
+            record["id"] = record.get("id", "")
+            record["helpful"] = helpful
+            logger.info("Saved feedback for scan %s: helpful=%s, reason=%s", scan_id, helpful, reason)
+            return record
+        except Exception as e:
+            logger.error("Error saving feedback (Supabase): %s", e)
+            raise
+
     def get_user_karma(self, user_id: str) -> Dict[str, Any]:
         """
         Get user's karma points and scan statistics.
