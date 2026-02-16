@@ -33,7 +33,7 @@ export default defineConfig(({ mode }) => {
         "object-src 'none'",
         "form-action 'self'",
         "upgrade-insecure-requests",
-        "script-src 'self' https://static.cloudflareinsights.com https://www.googletagmanager.com", // gtag.js (Google Ads)
+        "script-src 'self' 'sha256-GepDJZx/JItIsr2ttYbmtfWh3AIfeZDuQPuqDfpcX9A=' https://static.cloudflareinsights.com https://www.googletagmanager.com", // gtag inline + gtag.js (Google Ads)
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com", // unsafe-inline needed for React inline styles
         "font-src 'self' https://fonts.gstatic.com data:",
         "img-src 'self' data: https:",
