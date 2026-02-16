@@ -1,5 +1,7 @@
 /* DemoModal – Professional walkthrough with ExtensionShield dark theme */
 
+@use "sass:color";
+
 // Variables matching site design
 $modal-bg: rgba(13, 20, 36, 0.98);
 $modal-border: rgba(148, 163, 184, 0.15);
@@ -162,8 +164,8 @@ $success-green: #22c55e;
   }
 
   &:hover .demo-nav-btn-inner {
-    background: lighten($accent-green, 5%);
-    border-color: lighten($accent-green, 5%);
+    background: color.adjust($accent-green, $lightness: 5%);
+    border-color: color.adjust($accent-green, $lightness: 5%);
     color: #0a0f1a;
     box-shadow: 0 0 30px $accent-green-glow;
   }

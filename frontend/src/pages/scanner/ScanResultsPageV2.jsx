@@ -19,6 +19,51 @@ import { normalizeScanResultSafe, validateEvidenceIntegrity, gateIdToLayer, extr
 import { getExtensionIconUrl, EXTENSION_ICON_PLACEHOLDER } from "../../utils/constants";
 import "./ScanResultsPageV2.scss";
 
+/** True if text is an unresolved Chrome i18n placeholder (e.g. __MSG_appDesc__). */
+function isI18nPlaceholder(text) {
+  return typeof text === "string" && /^__MSG_[A-Za-z0-9@_]+__$/.test(text.trim());
+}
+
+/** Short overview: first 250 chars at word boundary, truncate the rest. No LLM, no cost. */
+function shortOverview(text) {
+  if (!text || typeof text !== "string") return "";
+  if (isI18nPlaceholder(text)) return "";
+  const trimmed = text.trim();
+  if (!trimmed) return "";
+  const maxLen = 250;
+  if (trimmed.length <= maxLen) return trimmed;
+  const cut = trimmed.slice(0, maxLen);
+  const lastSpace = cut.lastIndexOf(" ");
+  const end = lastSpace > maxLen * 0.6 ? lastSpace : maxLen;
+  return cut.slice(0, end).trim() + "…";
+}
+
+/** Get displayable description: hide __MSG_* placeholders, prefer resolved manifest text. */
+function getDisplayDescription(scanResults) {
+  // Try multiple sources for description, in order of preference:
+  // 1. metadata.description (Chrome Web Store scraped)
+  // 2. manifest.description (from manifest.json, may be i18n placeholder)
+  // 3. report_view_model.meta.description (injected by backend for legacy Supabase rows)
+  // 4. summary.summary (LLM executive summary)
+  // 5. report_view_model.scorecard.one_liner (LLM one-liner as last resort)
+  // 6. summary.one_liner
+  const candidates = [
+    scanResults?.metadata?.description,
+    scanResults?.manifest?.description,
+    scanResults?.report_view_model?.meta?.description,
+    scanResults?.summary?.summary,
+    scanResults?.report_view_model?.scorecard?.one_liner,
+    scanResults?.summary?.one_liner,
+  ];
+  
+  for (const raw of candidates) {
+    if (raw && typeof raw === "string" && !isI18nPlaceholder(raw) && raw.trim()) {
+      return raw;
+    }
+  }
+  return null;
+}
+
 /**
  * ScanResultsPageV2 - Redesigned results dashboard
  * Uses ReportViewModel from normalizeScanResultSafe() - NO fake data
@@ -34,6 +79,8 @@ const ScanResultsPageV2 = () => {
     loadResultsById,
     currentExtensionId,
   } = useScan();
+
+  const hasCachedResultsForThisScan = currentExtensionId === scanId && scanResults;
 
   const [isLoading, setIsLoading] = useState(false);
   const [rawData, setRawData] = useState(null);
@@ -80,28 +127,38 @@ const ScanResultsPageV2 = () => {
     return () => window.removeEventListener("resize", updateSize);
   }, []);
 
-  // Clear stale local state immediately when scanId changes so previous
-  // extension's report never flashes while the new one loads.
+  // Clear stale local state when scanId changes. If we already have this scan's
+  // results in context (e.g. just completed scan), use them immediately so we don't show loading.
   useEffect(() => {
     if (loadedScanIdRef.current !== scanId) {
+      if (hasCachedResultsForThisScan) {
+        loadedScanIdRef.current = scanId;
+        setRawData(scanResults);
+        const vm = normalizeScanResultSafe(scanResults);
+        setViewModel(vm);
+        setNormalizationError(vm ? null : "Failed to normalize scan result data");
+        return;
+      }
       loadedScanIdRef.current = null;
       isLoadingRef.current = false;
-      // Reset local derived state so stale data from the previous extension
-      // is never shown while the new extension's data loads.
       setViewModel(null);
       setRawData(null);
       setNormalizationError(null);
       setShowHeroIcon(true);
     }
-  }, [scanId]);
+  }, [scanId, hasCachedResultsForThisScan, scanResults]);
 
-  // Load results - always fetch from API when scanId changes
+  // Load results - use context when already available (e.g. after completing scan), else fetch
   useEffect(() => {
     let cancelled = false;
 
     const loadResults = async () => {
-      // Prevent double loading for the same scanId
       if (isLoadingRef.current || loadedScanIdRef.current === scanId) {
+        return;
+      }
+      // Already have this scan's results in context (e.g. just finished scan, then "View results")
+      if (hasCachedResultsForThisScan) {
+        loadedScanIdRef.current = scanId;
         return;
       }
 
@@ -127,7 +184,7 @@ const ScanResultsPageV2 = () => {
       cancelled = true;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scanId, loadResultsById]);
+  }, [scanId, loadResultsById, hasCachedResultsForThisScan]);
 
   // Normalize scan results when they change
   useEffect(() => {
@@ -410,7 +467,7 @@ const ScanResultsPageV2 = () => {
           {/* Left Column: Extension Card + Quick Summary with Top 3 findings */}
           <div className="results-v2-left">
             {/* Extension Details Card - Score donut inside, to the right */}
-            <div className="extension-card">
+            <div className={`extension-card${publisherDetailsOpen ? " extension-card--popover-open" : ""}`}>
               <ResultFeedback scanId={scanId} />
               <div className="extension-card-inner">
                 <div className="extension-card-left">
@@ -490,41 +547,46 @@ const ScanResultsPageV2 = () => {
                       </>
                     )}
                   </div>
-                  {chromeStoreUrl && (
-                    <div className="extension-card-store-link-wrap">
-                      <a
-                        href={chromeStoreUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="extension-card-store-link"
-                        aria-label="Open extension in Chrome Web Store"
-                      >
-                        View in Chrome Web Store
-                      </a>
-                    </div>
+                  {getDisplayDescription(scanResults) && (
+                    <p className="extension-card-description">
+                      {shortOverview(getDisplayDescription(scanResults))}
+                      {chromeStoreUrl && (
+                        <>
+                          {" "}
+                          <a
+                            href={chromeStoreUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="description-webstore-link"
+                          >
+                            Web Store
+                          </a>
+                        </>
+                      )}
+                    </p>
                   )}
-                  {viewModel?.publisherDisclosures && (() => {
-                    const pd = viewModel.publisherDisclosures;
-                    const traderLabel = pd.trader_status === "TRADER" ? "Trader" : pd.trader_status === "NON_TRADER" ? "Non-trader" : "Unknown";
-                    const traderDescription = pd.trader_status === "TRADER" 
+                  {(chromeStoreUrl || viewModel?.publisherDisclosures) && (() => {
+                    const pd = viewModel?.publisherDisclosures;
+                    const traderLabel = pd?.trader_status === "TRADER" ? "Trader" : pd?.trader_status === "NON_TRADER" ? "Non-trader" : "Unknown";
+                    const traderDescription = pd?.trader_status === "TRADER" 
                       ? "This developer is registered as a trader in the EU. Consumer rights apply to purchases from this developer."
-                      : pd.trader_status === "NON_TRADER"
+                      : pd?.trader_status === "NON_TRADER"
                       ? "This developer has not identified itself as a trader. Consumer rights may not apply to contracts with this developer."
                       : "Trader status unknown. Unable to determine if consumer rights apply.";
                     const getHost = (url) => {
                       try { return new URL(url).host; } catch { return url; }
                     };
                     const linkChips = [
-                      pd.developer_website_url && { key: "website", href: pd.developer_website_url, label: "Website", icon: "↗" },
-                      pd.support_email && { key: "support", href: `mailto:${pd.support_email}`, label: "Support", icon: "✉" },
-                      pd.privacy_policy_url && { key: "privacy", href: pd.privacy_policy_url, label: "Privacy", icon: "🔒" },
+                      pd?.developer_website_url && { key: "website", href: pd.developer_website_url, label: "Website", icon: "↗" },
+                      pd?.support_email && { key: "support", href: `mailto:${pd.support_email}`, label: "Support", icon: "✉" },
+                      pd?.privacy_policy_url && { key: "privacy", href: pd.privacy_policy_url, label: "Privacy", icon: "🔒" },
                     ].filter(Boolean);
-                    const allChips = [{ key: "trader", label: traderLabel, icon: "◉", title: traderDescription, link: false }, ...linkChips];
+                    const allChips = pd ? [{ key: "trader", label: traderLabel, icon: "◉", title: traderDescription, link: false }, ...linkChips] : [];
                     return (
                       <div className="publisher-disclosures">
                         <div className="publisher-disclosures-header">
                           <span className="publisher-disclosures-label">Publisher</span>
-                          <button
+                          {pd && <button
                             type="button"
                             className="publisher-info-icon"
                             onClick={() => setPublisherDetailsOpen((o) => !o)}
@@ -538,8 +600,8 @@ const ScanResultsPageV2 = () => {
                               <line x1="12" y1="16" x2="12" y2="12" />
                               <line x1="12" y1="8" x2="12.01" y2="8" />
                             </svg>
-                          </button>
-                          {publisherDetailsOpen && (
+                          </button>}
+                          {pd && publisherDetailsOpen && (
                             <>
                               <div
                                 className="publisher-details-backdrop"
@@ -548,25 +610,13 @@ const ScanResultsPageV2 = () => {
                                 onKeyDown={(e) => e.key === "Escape" && setPublisherDetailsOpen(false)}
                               />
                               <div className="publisher-info-popover" role="dialog" aria-label="Publisher information">
-                                <p className="publisher-info-row">
+                                <p>
                                   <span className="publisher-info-label">Trader status:</span>
                                   <span className="publisher-info-value">{traderLabel}</span>
                                 </p>
                                 <p className="publisher-info-description">{traderDescription}</p>
-                                {pd.developer_website_url && (
-                                  <p className="publisher-info-row">
-                                    <span className="publisher-info-label">Website:</span>
-                                    <a href={pd.developer_website_url} target="_blank" rel="noopener noreferrer">{getHost(pd.developer_website_url)}</a>
-                                  </p>
-                                )}
-                                {pd.support_email && (
-                                  <p className="publisher-info-row">
-                                    <span className="publisher-info-label">Support:</span>
-                                    <a href={`mailto:${pd.support_email}`}>{pd.support_email}</a>
-                                  </p>
-                                )}
                                 {pd.privacy_policy_url && (
-                                  <p className="publisher-info-row">
+                                  <p>
                                     <span className="publisher-info-label">Privacy:</span>
                                     <a href={pd.privacy_policy_url} target="_blank" rel="noopener noreferrer">{getHost(pd.privacy_policy_url)}</a>
                                   </p>
@@ -578,6 +628,7 @@ const ScanResultsPageV2 = () => {
                             </>
                           )}
                         </div>
+                        {(allChips.length > 0 || chromeStoreUrl) && (
                         <div className="publisher-disclosures-chips">
                           {allChips.map((c) =>
                             c.link !== false ? (
@@ -602,7 +653,25 @@ const ScanResultsPageV2 = () => {
                               </span>
                             )
                           )}
+                          {chromeStoreUrl && (
+                            <a
+                              href={chromeStoreUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="publisher-chip publisher-chip-link"
+                              aria-label="View in Chrome Web Store"
+                              title="View in Chrome Web Store"
+                            >
+                              <svg className="publisher-chip-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+                                <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
+                                <polyline points="15 3 21 3 21 9" />
+                                <line x1="10" y1="14" x2="21" y2="3" />
+                              </svg>
+                              <span>Web Store</span>
+                            </a>
+                          )}
                         </div>
+                        )}
                       </div>
                     );
                   })()}

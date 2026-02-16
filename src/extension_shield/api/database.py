@@ -101,6 +101,11 @@ class Database:
                 )
             """
             )
+            # Migration: add last_viewed_at for bumping re-scanned extensions to top
+            try:
+                cursor.execute("ALTER TABLE user_scan_history ADD COLUMN last_viewed_at TEXT")
+            except sqlite3.OperationalError:
+                pass  # column already exists
 
             # Scan results table
             cursor.execute(
@@ -428,19 +433,37 @@ class Database:
 
     def add_user_scan_history(self, user_id: str, extension_id: str) -> bool:
         """
-        Insert a user-scoped scan history entry.
+        Insert or update a user-scoped scan history entry. Re-scans bump the extension to top.
         """
         try:
             now = datetime.now(timezone.utc).isoformat()
-            row_id = str(uuid.uuid4())
             with self.get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute(
                     """
-                    INSERT INTO user_scan_history (id, user_id, extension_id, created_at)
-                    VALUES (?, ?, ?, ?)
+                    SELECT id FROM user_scan_history
+                    WHERE user_id = ? AND extension_id = ?
+                    LIMIT 1
                 """,
-                    (row_id, user_id, extension_id, now),
+                    (user_id, extension_id),
+                )
+                existing = cursor.fetchone()
+                if existing:
+                    cursor.execute(
+                        """
+                        UPDATE user_scan_history SET last_viewed_at = ?
+                        WHERE user_id = ? AND extension_id = ?
+                    """,
+                        (now, user_id, extension_id),
+                    )
+                    return True
+                row_id = str(uuid.uuid4())
+                cursor.execute(
+                    """
+                    INSERT INTO user_scan_history (id, user_id, extension_id, created_at, last_viewed_at)
+                    VALUES (?, ?, ?, ?, ?)
+                """,
+                    (row_id, user_id, extension_id, now, now),
                 )
             return True
         except Exception as e:
@@ -543,7 +566,7 @@ class Database:
                     LEFT JOIN scan_results r
                         ON r.extension_id = h.extension_id
                     WHERE h.user_id = ?
-                    ORDER BY h.created_at DESC
+                    ORDER BY COALESCE(h.last_viewed_at, h.created_at) DESC
                     LIMIT ?
                 """,
                     (user_id, limit),
@@ -693,7 +716,7 @@ class Database:
                         FROM scan_results
                         WHERE status = 'completed'
                           AND (extension_name LIKE ? OR extension_id LIKE ?)
-                        ORDER BY timestamp DESC
+                        ORDER BY COALESCE(updated_at, timestamp) DESC
                         LIMIT ?
                     """,
                         (term, term, limit),
@@ -710,7 +733,7 @@ class Database:
                             icon_base64, icon_media_type
                         FROM scan_results
                         WHERE status = 'completed'
-                        ORDER BY timestamp DESC
+                        ORDER BY COALESCE(updated_at, timestamp) DESC
                         LIMIT ?
                     """,
                         (limit,),
@@ -748,6 +771,63 @@ class Database:
             print(f"Error getting recent scans: {e}")
             print(f"Traceback: {traceback.format_exc()}")
             return []
+
+    def touch_scan_result(self, extension_id: str) -> bool:
+        """Touch scan result to bump it in recent scans (updates updated_at)."""
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    """
+                    UPDATE scan_results SET updated_at = datetime('now') WHERE extension_id = ?
+                """,
+                    (extension_id,),
+                )
+                return cursor.rowcount > 0
+        except Exception as e:
+            print(f"Error touching scan result: {e}")
+            return False
+
+    def update_scan_summary(self, extension_id: str, scoring_v2: dict, report_view_model: dict) -> bool:
+        """
+        Update the summary JSON field with upgraded scoring_v2 and report_view_model.
+        Called after legacy payload upgrade to persist the computed data.
+        """
+        try:
+            with self.get_connection() as conn:
+                cursor = conn.cursor()
+                # Get current summary
+                cursor.execute(
+                    "SELECT summary FROM scan_results WHERE extension_id = ?",
+                    (extension_id,),
+                )
+                row = cursor.fetchone()
+                if not row:
+                    return False
+                
+                current_summary = row[0]
+                if isinstance(current_summary, str):
+                    try:
+                        current_summary = json.loads(current_summary)
+                    except Exception:
+                        current_summary = {}
+                if not isinstance(current_summary, dict):
+                    current_summary = {}
+                
+                # Update with new fields
+                if scoring_v2:
+                    current_summary["scoring_v2"] = scoring_v2
+                if report_view_model:
+                    current_summary["report_view_model"] = report_view_model
+                
+                cursor.execute(
+                    "UPDATE scan_results SET summary = ? WHERE extension_id = ?",
+                    (json.dumps(current_summary), extension_id),
+                )
+                return cursor.rowcount > 0
+        except Exception as e:
+            print(f"Error updating scan summary: {e}")
+            return False
 
     def delete_scan_result(self, extension_id: str) -> bool:
         """Delete a scan result."""
@@ -1068,7 +1148,8 @@ class SupabaseDatabase:
         Relies on RLS policies in production.
         """
         try:
-            # Check if this extension was already scanned by this user (avoid duplicate karma)
+            now_iso = datetime.now(timezone.utc).isoformat()
+            # Check if this extension was already scanned by this user
             existing = (
                 self.client.table("user_scan_history")
                 .select("id")
@@ -1080,7 +1161,10 @@ class SupabaseDatabase:
             
             existing_data = getattr(existing, "data", None) or []
             if existing_data:
-                # User already scanned this extension, don't add duplicate or increment karma
+                # User already scanned this extension - bump last_viewed_at so it appears at top (no karma increment)
+                self.client.table("user_scan_history").update(
+                    {"last_viewed_at": now_iso}
+                ).eq("user_id", user_id).eq("extension_id", extension_id).execute()
                 return True
             
             # Insert new scan history (trigger will handle karma increment)
@@ -1170,9 +1254,9 @@ class SupabaseDatabase:
         try:
             hist_resp = (
                 self.client.table("user_scan_history")
-                .select("extension_id, created_at")
+                .select("extension_id, created_at, last_viewed_at")
                 .eq("user_id", user_id)
-                .order("created_at", desc=True)
+                .order("last_viewed_at", desc=True)
                 .limit(limit)
                 .execute()
             )
@@ -1325,7 +1409,7 @@ class SupabaseDatabase:
                 self.client.table(self.table_scan_results)
                 .select("extension_id, extension_name, slug, scanned_at, created_at, updated_at, security_score, risk_level, total_findings, total_files, high_risk_count, medium_risk_count, low_risk_count, metadata, webstore_analysis, sast_results, permissions_analysis, manifest, summary, icon_base64, icon_media_type")
                 .eq("status", "completed")
-                .order("scanned_at", desc=True)
+                .order("updated_at", desc=True)
             )
             if search and search.strip():
                 term = search.strip()
@@ -1367,6 +1451,62 @@ class SupabaseDatabase:
             print(f"Error getting recent scans (Supabase): {e}")
             print(f"Traceback: {traceback.format_exc()}")
             return []
+
+    def touch_scan_result(self, extension_id: str) -> bool:
+        """Touch scan result to bump it in recent scans (updates updated_at)."""
+        try:
+            resp = (
+                self.client.table(self.table_scan_results)
+                .update({"updated_at": datetime.now(timezone.utc).isoformat()})
+                .eq("extension_id", extension_id)
+                .execute()
+            )
+            data = getattr(resp, "data", None) or []
+            return len(data) > 0
+        except Exception as e:
+            print(f"Error touching scan result (Supabase): {e}")
+            return False
+
+    def update_scan_summary(self, extension_id: str, scoring_v2: dict, report_view_model: dict) -> bool:
+        """
+        Update the summary JSONB field with upgraded scoring_v2 and report_view_model.
+        Called after legacy payload upgrade to persist the computed data.
+        """
+        try:
+            # First, get the current summary
+            resp = (
+                self.client.table(self.table_scan_results)
+                .select("summary")
+                .eq("extension_id", extension_id)
+                .limit(1)
+                .execute()
+            )
+            data = getattr(resp, "data", None) or []
+            if not data:
+                return False
+            
+            current_summary = data[0].get("summary") or {}
+            if not isinstance(current_summary, dict):
+                current_summary = {}
+            
+            # Update with new fields
+            if scoring_v2:
+                current_summary["scoring_v2"] = scoring_v2
+            if report_view_model:
+                current_summary["report_view_model"] = report_view_model
+            
+            # Update the row
+            resp = (
+                self.client.table(self.table_scan_results)
+                .update({"summary": current_summary})
+                .eq("extension_id", extension_id)
+                .execute()
+            )
+            updated = getattr(resp, "data", None) or []
+            return len(updated) > 0
+        except Exception as e:
+            print(f"Error updating scan summary (Supabase): {e}")
+            return False
 
     def delete_scan_result(self, extension_id: str) -> bool:
         try:

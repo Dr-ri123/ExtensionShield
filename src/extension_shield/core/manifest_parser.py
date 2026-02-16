@@ -3,12 +3,16 @@ Manifest Parser
 """
 
 import json
+import re
 from typing import Optional, Dict, Any, List
 from pathlib import Path
 import logging
 
 
 logger = logging.getLogger(__name__)
+
+# Chrome extension i18n placeholder: __MSG_<messageKey>__
+_MSG_PATTERN = re.compile(r"__MSG_([A-Za-z0-9@_]+)__")
 
 
 class ManifestParser:
@@ -227,6 +231,54 @@ class ManifestParser:
 
         return dangerous
 
+    def _load_messages(self, raw_manifest: dict) -> Dict[str, str]:
+        """Load _locales messages. Try default_locale, then 'en', then first available."""
+        ext_path = Path(self.extension_dir)
+        locales_dir = ext_path / "_locales"
+        if not locales_dir.is_dir():
+            return {}
+
+        locales_to_try = []
+        default = raw_manifest.get("default_locale")
+        if default:
+            locales_to_try.append(default)
+        if "en" not in locales_to_try:
+            locales_to_try.append("en")
+        if default and default.startswith("en") and default != "en":
+            locales_to_try.append("en_US")
+            locales_to_try.append("en_GB")
+        for d in sorted(locales_dir.iterdir()):
+            if d.is_dir() and d.name not in locales_to_try:
+                locales_to_try.append(d.name)
+
+        for loc in locales_to_try:
+            msg_path = locales_dir / loc / "messages.json"
+            if msg_path.exists():
+                try:
+                    with open(msg_path, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                    result = {}
+                    for k, v in (data or {}).items():
+                        if isinstance(v, dict) and "message" in v:
+                            result[k] = str(v["message"])
+                    return result
+                except (json.JSONDecodeError, OSError) as e:
+                    logger.debug("Could not load _locales/%s/messages.json: %s", loc, e)
+        return {}
+
+    def _resolve_msg_placeholder(self, text: str, messages: Dict[str, str]) -> str:
+        """Replace __MSG_key__ with value from messages, or return original if not found."""
+        if not text or not isinstance(text, str):
+            return text
+        match = _MSG_PATTERN.fullmatch(text.strip())
+        if match:
+            key = match.group(1)
+            return messages.get(key, text)
+        # Handle inline __MSG_xxx__ within longer strings (Chrome allows this)
+        def repl(m):
+            return messages.get(m.group(1), m.group(0))
+        return _MSG_PATTERN.sub(repl, text)
+
     def parse(self) -> Optional[Dict[str, Any]]:
         """
         Parse manifest.json from extension directory
@@ -250,13 +302,21 @@ class ManifestParser:
             with open(manifest_path, "r", encoding="utf-8") as f:
                 raw_manifest = json.load(f)
 
+            messages = self._load_messages(raw_manifest)
+            raw_name = raw_manifest.get("name", "Unknown")
+            raw_desc = raw_manifest.get("description", "")
+
+            # Resolve __MSG_*__ placeholders for name and description
+            name = self._resolve_msg_placeholder(raw_name, messages) if raw_name else "Unknown"
+            description = self._resolve_msg_placeholder(raw_desc, messages) if raw_desc else ""
+
             # Extract and structure data
             parsed = {
-                # Basic info
-                "name": raw_manifest.get("name", "Unknown"),
+                # Basic info (with i18n placeholders resolved)
+                "name": name,
                 "version": raw_manifest.get("version", "Unknown"),
                 "manifest_version": raw_manifest.get("manifest_version", 2),
-                "description": raw_manifest.get("description", ""),
+                "description": description,
                 # Permissions (CRITICAL for risk scoring)
                 "permissions": self._extract_permissions(raw_manifest),
                 "host_permissions": self._extract_host_permissions(raw_manifest),

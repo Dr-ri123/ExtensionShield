@@ -1649,6 +1649,7 @@ def build_report_view_model(
             "extension_id": extension_id,
             "name": (manifest.get("name") or metadata.get("title") or metadata.get("name") or extension_id),
             "version": manifest.get("version") or metadata.get("version") or "0.0.0",
+            "description": (manifest.get("description") or metadata.get("description") or ""),
             "scan_id": scan_id or extension_id,
             "scanned_at": _utc_now_iso(),
             "host_scope_label": host_scope_label,

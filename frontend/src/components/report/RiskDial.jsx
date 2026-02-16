@@ -147,9 +147,9 @@ const RiskDial = ({
   const displayScore = Math.round(animatedScore);
   
   // Shared helper: derive band from score using backend-aligned thresholds
-  // Green: score >= 85 => GOOD (Low risk)
-  // Yellow: 60 <= score < 85 => WARN (Medium risk)
-  // Red: score < 60 => BAD (High risk)
+  // Green: score >= 85 => GOOD (Safe)
+  // Yellow: 60 <= score < 85 => WARN (Review needed)
+  // Red: score < 60 => BAD (Risk detected)
   const getBandFromScore = (scoreValue) => {
     if (scoreValue == null) return 'NA';
     if (scoreValue >= 85) return 'GOOD';
@@ -160,12 +160,12 @@ const RiskDial = ({
   // Prefer explicit band prop; if it's NA, derive from score
   const effectiveBand = band === 'NA' ? getBandFromScore(clampedScore) : band;
 
-  // Get risk label based on band
+  // Get risk label based on band (consumer-friendly labels)
   const getRiskLabel = () => {
     switch (effectiveBand) {
-      case 'GOOD': return 'Low Risk';
-      case 'WARN': return 'Medium Risk';
-      case 'BAD':  return 'High Risk';
+      case 'GOOD': return 'Safe';
+      case 'WARN': return 'Review needed';
+      case 'BAD':  return 'Risk detected';
       default:     return 'N/A';
     }
   };

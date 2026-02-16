@@ -190,20 +190,14 @@ export const ScanProvider = ({ children }) => {
       // The progress page will poll status until the scan is running/completed.
       navigate(`/scan/progress/${extId}`);
       
-      // Check status and trigger scan in the background
-      const status = await realScanService.checkScanStatus(extId);
-      let scanTrigger = null;
+      // Always trigger scan (for cached lookups, backend bumps extension to top of recent scans)
+      const scanTrigger = await realScanService.triggerScan(urlToScan);
 
-      if (!status.scanned) {
-        scanTrigger = await realScanService.triggerScan(urlToScan);
-
-        // For cached lookups, backend may return status=completed + already_scanned=true
-        if (!scanTrigger.already_scanned && scanTrigger.status !== "running") {
-          throw new Error(scanTrigger.error || "Failed to start scan");
-        }
+      if (!scanTrigger.already_scanned && scanTrigger.status !== "running" && scanTrigger.status !== "completed") {
+        throw new Error(scanTrigger.error || "Failed to start scan");
       }
-      
-      if (!status.scanned && scanTrigger && !scanTrigger.already_scanned) {
+
+      if (!scanTrigger.already_scanned && scanTrigger.status !== "completed") {
         await waitForScanCompletion(extId);
       }
 
@@ -348,9 +342,14 @@ export const ScanProvider = ({ children }) => {
   }, [navigate]);
 
   // Load results by extension ID (single API: realScanService.getRealScanResults)
-  // Always clears previous results first so stale data never leaks between extensions.
+  // Uses cached results when already loaded for this extension (e.g. after completing a scan).
   const loadResultsById = useCallback(async (extId) => {
     try {
+      // If we already have results for this extension (e.g. just completed scan), return them without clearing or refetching
+      if (extId === currentExtensionId && scanResults) {
+        return scanResults;
+      }
+
       // Clear previous extension's data before fetching new one
       setScanResults(null);
       setCurrentExtensionId(extId);
@@ -368,7 +367,7 @@ export const ScanProvider = ({ children }) => {
       setError("Failed to load scan results.");
       return null;
     }
-  }, []);
+  }, [currentExtensionId, scanResults]);
 
   // Clear scan state
   const clearScan = useCallback(() => {

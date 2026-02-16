@@ -47,6 +47,7 @@ from extension_shield.api.payload_helpers import (
     build_publisher_disclosures,
     build_report_view_model_safe,
     ensure_consumer_insights,
+    ensure_description_in_meta,
     log_scan_results_return_shape,
     upgrade_legacy_payload,
 )
@@ -2130,6 +2131,11 @@ async def trigger_scan(scan_request: ScanRequest, background_tasks: BackgroundTa
 
     # If we already have results, treat this as a cached lookup (no deep-scan consumption)
     if _has_cached_results(extension_id):
+        # Bump extension to top of recent scans (for both auth and anonymous users)
+        try:
+            db.touch_scan_result(extension_id)
+        except Exception:
+            pass
         # Record user history even for cached lookups (if authenticated)
         user_id = getattr(getattr(request, "state", None), "user_id", None)
         if user_id:
@@ -2393,6 +2399,7 @@ async def get_scan_results(identifier: str, http_request: Request):
         # Upgrade legacy payload and ensure consumer_insights
         payload = upgrade_legacy_payload(payload, extension_id)
         payload = ensure_consumer_insights(payload)
+        ensure_description_in_meta(payload)
         # Add risk and signals mapping
         payload["risk_and_signals"] = _extract_risk_and_signals(payload)
         scan_results[extension_id] = payload
@@ -2442,12 +2449,33 @@ async def get_scan_results(identifier: str, http_request: Request):
         formatted_results["scoring_v2"] = results.get("scoring_v2") or summary.get("scoring_v2")
         formatted_results["governance_bundle"] = results.get("governance_bundle") or summary.get("governance_bundle")
 
+        # Track if we need to upgrade (legacy payload without scoring_v2/report_view_model)
+        had_scoring_v2 = bool(formatted_results.get("scoring_v2"))
+        had_report_view_model = bool(formatted_results.get("report_view_model"))
+        
         # Upgrade legacy payload and ensure consumer_insights
         payload = upgrade_legacy_payload(formatted_results, extension_id)
         payload = ensure_consumer_insights(payload)
+        ensure_description_in_meta(payload)
         # Add risk and signals mapping
         payload["risk_and_signals"] = _extract_risk_and_signals(payload)
         scan_results[extension_id] = payload  # Cache in memory
+        
+        # Persist upgraded payload back to database (background, non-blocking)
+        # Only if we actually computed new scoring_v2 or report_view_model
+        now_has_scoring_v2 = bool(payload.get("scoring_v2"))
+        now_has_report_view_model = bool(payload.get("report_view_model"))
+        if (now_has_scoring_v2 and not had_scoring_v2) or (now_has_report_view_model and not had_report_view_model):
+            try:
+                db.update_scan_summary(
+                    extension_id,
+                    payload.get("scoring_v2"),
+                    payload.get("report_view_model"),
+                )
+                logger.info("[DEBUG get_scan_results] Persisted upgraded payload to DB for %s", extension_id)
+            except Exception as persist_err:
+                logger.warning("[DEBUG get_scan_results] Failed to persist upgraded payload: %s", persist_err)
+        
         log_scan_results_return_shape("db", payload)
         return payload
     else:
@@ -2466,6 +2494,7 @@ async def get_scan_results(identifier: str, http_request: Request):
             # Upgrade legacy payload and ensure consumer_insights
             payload = upgrade_legacy_payload(payload, extension_id)
             payload = ensure_consumer_insights(payload)
+            ensure_description_in_meta(payload)
             # Add risk and signals mapping
             payload["risk_and_signals"] = _extract_risk_and_signals(payload)
             scan_results[extension_id] = payload  # Cache in memory

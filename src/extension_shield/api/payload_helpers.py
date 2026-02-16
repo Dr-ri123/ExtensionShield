@@ -142,24 +142,23 @@ def upgrade_legacy_payload(payload: Dict[str, Any], extension_id: str) -> Dict[s
     except Exception:
         force_recompute = False
 
+    # Fast path: skip expensive recompute (SignalPack + ScoringEngine) when we already
+    # have scoring_v2 and report_view_model. consumer_insights can be added by
+    # ensure_consumer_insights() which is lightweight. Requiring consumer_insights here
+    # caused 10-20s delays for scans that had scoring_v2/report_view_model but lacked it.
     if (
         has_scoring_v2_before
         and has_report_view_model_before
-        and has_consumer_insights_before
         and not force_recompute
     ):
         payload["publisher_disclosures"] = build_publisher_disclosures(
             payload.get("metadata"), payload.get("governance_bundle")
         )
         logger.info(
-            "[UPGRADE] extension_id=%s, results_payload_upgraded=false, has_scoring_v2=%s→%s, has_report_view_model=%s→%s, has_consumer_insights=%s→%s",
+            "[UPGRADE] extension_id=%s, results_payload_upgraded=false (fast path), has_scoring_v2=%s, has_report_view_model=%s",
             extension_id,
             has_scoring_v2_before,
-            has_scoring_v2_before,
             has_report_view_model_before,
-            has_report_view_model_before,
-            has_consumer_insights_before,
-            has_consumer_insights_before,
         )
         return payload
 
@@ -378,6 +377,35 @@ def ensure_consumer_insights(payload: Dict[str, Any]) -> Dict[str, Any]:
             logger.warning("Failed to compute consumer_summary: %s", exc)
 
     return payload
+
+
+def _is_i18n_placeholder(text: Any) -> bool:
+    """True if text is an unresolved Chrome i18n placeholder (e.g. __MSG_appDesc__)."""
+    if not isinstance(text, str):
+        return False
+    return bool(re.match(r"^__MSG_[A-Za-z0-9@_]+__$", text.strip()))
+
+
+def ensure_description_in_meta(payload: Dict[str, Any]) -> None:
+    """
+    Ensure report_view_model.meta.description is populated from manifest or metadata
+    when missing. Fixes legacy Supabase rows that don't have meta.description.
+    """
+    rvm = payload.get("report_view_model")
+    if not isinstance(rvm, dict):
+        return
+    meta = rvm.get("meta")
+    if not isinstance(meta, dict):
+        rvm["meta"] = meta = {}
+    if meta.get("description") and not _is_i18n_placeholder(meta.get("description")):
+        return  # Already has valid description
+    manifest = payload.get("manifest") or {}
+    metadata = payload.get("metadata") or {}
+    for raw in (manifest.get("description"), metadata.get("description")):
+        if raw and isinstance(raw, str) and raw.strip() and not _is_i18n_placeholder(raw):
+            meta["description"] = raw.strip()
+            return
+    # Don't set empty string - let frontend fall through to summary/one_liner
 
 
 def log_scan_results_return_shape(path: str, payload: Dict[str, Any]) -> None:
