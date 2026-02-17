@@ -17,7 +17,9 @@ export {
   // Common utilities
   calculateAllSignals,
   getRiskLevel,
+  getRiskDisplayLabel,
   getRiskColorClass,
+  getSignalDisplayLabel,
   getSignalColorClass,
   countFindings,
   getTopFindingSummary,

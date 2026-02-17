@@ -66,8 +66,8 @@ function humanizeFactor(factor) {
   };
   const severity = factor.severity ?? 0;
   let level, levelColor;
-  if (severity >= 0.7)      { level = 'Risk detected'; levelColor = 'var(--risk-bad)'; }
-  else if (severity >= 0.4) { level = 'Review needed'; levelColor = 'var(--risk-warn)'; }
+  if (severity >= 0.7)      { level = 'Not safe';      levelColor = 'var(--risk-bad)'; }
+  else if (severity >= 0.4) { level = 'Needs review';  levelColor = 'var(--risk-warn)'; }
   else if (severity >= 0.05){ level = 'Safe';          levelColor = 'var(--risk-good)'; }
   else                      { level = 'Clear';         levelColor = 'var(--risk-good)'; }
   return { ...info, level, levelColor, severity, raw: factor };
@@ -104,8 +104,8 @@ function bandColor(band) {
 function bandLabel(band) {
   switch (band) {
     case 'GOOD': return 'Safe';
-    case 'WARN': return 'Review needed';
-    case 'BAD':  return 'Risk detected';
+    case 'WARN': return 'Needs review';
+    case 'BAD':  return 'Not safe';
     default:     return '';
   }
 }

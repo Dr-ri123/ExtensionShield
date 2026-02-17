@@ -280,4 +280,69 @@
   }
 }
 
+/* Day mode – Enterprise page */
+.light .enterprise-bg .bg-gradient {
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 0%, rgba(22, 163, 74, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 40% at 50% 100%, rgba(22, 163, 74, 0.05) 0%, transparent 55%);
+}
+
+.light .enterprise-card,
+.light .enterprise-form {
+  background: var(--atlas-surface-card);
+  border: 1px solid var(--atlas-border);
+  box-shadow: 0 4px 20px rgba(38, 35, 31, 0.06);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.light .enterprise-card:hover,
+.light .enterprise-form:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(38, 35, 31, 0.12);
+  border-color: rgba(22, 163, 74, 0.25);
+}
+
+.light .enterprise-features {
+  color: var(--atlas-text-secondary);
+  font-weight: 500;
+}
+
+.light .enterprise-features li::before {
+  color: var(--atlas-accent);
+}
+
+.light .field label {
+  font-weight: 600;
+  color: var(--atlas-text-primary);
+}
+
+.light .field input,
+.light .field textarea {
+  background: var(--atlas-bg-secondary);
+  border-color: var(--atlas-border);
+  color: var(--atlas-text-primary);
+}
+
+.light .field input:focus,
+.light .field textarea:focus {
+  border-color: var(--atlas-accent);
+  box-shadow: 0 0 0 3px var(--atlas-accent-subtle);
+}
+
+.light .form-note {
+  font-weight: 500;
+  color: var(--atlas-text-secondary);
+}
+
+.light .enterprise-submit {
+  background: var(--atlas-accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+.light .enterprise-submit:hover {
+  background: var(--atlas-accent-hover);
+  box-shadow: 0 8px 20px rgba(22, 163, 74, 0.3);
+}
+
 

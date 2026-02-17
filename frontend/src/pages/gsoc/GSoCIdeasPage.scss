@@ -1,5 +1,5 @@
 /* ============================================================================
-   GSoC Ideas Page
+   GSoC Ideas Page – Theme tokens from index.css
    ============================================================================ */
 
 .gsoc-ideas-page {
@@ -7,6 +7,7 @@
   background: transparent;
   color: var(--atlas-text-primary, #f8fafc);
   position: relative;
+  font-family: var(--font-sans);
 }
 
 .gsoc-bg {
@@ -33,10 +34,10 @@
 .gsoc-header {
   text-align: center;
   margin-bottom: 3rem;
-  
+
   h1 {
     font-size: clamp(2rem, 5vw, 3rem);
-    font-weight: 700;
+    font-weight: var(--weight-strong, 700);
     margin-bottom: 1.5rem;
     background: linear-gradient(135deg, #f8fafc 0%, #94a3b8 100%);
     -webkit-background-clip: text;
@@ -69,8 +70,8 @@
   background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(249, 115, 22, 0.1) 100%);
   border: 1px solid rgba(251, 191, 36, 0.3);
   border-radius: 999px;
-  font-size: 0.875rem;
-  font-weight: 600;
+  font-size: var(--report-text-sm);
+  font-weight: var(--weight-heading, 600);
   color: #fbbf24;
   margin-bottom: 1.5rem;
 }
@@ -104,10 +105,10 @@
   justify-content: space-between;
   gap: 1rem;
   margin-bottom: 1rem;
-  
+
   h3 {
-    font-size: 1.25rem;
-    font-weight: 700;
+    font-size: var(--report-text-xl);
+    font-weight: var(--weight-strong, 700);
     color: var(--atlas-text-primary, #f8fafc);
     margin: 0;
   }
@@ -115,28 +116,28 @@
 
 .difficulty-badge {
   padding: 0.25rem 0.625rem;
-  border-radius: 4px;
+  border-radius: var(--radius-sm);
   font-size: 0.6875rem;
-  font-weight: 700;
+  font-weight: var(--weight-strong, 700);
   letter-spacing: 0.05em;
   white-space: nowrap;
-  
+
   &.easy {
-    background: rgba(34, 197, 94, 0.2);
-    color: #86efac;
-    border: 1px solid rgba(34, 197, 94, 0.4);
+    background: var(--risk-good-bg);
+    color: var(--risk-good);
+    border: 1px solid var(--risk-good-border);
   }
-  
+
   &.medium {
-    background: rgba(251, 191, 36, 0.2);
-    color: #fde047;
-    border: 1px solid rgba(251, 191, 36, 0.4);
+    background: var(--risk-warn-bg);
+    color: var(--risk-warn);
+    border: 1px solid var(--risk-warn-border);
   }
-  
+
   &.hard {
-    background: rgba(239, 68, 68, 0.2);
-    color: #fca5a5;
-    border: 1px solid rgba(239, 68, 68, 0.4);
+    background: var(--risk-bad-bg);
+    color: var(--risk-bad);
+    border: 1px solid var(--risk-bad-border);
   }
 }
 
@@ -167,10 +168,10 @@
 .idea-goals {
   padding-top: 1rem;
   border-top: 1px solid rgba(148, 163, 184, 0.1);
-  
+
   h4 {
-    font-size: 0.875rem;
-    font-weight: 700;
+    font-size: var(--report-text-sm);
+    font-weight: var(--weight-strong, 700);
     color: var(--atlas-text-primary, #f8fafc);
     margin-bottom: 0.75rem;
   }
@@ -195,12 +196,12 @@
   padding: 2rem;
   background: linear-gradient(135deg, rgba(251, 191, 36, 0.08) 0%, rgba(13, 20, 36, 0.6) 100%);
   border: 1px solid rgba(251, 191, 36, 0.2);
-  border-radius: 16px;
+  border-radius: var(--radius-lg);
   text-align: center;
-  
+
   h3 {
-    font-size: 1.25rem;
-    font-weight: 700;
+    font-size: var(--report-text-xl);
+    font-weight: var(--weight-strong, 700);
     margin-bottom: 0.5rem;
     color: var(--atlas-text-primary, #f8fafc);
   }
@@ -224,9 +225,9 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.875rem 1.5rem;
-  border-radius: 8px;
-  font-size: 0.9375rem;
-  font-weight: 600;
+  border-radius: var(--radius);
+  font-size: var(--report-text-sm);
+  font-weight: var(--weight-heading, 600);
   text-decoration: none;
   transition: all 0.3s ease;
   
@@ -243,11 +244,110 @@
     background: transparent;
     color: var(--atlas-text-primary, #f8fafc);
     border: 1px solid rgba(148, 163, 184, 0.3);
-    
+
     &:hover {
       border-color: var(--atlas-accent, #22c55e);
       color: var(--atlas-accent, #22c55e);
     }
+  }
+}
+
+/* ============================================================================
+   Light mode – match site design theme
+   ============================================================================ */
+.light .gsoc-ideas-page {
+  color: var(--atlas-text-primary);
+}
+
+.light .gsoc-header h1 {
+  background: linear-gradient(135deg, var(--atlas-text-primary) 0%, var(--atlas-text-secondary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.light .gsoc-header .intro-text {
+  color: var(--atlas-text-primary);
+}
+
+.light .gsoc-header .sub-text {
+  color: var(--atlas-text-muted);
+}
+
+.light .gsoc-badge {
+  background: linear-gradient(135deg, rgba(230, 168, 0, 0.12) 0%, rgba(22, 163, 74, 0.08) 100%);
+  border-color: rgba(22, 163, 74, 0.25);
+  color: var(--atlas-accent);
+}
+
+.light .idea-card {
+  background: var(--atlas-bg-card);
+  border: 1px solid var(--atlas-border);
+  box-shadow: var(--atlas-card-shadow);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+
+  &:hover {
+    transform: translateY(-4px);
+    border-color: var(--atlas-border-accent);
+    box-shadow: 0 12px 40px rgba(38, 35, 31, 0.12);
+  }
+}
+
+.light .idea-header h3 {
+  color: var(--atlas-text-primary);
+}
+
+.light .idea-description {
+  color: var(--atlas-text-secondary);
+}
+
+.light .skill-tag {
+  background: var(--atlas-accent-subtle);
+  border-color: var(--atlas-border-accent);
+  color: var(--atlas-accent);
+}
+
+.light .idea-goals {
+  border-top-color: var(--atlas-border);
+}
+
+.light .idea-goals h4 {
+  color: var(--atlas-text-primary);
+}
+
+.light .idea-goals li {
+  color: var(--atlas-text-secondary);
+}
+
+.light .gsoc-cta {
+  background: var(--atlas-accent-subtle);
+  border-color: var(--atlas-border-accent);
+}
+
+.light .gsoc-cta h3 {
+  color: var(--atlas-text-primary);
+}
+
+.light .gsoc-cta p {
+  color: var(--atlas-text-secondary);
+}
+
+.light .cta-button.primary {
+  background: linear-gradient(135deg, var(--atlas-accent) 0%, var(--atlas-accent-hover) 100%);
+  color: #fff;
+
+  &:hover {
+    box-shadow: 0 8px 24px var(--atlas-accent-glow);
+  }
+}
+
+.light .cta-button.secondary {
+  color: var(--atlas-text-primary);
+  border-color: var(--atlas-border);
+
+  &:hover {
+    border-color: var(--atlas-accent);
+    color: var(--atlas-accent);
   }
 }
 

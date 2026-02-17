@@ -13,7 +13,7 @@ Canonical type system and audit summary. Use this for consistency across UI, mar
   - Many components use `font-family: inherit`; acceptable where parent sets `var(--font-sans)` (e.g. body/App).
 
 - **Explicit font-size / line-height**
-  - Two systems: `index.css` `--report-text-*` / `--report-line-*` and `_theme-tokens.scss` `$font-size-*`. Aligned so report scale matches SCSS (base 16px, sm 14px, etc.).
+  - Two systems: `index.css` `--report-text-*` / `--report-line-*` and `_theme-tokens.scss` `$font-size-*` (note: `_theme-tokens.scss` is not currently imported; index.css is canonical).
   - `--report-text-sm` was 15px; set to 0.875rem (14px) to match canonical sm.
 
 - **Hover changing typography**

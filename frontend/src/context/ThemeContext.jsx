@@ -17,15 +17,15 @@ const FORCE_DARK_ROUTES = ["/settings", "/reports"];
 export const ThemeProvider = ({ children }) => {
   const location = useLocation();
   const [theme, setTheme] = useState(() => {
-    // Check localStorage first, then system preference, then default to dark
+    // Check localStorage first; default to light theme when no preference is set
     const stored = localStorage.getItem("theme");
-    if (stored) {
-      return stored;
+    const initial = stored ?? "light";
+    // Apply theme class synchronously so first paint (e.g. /research/methodology) is correct before useEffect runs
+    if (typeof document !== "undefined") {
+      if (initial === "light") document.documentElement.classList.add("light");
+      else document.documentElement.classList.remove("light");
     }
-    if (window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) {
-      return "light";
-    }
-    return "dark";
+    return initial;
   });
 
   // Determine effective theme based on route

@@ -286,6 +286,30 @@
   font-size: 0.9rem;
 }
 
+/* Day mode – Reports page */
+.light .reports-page .empty-state {
+  background: rgba(247, 243, 235, 0.8);
+  border-color: var(--atlas-border);
+}
+
+.light .reports-page .empty-state h3 {
+  color: var(--atlas-text-primary);
+}
+
+.light .reports-page .empty-state p {
+  color: var(--atlas-text-muted);
+}
+
+.light .reports-page .report-card {
+  background: rgba(247, 243, 235, 0.95);
+  border: 1px solid var(--atlas-border);
+}
+
+.light .reports-page .report-card:hover {
+  border-color: var(--atlas-border-accent);
+  background: rgba(247, 243, 235, 0.98);
+}
+
 /* ============================================================================
    REPORTS LIST
    ============================================================================ */

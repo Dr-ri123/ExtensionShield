@@ -148,8 +148,8 @@ const RiskDial = ({
   
   // Shared helper: derive band from score using backend-aligned thresholds
   // Green: score >= 85 => GOOD (Safe)
-  // Yellow: 60 <= score < 85 => WARN (Review needed)
-  // Red: score < 60 => BAD (Risk detected)
+  // Yellow: 60 <= score < 85 => WARN (Needs review)
+  // Red: score < 60 => BAD (Not safe)
   const getBandFromScore = (scoreValue) => {
     if (scoreValue == null) return 'NA';
     if (scoreValue >= 85) return 'GOOD';
@@ -160,12 +160,12 @@ const RiskDial = ({
   // Prefer explicit band prop; if it's NA, derive from score
   const effectiveBand = band === 'NA' ? getBandFromScore(clampedScore) : band;
 
-  // Get risk label based on band (consumer-friendly labels)
+  // Get risk label based on band (consumer-friendly labels aligned with signalMapper.js)
   const getRiskLabel = () => {
     switch (effectiveBand) {
       case 'GOOD': return 'Safe';
-      case 'WARN': return 'Review needed';
-      case 'BAD':  return 'Risk detected';
+      case 'WARN': return 'Needs review';
+      case 'BAD':  return 'Not safe';
       default:     return 'N/A';
     }
   };

@@ -36,7 +36,7 @@ const MethodologyPage = () => {
               <p>All three dimensions combined into one actionable metric</p>
             </div>
             <div className="aggregate-dial">
-              <RiskDial score={83} label="OVERALL" size={280} decision="ALLOW" />
+              <RiskDial score={83} label="OVERALL" size={280} />
             </div>
             <div className="aggregate-formula">
               <div className="formula-item">

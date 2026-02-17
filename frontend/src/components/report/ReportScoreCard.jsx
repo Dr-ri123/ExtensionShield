@@ -32,8 +32,8 @@ const ReportScoreCard = ({
   const getBandLabel = () => {
     switch (band) {
       case 'GOOD': return 'Safe';
-      case 'WARN': return 'Review needed';
-      case 'BAD': return 'Risk detected';
+      case 'WARN': return 'Needs review';
+      case 'BAD': return 'Not safe';
       default: return 'N/A';
     }
   };

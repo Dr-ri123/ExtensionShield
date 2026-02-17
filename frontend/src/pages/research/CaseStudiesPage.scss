@@ -194,3 +194,80 @@
   }
 }
 
+/* ============================================================================
+   Day mode – Case Studies (chalk/limestone/pitch/rust)
+   ============================================================================ */
+.light .case-studies-page {
+  color: var(--atlas-text-primary);
+}
+
+.light .case-studies-bg .bg-gradient {
+  background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(22, 163, 74, 0.04) 0%, transparent 50%);
+}
+
+.light .breadcrumb a:hover {
+  color: var(--atlas-accent);
+}
+
+.light .case-studies-header h1 {
+  background: linear-gradient(135deg, var(--atlas-text-primary) 0%, var(--atlas-text-muted) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.light .case-study-card {
+  background: var(--atlas-surface-card);
+  border: 1px solid var(--atlas-border);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+
+  &:hover:not(.coming-soon) {
+    transform: translateY(-4px);
+    border-color: rgba(22, 163, 74, 0.25);
+    box-shadow: 0 12px 40px rgba(38, 35, 31, 0.12);
+  }
+
+  &.featured {
+    background: linear-gradient(135deg, var(--atlas-accent-subtle) 0%, var(--atlas-bg-secondary) 100%);
+    border-color: var(--atlas-border-accent);
+  }
+
+  h3 {
+    color: var(--atlas-text-primary);
+  }
+
+  .subtitle {
+    color: var(--atlas-text-secondary);
+  }
+
+  .description {
+    color: var(--atlas-text-muted);
+  }
+}
+
+.light .severity-badge.high {
+  background: rgba(249, 115, 22, 0.15);
+  color: #c2410c;
+  border-color: rgba(249, 115, 22, 0.35);
+}.light .severity-badge.critical {
+  background: var(--risk-bad-bg);
+  color: var(--risk-bad);
+  border-color: var(--risk-bad-border);
+}
+
+.light .category-badge {
+  background: var(--atlas-accent-subtle);
+  border-color: var(--atlas-border-accent);
+  color: var(--atlas-accent);
+  font-weight: 600;
+}
+
+.light .coming-soon-badge {
+  background: rgba(36, 34, 30, 0.08);
+  border-color: var(--atlas-border);
+  color: var(--atlas-text-muted);
+}
+
+.light .read-more {
+  color: var(--atlas-accent);
+}

@@ -30,9 +30,19 @@ j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="shortcut icon" href="/favicon-48x48.png" />
     <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#0d1424" />
+    <meta name="theme-color" content="#faf8f4" />
     <meta name="color-scheme" content="dark light" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Apply theme before first paint so /research/methodology and other pages render correctly on first visit -->
+    <script>
+      (function() {
+        var path = typeof window !== 'undefined' && window.location && window.location.pathname;
+        var forceDark = path && (path.startsWith('/settings') || path.startsWith('/reports'));
+        var theme = forceDark ? 'dark' : (localStorage.getItem('theme') || 'light');
+        if (theme === 'light') document.documentElement.classList.add('light');
+        else document.documentElement.classList.remove('light');
+      })();
+    </script>
     <!-- Content Security Policy -->
     <!-- CSP is injected by Vite plugins:
          - Dev: Permissive CSP for Vite HMR (via vite.config.js plugin)

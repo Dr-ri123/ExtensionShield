@@ -284,3 +284,112 @@
   }
 }
 
+/* Day mode – Honey case study */
+.light .honey-case-study-page {
+  color: var(--atlas-text-primary);
+}
+
+.light .honey-bg .bg-gradient {
+  background:
+    radial-gradient(ellipse 60% 40% at 20% 30%, rgba(178, 82, 24, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse 60% 40% at 80% 70%, rgba(239, 68, 68, 0.04) 0%, transparent 50%);
+}
+
+.light .breadcrumb a:hover {
+  color: var(--atlas-accent);
+}
+
+.light .honey-header h1 {
+  color: var(--atlas-text-primary);
+}
+
+.light .honey-subtitle {
+  color: var(--atlas-text-secondary);
+}
+
+.light .honey-stats {
+  background: rgba(247, 243, 235, 0.95);
+  border: 1px solid var(--atlas-border);
+}
+
+.light .finding-card {
+  background: var(--atlas-surface-card);
+  border: 1px solid var(--atlas-border);
+  box-shadow: 0 4px 20px rgba(38, 35, 31, 0.06);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.light .finding-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(22, 163, 74, 0.25);
+  box-shadow: 0 12px 40px rgba(38, 35, 31, 0.12);
+}
+
+.light .finding-card h3 {
+  color: var(--atlas-text-primary);
+  font-weight: 700;
+}
+
+.light .finding-card p {
+  color: var(--atlas-text-secondary);
+  font-weight: 500;
+}
+
+.light .honey-article section h2 {
+  color: var(--atlas-text-primary);
+}
+
+.light .honey-article section p {
+  color: var(--atlas-text-secondary);
+  font-weight: 500;
+}
+
+.light .honey-stats .stat-value {
+  color: var(--atlas-text-primary);
+}
+
+.light .honey-stats .stat-label {
+  color: var(--atlas-text-muted);
+  font-weight: 600;
+}
+
+.light .honey-stats .stat.danger .stat-value {
+  color: var(--risk-bad);
+}
+
+.light .date-badge {
+  background: var(--atlas-accent-subtle);
+  border-color: var(--atlas-border-accent);
+  color: var(--atlas-text-secondary);
+  font-weight: 600;
+}.light .lessons-list li {
+  background: rgba(247, 243, 235, 0.9);
+  border: 1px solid var(--atlas-border);
+  color: var(--atlas-text-secondary);
+}
+
+.light .lessons-list li strong {
+  color: var(--atlas-text-primary);
+}
+
+.light .honey-cta {
+  background: linear-gradient(135deg, var(--atlas-accent-subtle) 0%, var(--atlas-bg-secondary) 100%);
+  border: 1px solid var(--atlas-border-accent);
+}
+
+.light .cta-button {
+  background: var(--atlas-accent);
+  color: rgb(255 255 255);
+}
+
+.light .cta-button:hover {
+  box-shadow: 0 8px 24px var(--atlas-accent-glow);
+}
+
+/* Day mode: labels/badges green to match ExtensionShield */
+.light .category-badge {
+  background: var(--atlas-accent-subtle);
+  border-color: var(--atlas-border-accent);
+  color: var(--atlas-accent);
+  font-weight: 600;
+}

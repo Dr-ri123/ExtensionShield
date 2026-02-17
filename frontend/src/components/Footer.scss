@@ -88,6 +88,15 @@
   color: var(--atlas-accent, #22c55e);
 }
 
+/* Day mode – border and link hover use theme */
+.light .app-footer {
+  border-top-color: var(--atlas-border);
+}
+
+.light .app-footer .footer-links a:hover {
+  color: var(--atlas-accent);
+}
+
 /* Responsive */
 @media (max-width: 640px) {
   .app-footer {

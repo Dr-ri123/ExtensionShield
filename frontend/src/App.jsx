@@ -12,6 +12,7 @@ import SignInModal from "./components/SignInModal";
 import ShieldLogo from "./components/ShieldLogo";
 import Footer from "./components/Footer";
 import AppBackground from "./components/AppBackground";
+import ThemeToggle from "./components/ThemeToggle";
 import { trackPageView } from "./services/telemetryService";
 import "./App.scss";
 
@@ -400,6 +401,17 @@ function MainMegamenu() {
   );
 }
 
+// Reusable auth loading dots (header desktop + mobile)
+function AuthLoadingDots() {
+  return (
+    <div className="auth-loading">
+      <span className="loading-dot" />
+      <span className="loading-dot" />
+      <span className="loading-dot" />
+    </div>
+  );
+}
+
 // Scroll threshold (px) after which homepage header transitions to solid pill
 const HEADER_SCROLL_THRESHOLD = 100;
 
@@ -459,13 +471,13 @@ function AppHeader() {
       borderRadius: 9999,
       maxWidth: "1600px",
       margin: "0 auto",
-      background: isLight ? "rgba(255, 255, 255, 0.94)" : "transparent",
+      background: isLight ? "rgba(250, 248, 244, 0.78)" : "transparent",
       backdropFilter: "blur(24px)",
       WebkitBackdropFilter: "blur(24px)",
       boxShadow: isLight
-        ? "0 4px 24px rgba(0, 0, 0, 0.1), 0 0 1px rgba(0, 0, 0, 0.05)"
+        ? "0 4px 24px rgba(38, 35, 31, 0.1), 0 0 0 1px rgba(38, 35, 31, 0.08)"
         : "0 0 24px rgba(34, 197, 94, 0.08), 0 4px 24px rgba(0, 0, 0, 0.25)",
-      border: isLight ? "1px solid rgba(0, 0, 0, 0.06)" : "1px solid rgba(34, 197, 94, 0.12)",
+      border: isLight ? "1px solid rgba(38, 35, 31, 0.14)" : "1px solid rgba(34, 197, 94, 0.2)",
     },
   };
 
@@ -506,12 +518,9 @@ function AppHeader() {
         </nav>
 
         <div className="header-actions header-actions-desktop">
+          <ThemeToggle />
           {isLoading ? (
-            <div className="auth-loading">
-              <span className="loading-dot" />
-              <span className="loading-dot" />
-              <span className="loading-dot" />
-            </div>
+            <AuthLoadingDots />
           ) : isAuthenticated && user ? (
             <UserMenu />
           ) : (
@@ -570,12 +579,9 @@ function AppHeader() {
             })}
           </nav>
           <div className="mobile-menu-actions">
+            <ThemeToggle onToggle={() => setMobileMenuOpen(false)} />
             {isLoading ? (
-              <div className="auth-loading">
-                <span className="loading-dot" />
-                <span className="loading-dot" />
-                <span className="loading-dot" />
-              </div>
+              <AuthLoadingDots />
             ) : isAuthenticated && user ? (
               <UserMenu />
             ) : (

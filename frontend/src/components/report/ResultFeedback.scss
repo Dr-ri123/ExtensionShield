@@ -267,3 +267,109 @@
 @keyframes feedbackSpin {
   to { transform: rotate(360deg); }
 }
+
+/* Day mode – feedback uses theme tokens */
+.light .result-feedback--compact {
+  .result-feedback__signal {
+    color: var(--atlas-text-muted);
+  }
+
+  .result-feedback__circle {
+    border-color: var(--atlas-border);
+    background: rgba(255, 255, 255, 0.6);
+    color: var(--atlas-text-secondary);
+
+    &:hover {
+      background: var(--atlas-accent-subtle);
+      border-color: var(--atlas-border-accent);
+      color: var(--atlas-accent);
+    }
+
+    &:focus-visible {
+      outline-color: var(--atlas-accent);
+    }
+  }
+}
+
+.light .result-feedback--success {
+  .result-feedback__check {
+    color: var(--risk-good);
+  }
+
+  .result-feedback__thanks {
+    color: var(--risk-good);
+  }
+}
+
+.light .result-feedback--error .result-feedback__retry-btn:hover {
+  color: var(--risk-bad);
+}
+
+.light .result-feedback--submitting .result-feedback__spinner {
+  border-color: var(--atlas-border);
+  border-top-color: var(--atlas-accent);
+}
+
+.light .result-feedback__popover {
+  background: var(--atlas-bg-secondary);
+  border: 1px solid var(--atlas-border);
+  box-shadow: 0 12px 32px rgba(36, 34, 30, 0.12);
+}
+
+.light .result-feedback__popover-title {
+  color: var(--atlas-text-primary);
+}
+
+.light .result-feedback__reason {
+  color: var(--atlas-text-secondary);
+
+  input[type="radio"] {
+    accent-color: var(--atlas-accent);
+  }
+}
+
+.light .result-feedback__score-row {
+  color: var(--atlas-text-muted);
+}
+
+.light .result-feedback__slider {
+  background: rgba(36, 34, 30, 0.1);
+
+  &::-webkit-slider-thumb {
+    background: var(--atlas-accent);
+  }
+
+  &::-moz-range-thumb {
+    background: var(--atlas-accent);
+  }
+}
+
+.light .result-feedback__textarea {
+  color: var(--atlas-text-primary);
+  background: rgba(36, 34, 30, 0.06);
+  border-color: var(--atlas-border);
+
+  &::placeholder {
+    color: var(--atlas-text-muted);
+  }
+}
+
+.light .result-feedback__popover-btn {
+  border-color: var(--atlas-border);
+  background: rgba(36, 34, 30, 0.06);
+  color: var(--atlas-text-secondary);
+
+  &:hover {
+    background: rgba(36, 34, 30, 0.1);
+  }
+
+  &.result-feedback__popover-btn--primary {
+    background: var(--atlas-accent-subtle);
+    border-color: var(--atlas-border-accent);
+    color: var(--atlas-accent);
+
+    &:hover:not(:disabled) {
+      background: var(--atlas-accent-subtle);
+    }
+  }
+}

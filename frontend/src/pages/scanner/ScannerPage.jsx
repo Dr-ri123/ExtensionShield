@@ -6,7 +6,9 @@ import databaseService from "../../services/databaseService";
 import realScanService from "../../services/realScanService";
 import {
   getRiskColorClass,
+  getRiskDisplayLabel,
   getSignalColorClass,
+  getSignalDisplayLabel,
 } from "../../utils/signalMapper";
 import { enrichScans } from "../../utils/scanEnrichment";
 import { EXTENSION_ICON_PLACEHOLDER, getExtensionIconUrl } from "../../utils/constants";
@@ -90,12 +92,13 @@ const SignalChip = ({ type, signal }) => {
 
   const colorClass = getSignalColorClass(signal?.level);
 
+  const displayLabel = getSignalDisplayLabel(signal);
   return (
     <SignalTooltip type={type}>
       <div className={`signal-chip ${colorClass}`}>
         <span className="signal-icon">{icons[type] || icons.code}</span>
         <span className="signal-label">{labels[type] || labels.code}</span>
-        <span className="signal-value">{signal?.label || "—"}</span>
+        <span className="signal-value">{displayLabel}</span>
       </div>
     </SignalTooltip>
   );
@@ -128,7 +131,7 @@ const RiskBadge = ({ level, score }) => {
         color: getTextColor()
       }}
     >
-      <span className="risk-level">{level || "—"}</span>
+      <span className="risk-level">{getRiskDisplayLabel(level)}</span>
     </div>
   );
 };

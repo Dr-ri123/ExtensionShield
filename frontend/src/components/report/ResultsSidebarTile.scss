@@ -26,7 +26,12 @@
   display: flex;
   flex-direction: column;
   gap: 12px;
-  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease, background 0.2s;
+
+  &:hover {
+    border-color: rgba(148, 163, 184, 0.22);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.2);
+  }
 
   &.is-clickable {
     cursor: pointer;
@@ -118,7 +123,7 @@
   }
 }
 
-/* Row 3: Review/Good pill */
+/* Row 3: Needs review / Safe / Not safe pill */
 .tile-pill-row {
   display: flex;
   align-items: center;
@@ -169,4 +174,81 @@
   height: 100%;
   border-radius: 3px;
   transition: width 0.4s ease;
+}
+
+/* ============================================================================
+   Light theme – visible text, borders, and pills (no muted)
+   ============================================================================ */
+.light .results-sidebar-tile {
+  background: var(--atlas-bg-card);
+  border: 1px solid var(--atlas-border);
+  box-shadow: 0 4px 20px rgba(38, 35, 31, 0.06);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 40px rgba(38, 35, 31, 0.12);
+    border-color: rgba(22, 163, 74, 0.25);
+  }
+
+  &.is-clickable:hover {
+    background: var(--atlas-bg-card);
+    border-color: rgba(22, 163, 74, 0.25);
+    box-shadow: 0 12px 40px rgba(38, 35, 31, 0.12);
+  }
+
+  &.band-good {
+    border-color: var(--risk-good-border);
+  }
+  &.band-warn {
+    border-color: var(--risk-warn-border);
+  }
+  &.band-bad {
+    border-color: var(--risk-bad-border);
+  }
+}
+
+.light .tile-title {
+  color: var(--atlas-text-primary);
+  font-weight: 700;
+}
+
+.light .tile-click-hint {
+  color: var(--atlas-text-muted);
+}
+
+.light .tile-percent-row .tile-findings {
+  color: var(--atlas-text-secondary);
+
+  strong {
+    color: var(--atlas-text-primary);
+  }
+}
+
+.light .tile-pill {
+  &.tile-pill-good {
+    background: var(--risk-good-bg);
+    border: 1px solid var(--risk-good-border);
+    color: var(--risk-good);
+  }
+  &.tile-pill-warn {
+    background: var(--risk-warn-bg);
+    border: 1px solid var(--risk-warn-border);
+    color: #92400e;
+    font-weight: 700;
+  }
+  &.tile-pill-bad {
+    background: var(--risk-bad-bg);
+    border: 1px solid var(--risk-bad-border);
+    color: var(--risk-bad);
+  }
+  &.tile-pill-na {
+    background: var(--atlas-bg-secondary);
+    border: 1px solid var(--atlas-border);
+    color: var(--atlas-text-secondary);
+  }
+}
+
+.light .tile-progress {
+  background: var(--atlas-border);
 }

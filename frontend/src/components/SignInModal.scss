@@ -92,12 +92,7 @@
   max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 2rem);
   margin: auto;
   flex-shrink: 0;
-  background: linear-gradient(
-    165deg,
-    rgba(17, 24, 39, 0.98) 0%,
-    rgba(13, 20, 36, 0.99) 50%,
-    rgba(8, 12, 21, 1) 100%
-  );
+  background: rgba(17, 24, 39, 0.6);
   border: 1px solid rgba(34, 197, 94, 0.15);
   border-radius: 20px;
   padding: 2.5rem;
@@ -354,7 +349,7 @@
     font-size: 0.9375rem;
     font-family: inherit;
     color: #f8fafc;
-    background: rgba(17, 24, 39, 0.6);
+    background: rgba(0, 0, 0, 0.9);
     border: 1px solid rgba(148, 163, 184, 0.15);
     border-radius: 10px;
     outline: none;
@@ -366,7 +361,7 @@
     }
 
     &:focus {
-      background: rgba(17, 24, 39, 0.8);
+      background: rgba(0, 0, 0, 0.95);
       border-color: rgba(34, 197, 94, 0.5);
       box-shadow:
         0 0 0 3px rgba(34, 197, 94, 0.1),
@@ -701,6 +696,185 @@
     white-space: normal;
     font-size: 0.6875rem;
     line-height: 1.3;
+  }
+}
+
+/* ============================================================================
+   Light mode – match site design theme
+   ============================================================================ */
+.light .signin-modal-overlay {
+  background: rgba(38, 35, 31, 0.4);
+  backdrop-filter: blur(12px);
+
+  &::before {
+    background-image:
+      linear-gradient(var(--atlas-border-accent) 1px, transparent 1px),
+      linear-gradient(90deg, var(--atlas-border-accent) 1px, transparent 1px);
+    opacity: 0.5;
+  }
+}
+
+.light .signin-modal {
+  background: #fff;
+  border: 1px solid var(--atlas-border);
+  box-shadow: 0 20px 60px rgba(38, 35, 31, 0.12), var(--atlas-card-shadow);
+
+  &::before {
+    background: linear-gradient(
+      90deg,
+      transparent,
+      var(--atlas-accent),
+      transparent
+    );
+    opacity: 0.6;
+  }
+
+  &::after {
+    background: linear-gradient(
+      135deg,
+      transparent 50%,
+      var(--atlas-accent-subtle) 50%
+    );
+  }
+}
+
+.light .modal-close {
+  background: rgba(38, 35, 31, 0.06);
+  border-color: var(--atlas-border);
+
+  svg {
+    color: var(--atlas-text-muted);
+  }
+
+  &:hover {
+    background: rgba(38, 35, 31, 0.1);
+    border-color: var(--atlas-border);
+
+    svg {
+      color: var(--atlas-text-primary);
+    }
+  }
+}
+
+.light .modal-logo .logo-text {
+  background: linear-gradient(135deg, var(--atlas-text-primary) 0%, var(--atlas-text-secondary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.light .modal-title {
+  color: var(--atlas-text-primary);
+}
+
+.light .modal-subtitle {
+  color: var(--atlas-text-muted);
+}
+
+.light .divider span {
+  color: var(--atlas-text-muted);
+}
+
+.light .divider::before,
+.light .divider::after {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--atlas-border),
+    transparent
+  );
+}
+
+.light .oauth-btn.google {
+  background: #fff;
+  border-color: var(--atlas-border);
+  color: var(--atlas-text-primary);
+
+  &:hover:not(:disabled) {
+    background: #fff;
+    box-shadow: 0 4px 20px rgba(38, 35, 31, 0.08);
+  }
+}
+
+.light .form-field label {
+  color: var(--atlas-text-muted);
+}
+
+.light .form-field input {
+  color: var(--atlas-accent);
+  background: #fff;
+  border-color: var(--atlas-border);
+
+  &::placeholder {
+    color: var(--atlas-accent);
+  }
+
+  &:focus {
+    background: #fff;
+    border-color: var(--atlas-border-accent);
+    box-shadow: 0 0 0 3px var(--atlas-accent-subtle);
+  }
+}
+
+.light .success-message {
+  background: var(--risk-good-bg);
+  border-color: var(--risk-good-border);
+  color: var(--risk-good);
+
+  svg {
+    color: var(--risk-good);
+  }
+}
+
+.light .error-message {
+  background: var(--risk-bad-bg);
+  border-color: var(--risk-bad-border);
+  color: var(--risk-bad);
+
+  svg {
+    color: var(--risk-bad);
+  }
+}
+
+.light .submit-btn {
+  background: linear-gradient(135deg, var(--atlas-accent) 0%, var(--atlas-accent-hover) 100%);
+  color: #fff;
+
+  &:hover:not(:disabled) {
+    box-shadow: 0 8px 30px var(--atlas-accent-glow);
+  }
+}
+
+.light .loading-spinner {
+  border-color: rgba(255, 255, 255, 0.3);
+  border-top-color: #fff;
+}
+
+.light .mode-toggle p {
+  color: var(--atlas-text-muted);
+}
+
+.light .mode-toggle button {
+  color: var(--atlas-accent);
+
+  &:hover:not(:disabled) {
+    color: var(--atlas-accent-hover);
+  }
+}
+
+.light .modal-footer {
+  border-top-color: var(--atlas-border);
+
+  p {
+    color: var(--atlas-text-muted);
+  }
+
+  a {
+    color: var(--atlas-text-secondary);
+
+    &:hover {
+      color: var(--atlas-accent);
+    }
   }
 }
 

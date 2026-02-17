@@ -258,19 +258,29 @@ export const AuthProvider = ({ children }) => {
 
     load();
 
-    // Fallback timeout - ensure isLoading is always set to false after max 10 seconds
+    // Fallback timeout - ensure isLoading is always set to false (avoid infinite loading)
     fallbackTimeout = setTimeout(() => {
       if (isMounted) {
         logger.warn("Auth initialization taking too long, forcing completion");
         setIsLoading(false);
       }
-    }, 10000);
+    }, 6000);
 
     return () => {
       isMounted = false;
       if (timeoutId) clearTimeout(timeoutId);
       clearTimeout(fallbackTimeout);
-      authStateSubscription?.subscription?.unsubscribe();
+      try {
+        if (authStateSubscription?.subscription?.unsubscribe) {
+          authStateSubscription.subscription.unsubscribe();
+        } else if (authStateSubscription?.data?.subscription?.unsubscribe) {
+          authStateSubscription.data.subscription.unsubscribe();
+        } else if (typeof authStateSubscription?.unsubscribe === "function") {
+          authStateSubscription.unsubscribe();
+        }
+      } catch (_) {
+        // ignore cleanup errors
+      }
     };
   }, [toUiUser]);
 

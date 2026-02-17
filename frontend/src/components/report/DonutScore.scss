@@ -72,3 +72,31 @@
 .donut-score--gauge .donut-status-pill {
   font-size: 0.8125rem;
 }
+
+/* Light theme – score value and pill visible */
+.light .donut-value {
+  color: var(--atlas-text-primary);
+}
+
+.light .donut-status-pill {
+  &.status-good {
+    background: var(--risk-good-bg);
+    border: 1px solid var(--risk-good-border);
+    color: var(--risk-good);
+  }
+  &.status-warn {
+    background: var(--risk-warn-bg);
+    border: 1px solid var(--risk-warn-border);
+    color: #92400e;
+  }
+  &.status-bad {
+    background: var(--risk-bad-bg);
+    border: 1px solid var(--risk-bad-border);
+    color: var(--risk-bad);
+  }
+  &.status-na {
+    background: var(--atlas-bg-secondary);
+    border: 1px solid var(--atlas-border);
+    color: var(--atlas-text-secondary);
+  }
+}

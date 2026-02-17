@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
 import SEOHead from "../../components/SEOHead";
+import { useTheme } from "../../context/ThemeContext";
 import { TrendChart, SourcesBox } from "../../components/benchmarks";
-import { getScanResultsRoute } from "../../utils/slug";
 import "./BenchmarksPage.scss";
 
 const BenchmarksPage = () => {
+  const { theme } = useTheme();
   const [trendsData, setTrendsData] = useState(null);
   const [benchmarksData, setBenchmarksData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -393,47 +394,6 @@ const BenchmarksPage = () => {
                       </ul>
                     </div>
                   )}
-                </div>
-              ))}
-            </div>
-          </section>
-
-          {/* Safer Alternatives */}
-          <section className="recommendations-section">
-            <div className="section-header">
-              <h2>Safer Alternative Recommendations</h2>
-              <p>When risk is elevated, we suggest lower-risk alternatives in the same category (based on our rubric + public signals).</p>
-            </div>
-            
-            <div className="recommendations-grid">
-              {benchmarksData.differentiators.safer_alternatives.example_recommendations.map((rec, index) => (
-                <div key={index} className="recommendation-card">
-                  <div className="recommendation-header">
-                    <h4>{rec.name}</h4>
-                    <span className="risk-badge">Recommended alternative</span>
-                  </div>
-                  <p className="recommendation-reason">{rec.reason}</p>
-                  <div className="recommendation-actions">
-                    <a 
-                      href={rec.reportUrl || (rec.extensionId ? getScanResultsRoute(rec.extensionId, rec.name) : "#")} 
-                      className="recommendation-link primary"
-                    >
-                      View report →
-                    </a>
-                    {rec.storeUrl && (
-                      <>
-                        <span style={{ color: '#64748b', margin: '0 0.5rem' }}>·</span>
-                        <a 
-                          href={rec.storeUrl} 
-                          target="_blank"
-                          rel="noreferrer noopener"
-                          className="recommendation-link secondary"
-                        >
-                          Chrome Web Store
-                        </a>
-                      </>
-                    )}
-                  </div>
                 </div>
               ))}
             </div>

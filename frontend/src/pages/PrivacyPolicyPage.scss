@@ -456,3 +456,105 @@
   }
 }
 
+/* ============================================================================
+   Light theme – accordion cards, text, and controls match site
+   ============================================================================ */
+.light .privacy-policy-page {
+  color: var(--atlas-text-primary);
+}
+
+.light .privacy-policy-page .back-link:hover {
+  color: var(--atlas-accent);
+}
+
+.light .privacy-policy-page .page-title,
+.light .privacy-policy-page .page-subtitle,
+.light .privacy-policy-page .section-title,
+.light .privacy-policy-page .subsection-title {
+  color: var(--atlas-text-primary);
+}
+
+.light .privacy-policy-page .page-description,
+.light .privacy-policy-page .section-content {
+  color: var(--atlas-text-secondary);
+}
+
+/* Accordion cards – use site theme tokens (see index.css .light) */
+.light .privacy-policy-page .glass-card {
+  background: var(--atlas-bg-card);
+  border: 1px solid var(--atlas-border);
+  box-shadow: var(--atlas-card-shadow);
+
+  &:hover {
+    border-color: var(--atlas-border-accent);
+    box-shadow: 0 8px 24px rgba(38, 35, 31, 0.08);
+  }
+}
+
+.light .privacy-policy-page .accordion-header:hover {
+  background: var(--atlas-accent-subtle);
+}
+
+.light .privacy-policy-page .accordion-toggle {
+  color: var(--atlas-text-secondary);
+
+  .accordion-header:hover & {
+    color: var(--atlas-accent);
+  }
+}
+
+.light .privacy-policy-page .section-icon {
+  color: var(--atlas-accent);
+}
+
+.light .privacy-policy-page .section-text {
+  color: var(--atlas-text-secondary);
+
+  strong {
+    color: var(--atlas-text-primary);
+  }
+}
+
+.light .privacy-policy-page .section-list {
+  color: var(--atlas-text-secondary);
+
+  li::before {
+    background: var(--atlas-accent);
+  }
+
+  li strong {
+    color: var(--atlas-text-primary);
+  }
+}
+
+.light .privacy-policy-page .subsection-title {
+  border-left-color: var(--atlas-accent);
+}
+
+.light .privacy-policy-page .subsection-icon {
+  color: var(--atlas-accent);
+}
+
+.light .privacy-policy-page .contact-card {
+  background: var(--atlas-accent-subtle);
+  border-color: var(--atlas-border-accent);
+}
+
+.light .privacy-policy-page .contact-link {
+  color: var(--atlas-accent);
+
+  &:hover {
+    color: var(--atlas-accent-hover);
+  }
+}
+
+.light .privacy-policy-page .back-button {
+  color: var(--atlas-text-secondary);
+  border-color: var(--atlas-border);
+
+  &:hover {
+    color: var(--atlas-accent-hover);
+    border-color: var(--atlas-accent);
+    background: var(--atlas-accent-subtle);
+  }
+}

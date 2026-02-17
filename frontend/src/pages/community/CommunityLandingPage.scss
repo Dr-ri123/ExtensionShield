@@ -5,7 +5,7 @@
 
 .community-landing-page {
   min-height: 100vh;
-  background: transparent;
+  background: var(--atlas-bg-primary, #0d1424);
   color: var(--atlas-text-primary, #f8fafc);
   position: relative;
   overflow: hidden;
@@ -145,12 +145,13 @@
   }
 
   &.primary {
-    background: linear-gradient(135deg, var(--atlas-accent, #22c55e) 0%, #4ade80 100%);
-    color: #0d1424;
-    box-shadow: 0 4px 20px rgba(34, 197, 94, 0.35);
+    background: var(--atlas-accent, #16a34a);
+    color: #fff;
+    box-shadow: 0 4px 20px rgba(22, 163, 74, 0.35);
 
     &:hover {
-      box-shadow: 0 6px 28px rgba(34, 197, 94, 0.45);
+      background: var(--atlas-accent-hover, #15803d);
+      box-shadow: 0 6px 28px rgba(22, 163, 74, 0.45);
     }
   }
 }
@@ -168,4 +169,31 @@
     padding-left: 1.5rem;
     padding-right: 1.5rem;
   }
+}
+
+/* Day mode */
+.light .community-landing-page {
+  color: var(--atlas-text-primary);
+}
+
+.light .community-bg-gradient {
+  background:
+    radial-gradient(ellipse 90% 60% at 50% 20%, rgba(178, 82, 24, 0.08) 0%, transparent 50%),
+    radial-gradient(ellipse 70% 50% at 50% 80%, rgba(178, 82, 24, 0.06) 0%, transparent 50%),
+    radial-gradient(ellipse 50% 40% at 80% 50%, rgba(208, 120, 65, 0.04) 0%, transparent 45%);
+}
+
+.light .community-tagline {
+  background: linear-gradient(135deg, var(--atlas-text-primary) 0%, var(--atlas-text-secondary) 50%, var(--atlas-accent) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.light .tagline-cursor {
+  background: var(--atlas-accent);
+}
+
+.light .community-landing-message {
+  color: var(--atlas-text-secondary);
 }

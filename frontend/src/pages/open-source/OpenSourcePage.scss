@@ -4,7 +4,7 @@
 
 .open-source-page {
   min-height: 100vh;
-  background: transparent;
+  background: var(--atlas-bg-primary, #0d1424);
   color: var(--atlas-text-primary, #f8fafc);
   position: relative;
   overflow: hidden;
@@ -270,3 +270,82 @@
   }
 }
 
+/* Day mode */
+.light .open-source-page {
+  color: var(--atlas-text-primary);
+}
+
+.light .open-source-bg .bg-gradient {
+  background: radial-gradient(ellipse 80% 50% at 50% 0%, rgba(178, 82, 24, 0.06) 0%, transparent 50%);
+}
+
+.light .open-source-header h1 {
+  background: linear-gradient(135deg, var(--atlas-text-primary) 0%, var(--atlas-text-secondary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.light .open-source-header p {
+  color: var(--atlas-text-secondary);
+}
+
+.light .oss-badge {
+  background: var(--atlas-accent-subtle);
+  border-color: var(--atlas-accent);
+  color: var(--atlas-accent);
+}
+
+.light .link-card {
+  background: var(--atlas-surface-card);
+  border: 1px solid var(--atlas-border);
+  box-shadow: 0 4px 20px rgba(38, 35, 31, 0.06);
+  transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+}
+
+.light .link-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(22, 163, 74, 0.25);
+  box-shadow: 0 12px 40px rgba(38, 35, 31, 0.12);
+}
+
+.light .link-content h3 {
+  color: var(--atlas-text-primary);
+}
+
+.light .link-content p {
+  color: var(--atlas-text-secondary);
+  font-weight: 500;
+}
+
+.light .about-section {
+  background: var(--atlas-surface-card);
+  border: 1px solid var(--atlas-border);
+  box-shadow: 0 4px 20px rgba(38, 35, 31, 0.06);
+}
+
+.light .about-section h2 {
+  color: var(--atlas-text-primary);
+}
+
+.light .about-section .about-content p {
+  color: var(--atlas-text-secondary);
+  font-weight: 500;
+}
+
+.light .about-section .about-content a {
+  color: var(--atlas-accent);
+}
+
+.light .license-section {
+  background: var(--atlas-bg-tertiary);
+  border: 1px solid var(--atlas-border);
+  color: var(--atlas-text-primary);
+}
+
+.light .license-section h3 {
+  color: var(--atlas-text-primary);
+}.light .license-section p {
+  color: var(--atlas-text-secondary);
+  font-weight: 500;
+}

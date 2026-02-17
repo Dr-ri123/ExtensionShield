@@ -1,24 +1,8 @@
 /* ============================================================================
    ExtensionShield - Homepage
    Clean, authentic design inspired by modern app landing pages
+   Theme colors from index.css (:root / .light).
    ============================================================================ */
-
-:root {
-  /* Softer dark theme – lighter backgrounds for reduced eye strain, WCAG AA compliant */
-  --atlas-bg-primary: #0d1424;
-  --atlas-bg-secondary: #111827;
-  --atlas-accent: #22c55e;
-  --atlas-accent-glow: rgba(34, 197, 94, 0.4);
-  --atlas-purple: #8b5cf6;
-  --atlas-purple-glow: rgba(139, 92, 246, 0.4);
-  --atlas-orange: #f97316;
-  --atlas-orange-glow: rgba(249, 115, 22, 0.4);
-  --atlas-danger: var(--risk-bad);
-  --atlas-text-primary: #f8fafc;
-  --atlas-text-secondary: #94a3b8;
-  --atlas-text-muted: #64748b;
-  --atlas-border: rgba(148, 163, 184, 0.12);
-}
 
 /* ============================================================================
    BASE
@@ -742,7 +726,7 @@
   min-width: 0;
   max-width: 260px;
   padding: 1.5rem 1.25rem;
-  background: rgba(13, 20, 36, 0.6);
+  background: var(--atlas-bg-card);
   border: 1px solid var(--atlas-border);
   border-radius: 16px;
   position: relative;
@@ -1213,35 +1197,45 @@
 .honey-ring {
   position: absolute;
   border-radius: 50%;
-  border: 1px solid rgba(255, 149, 0, 0.2);
+  border-width: 1.5px;
   animation: honeyPulse 3s ease-out infinite;
   
   &.honey-ring-1 {
     width: 100%;
     height: 100%;
     animation-delay: 0s;
+    border-color: rgba(255, 149, 0, 0.75);
   }
-  
+
   &.honey-ring-2 {
     width: 150%;
     height: 150%;
     animation-delay: 0.5s;
+    border-color: rgba(232, 93, 4, 0.65);
   }
-  
+
   &.honey-ring-3 {
     width: 200%;
     height: 200%;
     animation-delay: 1s;
+    border-color: rgba(212, 160, 18, 0.55);
+  }
+
+  &.honey-ring-4 {
+    width: 250%;
+    height: 250%;
+    animation-delay: 1.5s;
+    border-color: rgba(255, 149, 0, 0.45);
   }
 }
 
 @keyframes honeyPulse {
   0% {
-    opacity: 0.6;
+    opacity: 1;
     transform: scale(1);
   }
   100% {
-    opacity: 0;
+    opacity: 0.35;
     transform: scale(1.3);
   }
 }
@@ -1365,15 +1359,17 @@
   display: flex;
   gap: 1rem;
   padding: 1rem 1.25rem;
-  background: rgba(13, 20, 36, 0.6);
-  border: 1px solid var(--atlas-border);
-  border-radius: 12px;
+  background: rgba(255, 149, 0, 0.05);
+  border: 1px solid rgba(255, 149, 0, 0.12);
+  border-left: 3px solid var(--atlas-orange, #f97316);
+  border-radius: 0 12px 12px 0;
   transition: all 0.3s ease;
   
   &:hover {
-    border-color: rgba(255, 149, 0, 0.3);
+    background: rgba(255, 149, 0, 0.08);
+    border-left-color: rgba(255, 149, 0, 0.9);
     transform: translateX(4px);
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 8px 32px rgba(255, 149, 0, 0.12);
   }
 }
 
@@ -1484,13 +1480,13 @@
 
 .verdict-value {
   padding: 0.5rem 1rem;
-  background: rgba(239, 68, 68, 0.15);
-  border: 1px solid rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.5);
   border-radius: 6px;
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.05em;
-  color: #fca5a5;
+  color: var(--risk-bad);
 }
 
 /* ============================================================================
@@ -1573,7 +1569,7 @@
   transform: translateX(-50%);
   padding: 0.375rem 1rem;
   background: var(--atlas-accent);
-  color: #0d1424;
+  color: #fff;
   font-size: 0.625rem;
   font-weight: 700;
   letter-spacing: 0.1em;
@@ -2345,15 +2341,39 @@
   
   .scam-intro {
     padding: 1.25rem 1.5rem;
-    
+    background: rgba(255, 149, 0, 0.06);
+    border-left: 3px solid rgba(255, 149, 0, 0.7);
+    border-radius: 0 12px 12px 0;
+
     p {
       font-size: 0.9375rem;
+      color: var(--atlas-text-secondary);
+      font-weight: 500;
     }
   }
-  
+
   .scam-point {
-    padding: 1.25rem;
+    padding: 1.25rem 1.5rem;
     gap: 1rem;
+    background: rgba(255, 149, 0, 0.06);
+    border: 1px solid rgba(255, 149, 0, 0.14);
+    border-left: 3px solid rgba(255, 149, 0, 0.7);
+    border-radius: 0 12px 12px 0;
+  }
+
+  .scam-point:hover {
+    background: rgba(255, 149, 0, 0.1);
+    border-left-color: rgba(255, 149, 0, 0.9);
+    box-shadow: 0 8px 32px rgba(255, 149, 0, 0.1);
+  }
+
+  .point-content h4 {
+    color: var(--atlas-text-primary);
+  }
+
+  .point-content p {
+    color: var(--atlas-text-secondary);
+    font-weight: 500;
   }
   
   .point-icon {
@@ -2451,6 +2471,289 @@
 
   .stat-label {
     font-size: 0.625rem;
+  }
+}
+
+/* ============================================================================
+   Day mode – Homepage (chalk/limestone/pitch/rust, enterprise-grade)
+   ============================================================================ */
+.light {
+  .hero-glass-card {
+    background: rgba(247, 243, 235, 0.92);
+    border: 1px solid var(--atlas-border);
+    box-shadow: 0 4px 20px rgba(36, 34, 30, 0.06);
+  }
+
+  .glass-card-icon {
+    background: rgba(36, 34, 30, 0.06);
+    border: 1px solid rgba(36, 34, 30, 0.08);
+    box-shadow: 0 2px 8px rgba(36, 34, 30, 0.06);
+  }
+
+  .glass-progress-bar {
+    background: rgba(36, 34, 30, 0.1);
+  }
+
+  .glass-card-meta {
+    border-top-color: rgba(36, 34, 30, 0.1);
+  }
+
+  /* Hero search input – soft surface, rust focus */
+  .search-container {
+    background: rgba(247, 243, 235, 0.98);
+    border: 1px solid var(--atlas-border);
+
+    &:focus-within {
+      border-color: var(--atlas-accent);
+      box-shadow: 0 0 0 4px var(--atlas-accent-subtle);
+    }
+
+    .search-icon svg {
+      stroke: var(--atlas-text-muted);
+    }
+
+    input::placeholder {
+      color: var(--atlas-text-muted);
+    }
+
+    input:-webkit-autofill,
+    input:-webkit-autofill:hover,
+    input:-webkit-autofill:focus,
+    input:-webkit-autofill:active {
+      -webkit-box-shadow: 0 0 0 9999px rgb(246 242 234) inset;
+      box-shadow: 0 0 0 9999px rgb(246 242 234) inset;
+      -webkit-text-fill-color: var(--atlas-text-primary);
+    }
+  }
+
+  .search-btn {
+    background: linear-gradient(135deg, var(--atlas-accent) 0%, var(--atlas-accent-hover) 100%);
+    color: rgb(255 255 255);
+
+    &:hover {
+      box-shadow: 0 8px 24px var(--atlas-accent-glow);
+    }
+  }
+
+  .search-btn.search-btn-icon:hover {
+    background: var(--atlas-accent-subtle);
+    color: var(--atlas-accent);
+  }
+
+  /* Stats bar */
+  .stats-bar {
+    background: rgba(247, 243, 235, 0.95);
+    border: 1px solid var(--atlas-border);
+    box-shadow: 0 4px 16px rgba(36, 34, 30, 0.06);
+  }
+
+  /* Bridge section – step cards */
+  .bridge-gradient-top {
+    background: linear-gradient(180deg, var(--atlas-bg-primary) 0%, transparent 100%);
+  }
+
+  .bridge-step {
+    background: var(--atlas-bg-card);
+    border: 1px solid var(--atlas-border);
+    box-shadow: 0 4px 20px rgba(38, 35, 31, 0.08);
+
+    &:hover {
+      box-shadow: 0 12px 40px rgba(38, 35, 31, 0.12);
+    }
+  }
+
+  .step-number {
+    background: var(--atlas-bg-secondary);
+    border: 1px solid var(--atlas-border);
+    color: var(--atlas-text-muted);
+  }
+
+  .step-icon.trust {
+    background: var(--risk-good-bg);
+    border: 1px solid var(--risk-good-border);
+    svg { stroke: var(--risk-good); }
+  }
+
+  .step-icon.update {
+    background: rgba(139, 92, 246, 0.1);
+    border: 1px solid rgba(139, 92, 246, 0.25);
+    svg { stroke: var(--atlas-purple); }
+  }
+
+  .step-icon.abuse {
+    background: var(--risk-bad-bg);
+    border: 1px solid var(--risk-bad-border);
+    svg { stroke: var(--risk-bad); }
+  }
+
+  .bridge-connector {
+    color: var(--atlas-text-muted);
+  }
+
+  .bridge-footer {
+    border-top-color: var(--atlas-border);
+  }
+
+  /* Deception / extension example cards */
+  .deception-carousel-btn {
+    background: rgba(247, 243, 235, 0.95);
+    border: 1px solid var(--atlas-border);
+    color: var(--atlas-text-secondary);
+
+    &:hover {
+      background: var(--atlas-accent-subtle);
+      border-color: var(--atlas-border-accent);
+      color: var(--atlas-accent);
+    }
+  }
+
+  .deception-card {
+    background: var(--atlas-surface-card);
+    border: 1px solid var(--atlas-border);
+    box-shadow: 0 4px 20px rgba(38, 35, 31, 0.08);
+    border-radius: 16px;
+    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+  }
+
+  .deception-card:hover {
+    transform: translateY(-4px);
+    border-color: rgba(22, 163, 74, 0.25);
+    box-shadow: 0 12px 40px rgba(38, 35, 31, 0.12);
+  }
+
+  .ext-verified {
+    background: var(--atlas-accent-subtle);
+    color: var(--atlas-accent);
+  }
+
+  .card-truth-layer {
+    background: var(--risk-bad-bg);
+    border-top: 1px solid var(--risk-bad-border);
+  }
+
+  .threat-dot {
+    background: var(--risk-bad);
+  }
+
+  /* Honey case study section – original honey color and visible honey circles (same as dark mode) */
+  .honey-case-study::before {
+    background:
+      radial-gradient(ellipse 80% 50% at 20% 50%, rgba(255, 149, 0, 0.1) 0%, transparent 50%),
+      radial-gradient(ellipse 60% 40% at 80% 60%, rgba(239, 68, 68, 0.06) 0%, transparent 50%);
+  }
+
+  .honey-ring {
+    border-width: 1.5px;
+  }
+
+  .honey-ring-1 { border-color: rgba(255, 149, 0, 0.75); }
+  .honey-ring-2 { border-color: rgba(232, 93, 4, 0.65); }
+  .honey-ring-3 { border-color: rgba(212, 160, 18, 0.55); }
+  .honey-ring-4 { border-color: rgba(255, 149, 0, 0.45); }
+
+  .honey-logo {
+    filter: drop-shadow(0 20px 40px rgba(255, 149, 0, 0.35));
+  }
+
+  .case-study-badge {
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    color: #dc2626;
+  }
+
+  .case-study-title {
+    color: var(--atlas-text-primary);
+  }
+
+  .case-study-title .subtitle {
+    color: var(--atlas-text-muted);
+  }
+
+  .verdict-value {
+    color: var(--risk-bad);
+    background: var(--risk-bad-bg);
+    border-color: var(--risk-bad-border);
+  }
+
+  .verdict-label {
+    color: var(--atlas-text-secondary);
+  }
+
+  /* Pricing cards – backgrounds match card design (green tint Community, purple tint Enterprise) */
+  .pricing-card {
+    border: 1px solid var(--atlas-border);
+    box-shadow: 0 4px 24px rgba(36, 34, 30, 0.08);
+  }
+
+  .pricing-card.popular {
+    background: linear-gradient(180deg, rgba(22, 163, 74, 0.06) 0%, rgba(250, 250, 252, 0.98) 100%);
+    border-color: rgba(22, 163, 74, 0.25);
+  }
+
+  .pricing-card.enterprise {
+    background: linear-gradient(180deg, rgba(139, 92, 246, 0.06) 0%, rgba(250, 250, 252, 0.98) 100%);
+    border-color: rgba(139, 92, 246, 0.28);
+  }
+
+  .popular-badge {
+    color: #fff;
+  }
+
+  .pricing-btn.popular-btn,
+  .pricing-btn.enterprise-btn {
+    background: linear-gradient(135deg, var(--atlas-accent) 0%, var(--atlas-accent-hover) 100%);
+    color: rgb(255 255 255);
+  }
+
+  .glass-row .glass-row-header .glass-row-icon.safe {
+    color: var(--risk-good);
+  }
+
+  /* Karma / community feedback panel – ash-style card, sage buttons, rust icon */
+  .karma-panel {
+    background: rgba(73, 70, 63, 0.12);
+    border: 1px solid var(--atlas-border);
+
+    &:hover {
+      border-color: var(--atlas-border-accent);
+      box-shadow: 0 8px 32px rgba(36, 34, 30, 0.08);
+    }
+  }
+
+  .karma-ring {
+    border-color: rgba(22, 163, 74, 0.25);
+  }
+
+  .karma-icon-main {
+    background: var(--atlas-accent-subtle);
+    border: 2px solid var(--atlas-border-accent);
+    box-shadow: 0 8px 24px var(--atlas-accent-glow);
+
+    svg {
+      stroke: var(--atlas-accent);
+    }
+  }
+
+  .karma-action-item {
+    background: rgba(139, 166, 140, 0.2);
+    border: 1px solid rgba(139, 166, 140, 0.35);
+
+    svg {
+      stroke: var(--atlas-accent);
+    }
+
+    span {
+      color: var(--atlas-text-primary);
+    }
+
+    &:hover {
+      background: rgba(139, 166, 140, 0.3);
+      border-color: rgba(139, 166, 140, 0.5);
+
+      span {
+        color: var(--atlas-accent);
+      }
+    }
   }
 }
 

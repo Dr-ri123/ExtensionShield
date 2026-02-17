@@ -99,8 +99,8 @@
   border-radius: 50%;
   background: radial-gradient(
     circle at 50% 50%,
-    rgba(20, 184, 166, 0.08) 0%,
-    rgba(20, 184, 166, 0.03) 35%,
+    rgba(20, 184, 166, 0.14) 0%,
+    rgba(20, 184, 166, 0.06) 35%,
     transparent 65%
   );
   pointer-events: none;
@@ -186,6 +186,24 @@
   }
 }
 
+/* Day mode sun pulse – rust/ochre */
+@keyframes sunPulseLight {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow:
+      0 0 8px 2px rgba(208, 120, 65, 0.5),
+      0 0 18px 6px rgba(178, 82, 24, 0.3),
+      0 0 32px 12px rgba(178, 82, 24, 0.15);
+  }
+  50% {
+    transform: scale(1.08);
+    box-shadow:
+      0 0 10px 3px rgba(208, 120, 65, 0.55),
+      0 0 22px 8px rgba(178, 82, 24, 0.35),
+      0 0 40px 16px rgba(178, 82, 24, 0.2);
+  }
+}
+
 /* Orbit group: holds both rings with rotateX tilt for 3D depth */
 .hero-orbital-group {
   position: absolute;
@@ -203,12 +221,12 @@
   top: 50%;
   left: 50%;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1.5px solid rgba(255, 220, 150, 0.18);
   pointer-events: none;
   transform-style: preserve-3d;
   box-shadow:
-    inset 0 0 12px 1px rgba(255, 200, 100, 0.04),
-    0 0 8px 1px rgba(255, 200, 100, 0.03);
+    inset 0 0 12px 2px rgba(255, 200, 100, 0.08),
+    0 0 10px 2px rgba(255, 200, 100, 0.06);
 }
 
 .hero-orbital-path--primary {
@@ -216,7 +234,10 @@
   height: 340px;
   margin-left: -170px;
   margin-top: -170px;
-  border-color: rgba(255, 220, 150, 0.1);
+  border-color: rgba(255, 220, 150, 0.28);
+  box-shadow:
+    inset 0 0 14px 2px rgba(255, 200, 100, 0.1),
+    0 0 12px 2px rgba(255, 200, 100, 0.08);
 }
 
 .hero-orbital-path--secondary {
@@ -224,7 +245,7 @@
   height: 480px;
   margin-left: -240px;
   margin-top: -240px;
-  border-color: rgba(255, 200, 120, 0.06);
+  border-color: rgba(255, 200, 120, 0.14);
 }
 
 /* Helper text between top two orbit circles — subtle cue for first-time visitors */
@@ -771,6 +792,141 @@
   color: var(--atlas-text-muted);
   text-align: center;
   letter-spacing: 0.02em;
+}
+
+/* ============================================================================
+   Day mode – Hero Orbit rings & sun (Deasy chalk/limestone/rust)
+   ============================================================================ */
+.light {
+  .hero-orbital-spotlight {
+    background: radial-gradient(
+      circle at 50% 50%,
+      rgba(255, 200, 100, 0.12) 0%,
+      rgba(255, 180, 80, 0.05) 35%,
+      transparent 65%
+    );
+  }
+
+  /* Honey / sun: original amber–gold color and glow circles (same as dark mode) */
+  .hero-orbital-sun__core {
+    background: radial-gradient(
+      circle at 40% 40%,
+      rgba(255, 245, 220, 1) 0%,
+      rgba(255, 210, 120, 0.95) 30%,
+      rgba(255, 180, 80, 0.8) 60%,
+      rgba(230, 140, 50, 0.6) 100%
+    );
+    box-shadow:
+      0 0 8px 2px rgba(255, 200, 100, 0.6),
+      0 0 18px 6px rgba(255, 180, 80, 0.35),
+      0 0 32px 12px rgba(255, 160, 60, 0.18);
+    animation: sunPulse 4s ease-in-out infinite;
+  }
+
+  .hero-orbital-sun__glow {
+    background: radial-gradient(
+      circle at 50% 50%,
+      rgba(255, 200, 100, 0.25) 0%,
+      rgba(255, 180, 80, 0.12) 35%,
+      rgba(255, 160, 60, 0.04) 60%,
+      transparent 80%
+    );
+    animation: sunGlowPulse 4s ease-in-out infinite;
+  }
+
+  /* Visible orbit rings – same warm tone as background, clearly discernible */
+  .hero-orbital-path {
+    border-width: 1.5px;
+    border-color: rgba(50, 47, 42, 0.32);
+    box-shadow:
+      inset 0 0 14px 2px rgba(50, 47, 42, 0.1),
+      0 0 10px 2px rgba(50, 47, 42, 0.08);
+  }
+
+  .hero-orbital-path--primary {
+    border-color: rgba(50, 47, 42, 0.38);
+    box-shadow:
+      inset 0 0 14px 2px rgba(50, 47, 42, 0.12),
+      0 0 12px 2px rgba(50, 47, 42, 0.1);
+  }
+
+  .hero-orbital-path--secondary {
+    border-color: rgba(50, 47, 42, 0.26);
+  }
+
+  .hero-orbital-cta__helper {
+    color: var(--atlas-text-secondary);
+    opacity: 0.9;
+  }
+
+  .hero-orbit-icon__ring {
+    background: var(--atlas-bg-secondary);
+    border: 1.5px solid rgba(36, 34, 30, 0.1);
+    box-shadow:
+      0 4px 16px rgba(36, 34, 30, 0.08),
+      inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  }
+
+  .hero-orbit-icon:hover .hero-orbit-icon__ring {
+    box-shadow:
+      0 0 0 2px var(--atlas-border-accent),
+      0 0 20px var(--atlas-accent-glow),
+      0 4px 16px rgba(36, 34, 30, 0.1),
+      inset 0 1px 0 rgba(255, 255, 255, 0.7);
+  }
+
+  .hero-orbit-icon__ring--active,
+  .hero-orbit-icon--selected .hero-orbit-icon__ring {
+    border-color: var(--atlas-accent);
+    box-shadow: 0 0 0 2px var(--atlas-accent), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  }
+
+  .hero-orbit-icon__tooltip {
+    background: var(--atlas-bg-tertiary);
+    border: 1px solid rgba(36, 34, 30, 0.12);
+    box-shadow: 0 8px 24px rgba(36, 34, 30, 0.12);
+
+    &::after {
+      border-color: var(--atlas-bg-tertiary) transparent transparent transparent;
+    }
+  }
+
+  .hero-orbital-focus-card {
+    background: var(--atlas-bg-secondary);
+    border: 1px solid var(--atlas-border);
+    box-shadow:
+      0 20px 50px rgba(36, 34, 30, 0.1),
+      0 0 0 1px rgba(36, 34, 30, 0.06),
+      inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  }
+
+  .hero-orbital-focus-details-link {
+    background: var(--atlas-accent-subtle);
+    border: 1px solid var(--atlas-border-accent);
+    color: var(--atlas-accent);
+
+    &:hover {
+      background: var(--atlas-accent-subtle);
+      color: var(--atlas-accent-hover);
+      border-color: var(--atlas-accent);
+    }
+  }
+
+  .hero-orbital-focus-row-header .hero-orbital-focus-row-icon.safe {
+    color: var(--risk-good);
+  }
+
+  .hero-orbital-progress-bar {
+    background: rgba(36, 34, 30, 0.1);
+  }
+
+  .hero-orbital-focus-meta {
+    border-top-color: rgba(36, 34, 30, 0.1);
+  }
+
+  .hero-orbital-modal-backdrop {
+    background: rgba(36, 34, 30, 0.4);
+  }
 }
 
 /* ============================================================================

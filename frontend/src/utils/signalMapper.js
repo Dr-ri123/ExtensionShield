@@ -66,18 +66,13 @@ export function calculateSecuritySignal(scanResult) {
     
     if (securityScore <= SECURITY_PRIVACY_THRESHOLDS.HIGH) {
       level = SIGNAL_LEVELS.HIGH;
-      // Check for critical gates
-      const hardGates = scoringV2?.hard_gates_triggered || [];
-      const hasCriticalGate = hardGates.some(gate => 
-        gate.includes('CRITICAL') || gate.includes('CRITICAL_SAST')
-      );
-      label = hasCriticalGate ? 'Critical' : 'Bad';
+      label = 'Not safe';
     } else if (securityScore <= SECURITY_PRIVACY_THRESHOLDS.WARN) {
       level = SIGNAL_LEVELS.WARN;
-      label = 'Review';
+      label = 'Needs review';
     } else {
       level = SIGNAL_LEVELS.OK;
-      label = 'Good';
+      label = 'Safe';
     }
     
     return { level, label, score: securityScore };
@@ -102,13 +97,13 @@ export function calculatePrivacySignal(scanResult) {
     
     if (privacyScore <= SECURITY_PRIVACY_THRESHOLDS.HIGH) {
       level = SIGNAL_LEVELS.HIGH;
-      label = 'Bad';
+      label = 'Not safe';
     } else if (privacyScore <= SECURITY_PRIVACY_THRESHOLDS.WARN) {
       level = SIGNAL_LEVELS.WARN;
-      label = 'Warning';
+      label = 'Needs review';
     } else {
       level = SIGNAL_LEVELS.OK;
-      label = 'Good';
+      label = 'Safe';
     }
     
     return { level, label, score: privacyScore };
@@ -133,13 +128,13 @@ export function calculateGovernanceSignal(scanResult) {
     
     if (governanceScore <= GOVERNANCE_THRESHOLDS.HIGH) {
       level = SIGNAL_LEVELS.HIGH;
-      label = 'Non-compliant';
+      label = 'Not safe';
     } else if (governanceScore <= GOVERNANCE_THRESHOLDS.WARN) {
       level = SIGNAL_LEVELS.WARN;
-      label = 'Review';
+      label = 'Needs review';
     } else {
       level = SIGNAL_LEVELS.OK;
-      label = 'Compliant';
+      label = 'Safe';
     }
     
     return { level, label, score: governanceScore };
@@ -331,6 +326,19 @@ export function getRiskLevel(score) {
 }
 
 /**
+ * Display label for risk level (consumer-facing: Safe, Needs review, Not safe).
+ * Internal/DB still uses LOW, MEDIUM, HIGH for compatibility.
+ */
+export function getRiskDisplayLabel(level) {
+  if (!level) return '—';
+  const upper = String(level).toUpperCase();
+  if (upper === 'LOW' || upper === 'NONE') return 'Safe';
+  if (upper === 'MED' || upper === 'MEDIUM' || upper === 'MODERATE') return 'Needs review';
+  if (upper === 'HIGH' || upper === 'CRITICAL') return 'Not safe';
+  return level;
+}
+
+/**
  * Get risk color class based on level
  */
 export function getRiskColorClass(level) {
@@ -349,6 +357,19 @@ export function getRiskColorClass(level) {
     default:
       return 'risk-unknown';
   }
+}
+
+/**
+ * Display label for signal (consumer-facing: Safe, Needs review, Not safe).
+ * Uses signal.level when present; otherwise returns signal.label for legacy labels.
+ */
+export function getSignalDisplayLabel(signal) {
+  if (!signal) return '—';
+  const level = signal.level;
+  if (level === SIGNAL_LEVELS.OK) return 'Safe';
+  if (level === SIGNAL_LEVELS.WARN) return 'Needs review';
+  if (level === SIGNAL_LEVELS.HIGH) return 'Not safe';
+  return signal.label || '—';
 }
 
 /**
@@ -519,7 +540,9 @@ export default {
   calculateGovernanceSignal,
   calculateAllSignals,
   getRiskLevel,
+  getRiskDisplayLabel,
   getRiskColorClass,
+  getSignalDisplayLabel,
   getSignalColorClass,
   countFindings,
   getTopFindingSummary,
