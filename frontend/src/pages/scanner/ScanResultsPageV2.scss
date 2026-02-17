@@ -765,9 +765,12 @@
 }
 
 /* ============================================================================
-   Light theme – scan results (tasks 2–4: loading titles, extension card text, dialog)
+   Light theme – scan results (loading background, extension card, modals)
    ============================================================================ */
 .light .results-v2 {
+  /* Full-page light background so loading state is light (no dark flash) */
+  background: var(--atlas-bg-primary);
+
   .nav-back {
     background: var(--atlas-bg-secondary);
     border: 1px solid var(--atlas-border);

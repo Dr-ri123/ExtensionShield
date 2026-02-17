@@ -474,6 +474,7 @@ export const ScanProvider = ({ children }) => {
     error,
     setError,
     currentExtensionId,
+    setCurrentExtensionId,
     dashboardStats,
     scanHistory,
     
@@ -488,7 +489,7 @@ export const ScanProvider = ({ children }) => {
     clearScan,
   }), [
     url, isScanning, scanStage, scanResults, error,
-    currentExtensionId, dashboardStats, scanHistory,
+    currentExtensionId, setCurrentExtensionId, dashboardStats, scanHistory,
     startScan, handleFileUpload, loadScanFromHistory,
     loadResultsById, loadDashboardStats, loadScanHistory,
     extractExtensionId, clearScan,

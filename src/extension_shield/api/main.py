@@ -1029,7 +1029,7 @@ async def run_analysis_workflow(url: str, extension_id: str):
             )
             logger.info("[TIMELINE] scores_computed → extension_id=%s, overall_score=%s", extension_id, scoring_result.overall_score)
             
-            # Build scoring_v2 payload for API response
+            # Build scoring_v2 payload for API response (include gate/override breakdown for QA)
             scoring_v2_payload = {
                 "scoring_version": "v2",
                 "weights_version": "v1",
@@ -1044,6 +1044,16 @@ async def run_analysis_workflow(url: str, extension_id: str):
                 "risk_level": scoring_result.risk_level.value,
                 "explanation": scoring_result.explanation,
             }
+            if scoring_result.base_overall is not None:
+                scoring_v2_payload["base_overall"] = scoring_result.base_overall
+            if scoring_result.gate_penalty is not None:
+                scoring_v2_payload["gate_penalty"] = scoring_result.gate_penalty
+            if scoring_result.gate_reasons is not None:
+                scoring_v2_payload["gate_reasons"] = scoring_result.gate_reasons
+            if scoring_result.coverage_cap_applied is not None:
+                scoring_v2_payload["coverage_cap_applied"] = scoring_result.coverage_cap_applied
+            if scoring_result.coverage_cap_reason is not None:
+                scoring_v2_payload["coverage_cap_reason"] = scoring_result.coverage_cap_reason
 
             # Build scan results - sanitize complex objects to prevent circular references
             raw_results = {

@@ -457,3 +457,102 @@
   outline-offset: 2px;
   border-radius: 8px;
 }
+
+// ===========================================================================
+// Light theme – Security / Privacy / Governance modals match site design
+// ===========================================================================
+.light {
+  --lm-overlay-bg: rgba(38, 35, 31, 0.75);
+}
+
+.light .lm-dialog-smooth {
+  > button {
+    color: var(--atlas-text-muted);
+    &:hover {
+      color: var(--atlas-text-primary);
+      background: var(--atlas-bg-secondary);
+    }
+  }
+}
+
+.light .lm-content {
+  background: var(--atlas-bg-card);
+  border: 1px solid var(--atlas-border);
+  color: var(--atlas-text-primary);
+  box-shadow: 0 24px 48px -12px rgba(38, 35, 31, 0.2);
+}
+
+.light .lm-header {
+  .lm-title { color: var(--atlas-text-primary); }
+  .lm-score {
+    background: var(--atlas-bg-secondary);
+    border-color: var(--atlas-border);
+  }
+  .lm-band {
+    background: var(--atlas-bg-secondary);
+  }
+}
+
+.light .lm-ring-bg {
+  stroke: var(--atlas-border);
+}
+
+.light .lm-body {
+  .lm-insight {
+    color: var(--atlas-text-primary);
+    background: var(--atlas-bg-secondary);
+    border-color: var(--atlas-border);
+  }
+  .lm-tagline { color: var(--atlas-text-secondary); }
+  .lm-section-title { color: var(--atlas-text-muted); }
+}
+
+.light .lm-bullets li {
+  color: var(--atlas-text-primary);
+  background: var(--atlas-bg-secondary);
+  border-color: var(--atlas-border);
+}
+.light .lm-bullet-num {
+  background: var(--atlas-accent-subtle);
+  border-color: var(--atlas-border-accent);
+  color: var(--atlas-accent);
+}
+
+.light .lm-section-risk > .lm-section-title {
+  color: var(--atlas-text-primary);
+  border-bottom-color: var(--atlas-border);
+}
+.light .lm-cat-label {
+  color: var(--atlas-text-muted);
+  border-left-color: var(--atlas-border);
+}
+
+.light .lm-factor-card {
+  background: var(--atlas-bg-secondary);
+  border-color: var(--atlas-border);
+  &:hover {
+    background: var(--atlas-bg-tertiary);
+    border-color: var(--atlas-border);
+  }
+}
+
+.light .lm-factor-visual .lm-factor-gauge {
+  background: var(--atlas-border);
+}
+.light .lm-factor-label { color: var(--atlas-text-primary); }
+.light .lm-factor-desc { color: var(--atlas-text-secondary); }
+
+.light .lm-perm {
+  color: var(--atlas-text-primary);
+  background: var(--atlas-bg-secondary);
+  border-color: var(--atlas-border);
+}
+.light .lm-perm-low .lm-perm-dot {
+  background: var(--atlas-text-muted);
+}
+
+.light .lm-watch li {
+  color: var(--atlas-text-primary);
+  background: var(--atlas-bg-secondary);
+  border-color: var(--atlas-border-accent);
+}

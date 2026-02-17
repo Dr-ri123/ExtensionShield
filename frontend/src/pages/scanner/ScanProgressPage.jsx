@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState, useCallback, useMemo } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
 import { Button } from "../../components/ui/button";
 import RocketGame from "../../components/RocketGame";
@@ -63,29 +63,15 @@ class RocketGameErrorBoundary extends React.Component {
   }
 }
 
-// Wrapper component to add mount logging for RocketGame
-const RocketGameWrapper = ({ scanComplete, onStatsUpdate }) => {
+const RocketGameWrapper = ({ onStatsUpdate }) => {
   useEffect(() => {
     if (import.meta.env.DEV) {
-      logger.log("[ScanProgressPage] RocketGame mounted successfully");
-      return () => {
-        logger.log("[ScanProgressPage] RocketGame unmounting");
-      };
+      logger.log("[ScanProgressPage] RocketGame mounted");
+      return () => logger.log("[ScanProgressPage] RocketGame unmounting");
     }
   }, []);
 
-  return (
-    <RocketGame 
-      isActive={true} 
-      statusLabel={
-        scanComplete 
-          ? "Scan complete! Keep playing or click 'View Results' above." 
-          : "Running the scan... Play a game till then!"
-      }
-      onStatsUpdate={onStatsUpdate}
-      showScoreboard={false}
-    />
-  );
+  return <RocketGame isActive onStatsUpdate={onStatsUpdate} />;
 };
 
 const ScanProgressPage = () => {
@@ -114,6 +100,7 @@ const ScanProgressPage = () => {
     setError,
     scanResults,
     setScanResults,
+    setCurrentExtensionId,
     currentExtensionId,
   } = useScan();
   
@@ -253,11 +240,12 @@ const ScanProgressPage = () => {
             setShowCompletionModal(true);
           }
 
-          // Best-effort: fetch results so "View Results" works immediately.
+          // Best-effort: fetch results and set current extension so results page has cache (no flash).
           try {
             const results = await realScanService.getRealScanResults(scanId);
             if (!cancelled && results) {
               setScanResults(results);
+              setCurrentExtensionId(scanId);
             }
           } catch (_e) {
             // Results might not be ready yet — no further polling needed.
@@ -280,7 +268,7 @@ const ScanProgressPage = () => {
       cancelled = true;
       if (intervalId) clearInterval(intervalId);
     };
-  }, [scanId, setError, setScanResults]);
+  }, [scanId, setError, setScanResults, setCurrentExtensionId]);
 
   // Reset state when scanId changes or on mount
   // This ensures that when navigating to a new scan, the game always shows immediately
@@ -409,7 +397,7 @@ const ScanProgressPage = () => {
     setShowErrorModal(false);
     setError(null);
     setErrorMessage("");
-  }, []);
+  }, [setError]);
 
   const handleContinuePlaying = useCallback(() => {
     setShowCompletionModal(false);
@@ -487,10 +475,7 @@ const ScanProgressPage = () => {
           {/* Full Viewport Game Container */}
           <div className="game-container-fullscreen">
             <RocketGameErrorBoundary>
-              <RocketGameWrapper 
-                scanComplete={scanComplete}
-                onStatsUpdate={handleStatsUpdate}
-              />
+              <RocketGameWrapper onStatsUpdate={handleStatsUpdate} />
             </RocketGameErrorBoundary>
           </div>
 

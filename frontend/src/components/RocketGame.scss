@@ -74,3 +74,13 @@
     height: 300px;
   }
 }
+
+/* Light theme – game mode background matches homepage (warm + dot effect) */
+.light .rocket-game-frame {
+  background-image:
+    radial-gradient(circle at center, rgba(73, 70, 63, 0.08) 1px, transparent 1px),
+    linear-gradient(180deg, #fbf9f5 0%, #f5f1ea 50%, #efeae3 100%);
+  background-size: 24px 24px, 100% 100%;
+  border-color: var(--atlas-border);
+  box-shadow: 0 8px 32px rgba(38, 35, 31, 0.08);
+}

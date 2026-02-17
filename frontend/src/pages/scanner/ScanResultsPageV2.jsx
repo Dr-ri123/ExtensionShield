@@ -17,6 +17,7 @@ import { useScan } from "../../context/ScanContext";
 import realScanService from "../../services/realScanService";
 import { normalizeScanResultSafe, validateEvidenceIntegrity, gateIdToLayer, extractFindingsByLayer } from "../../utils/normalizeScanResult";
 import { getExtensionIconUrl, EXTENSION_ICON_PLACEHOLDER } from "../../utils/constants";
+import { normalizeExtensionId } from "../../utils/extensionId";
 import "./ScanResultsPageV2.scss";
 
 /** True if text is an unresolved Chrome i18n placeholder (e.g. __MSG_appDesc__). */
@@ -80,7 +81,10 @@ const ScanResultsPageV2 = () => {
     currentExtensionId,
   } = useScan();
 
-  const hasCachedResultsForThisScan = currentExtensionId === scanId && scanResults;
+  const hasCachedResultsForThisScan =
+    scanResults &&
+    (currentExtensionId === scanId ||
+      (scanId && normalizeExtensionId(scanResults.extension_id || "") === scanId));
 
   const [isLoading, setIsLoading] = useState(false);
   const [rawData, setRawData] = useState(null);

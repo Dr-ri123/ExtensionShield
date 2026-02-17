@@ -240,6 +240,13 @@ class ScoringEngine:
         # STEP 3: Evaluate hard gates (before calculating overall score)
         # =====================================================================
         
+        layer_weights = self.weights.layer_weights
+        base_overall = int(
+            security_score * layer_weights.get("security", 0.5) +
+            privacy_score * layer_weights.get("privacy", 0.3) +
+            governance_score * layer_weights.get("governance", 0.2)
+        )
+        
         gate_results = self.gates.evaluate_all(signal_pack, manifest)
         self._last_gate_results = gate_results
         
@@ -249,26 +256,54 @@ class ScoringEngine:
             security_score, privacy_score, governance_score, gate_results
         )
         
+        overall_after_gates = int(
+            security_score * layer_weights.get("security", 0.5) +
+            privacy_score * layer_weights.get("privacy", 0.3) +
+            governance_score * layer_weights.get("governance", 0.2)
+        )
+        gate_penalty = base_overall - overall_after_gates
+        gate_reasons_list: List[str] = []
+        for g in gate_results:
+            if g.triggered and g.reasons:
+                gate_reasons_list.extend(g.reasons[:2])
+        
+        # Layer objects must reflect adjusted scores for API/export consistency
+        security_layer = LayerScore(
+            layer_name="security",
+            score=security_score,
+            risk=security_layer.risk,
+            factors=security_layer.factors,
+        )
+        privacy_layer = LayerScore(
+            layer_name="privacy",
+            score=privacy_score,
+            risk=privacy_layer.risk,
+            factors=privacy_layer.factors,
+        )
+        governance_layer = LayerScore(
+            layer_name="governance",
+            score=governance_score,
+            risk=governance_layer.risk,
+            factors=governance_layer.factors,
+        )
+        
         # =====================================================================
         # STEP 4: Calculate overall score (weighted average of layers)
         # AFTER gate penalties are applied
         # =====================================================================
         
-        layer_weights = self.weights.layer_weights
-        overall_score = int(
-            security_score * layer_weights.get("security", 0.5) +
-            privacy_score * layer_weights.get("privacy", 0.3) +
-            governance_score * layer_weights.get("governance", 0.2)
-        )
+        overall_score = overall_after_gates
         
         # Coverage sanity: cap overall_score when critical analyzers are missing.
         # Missing SAST coverage must not look like a perfectly safe 100/100.
         coverage_reasons: List[str] = []
+        coverage_cap_applied = False
+        coverage_cap_reason: Optional[str] = None
         if sast_missing_coverage and overall_score > 80:
             overall_score = 80
-            coverage_reasons.append(
-                "Limited analysis coverage (SAST missing) — review recommended"
-            )
+            coverage_cap_applied = True
+            coverage_cap_reason = "Limited analysis coverage (SAST missing) — review recommended"
+            coverage_reasons.append(coverage_cap_reason)
         
         logger.debug(
             "Layer scores (after gate penalties): security=%d, privacy=%d, governance=%d, overall=%d",
@@ -339,6 +374,11 @@ class ScoringEngine:
             governance_layer=governance_layer,
             hard_gates_triggered=triggered_gate_ids,
             scoring_version=self.VERSION,
+            base_overall=base_overall,
+            gate_penalty=gate_penalty,
+            gate_reasons=gate_reasons_list or None,
+            coverage_cap_applied=coverage_cap_applied,
+            coverage_cap_reason=coverage_cap_reason,
         )
         
         # Cache for explanation generation

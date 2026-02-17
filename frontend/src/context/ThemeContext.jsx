@@ -17,7 +17,8 @@ const FORCE_DARK_ROUTES = [];
 export const ThemeProvider = ({ children }) => {
   const location = useLocation();
   const [theme, setTheme] = useState(() => {
-    // Check localStorage first; default to light theme when no preference is set
+    // Site default is light (professional, trustworthy). We do NOT follow system preference;
+    // dark mode is only applied when the user explicitly toggles it.
     const stored = localStorage.getItem("theme");
     const initial = stored ?? "light";
     // Apply theme class synchronously so first paint (e.g. /research/methodology) is correct before useEffect runs

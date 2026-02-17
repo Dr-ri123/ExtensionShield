@@ -337,6 +337,11 @@ def governance_node(state: dict) -> Command:
                 "reasons": scoring_result.reasons,
                 "hard_gates_triggered": scoring_result.hard_gates_triggered,
                 "scoring_version": scoring_result.scoring_version,
+                "base_overall": getattr(scoring_result, "base_overall", None),
+                "gate_penalty": getattr(scoring_result, "gate_penalty", None),
+                "gate_reasons": getattr(scoring_result, "gate_reasons", None),
+                "coverage_cap_applied": getattr(scoring_result, "coverage_cap_applied", None),
+                "coverage_cap_reason": getattr(scoring_result, "coverage_cap_reason", None),
                 # Full layer breakdowns for transparency
                 "security_layer": scoring_result.security_layer.model_dump_for_api() if scoring_result.security_layer else None,
                 "privacy_layer": scoring_result.privacy_layer.model_dump_for_api() if scoring_result.privacy_layer else None,

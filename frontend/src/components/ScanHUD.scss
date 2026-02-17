@@ -514,6 +514,114 @@
   50% { opacity: 0.4; box-shadow: 0 0 2px rgba(34, 197, 94, 0.2); }
 }
 
+/* Light theme – match site, accessible contrast */
+.light .scan-hud {
+  background: var(--atlas-bg-card);
+  border-color: var(--atlas-border-accent);
+  color: var(--atlas-text-primary);
+  box-shadow: 0 8px 32px rgba(38, 35, 31, 0.12);
+}
+.light .scan-hud-scanlines::before {
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 2px,
+    rgba(21, 128, 61, 0.04) 2px,
+    rgba(21, 128, 61, 0.04) 4px
+  );
+}
+.light .scan-hud-cursor {
+  color: var(--atlas-accent);
+}
+.light .scan-hud-collapsed-icon {
+  background: var(--atlas-bg-secondary);
+  border-color: var(--atlas-border);
+}
+.light .scan-hud-collapsed-progress-bar {
+  background: var(--atlas-border);
+}
+.light .scan-hud-collapsed-progress-fill {
+  background: linear-gradient(180deg, var(--atlas-accent) 0%, var(--atlas-accent-hover) 100%);
+  box-shadow: 0 0 6px var(--atlas-accent-subtle);
+}
+.light .scan-hud-collapsed-percentage {
+  color: var(--atlas-accent);
+}
+.light .scan-hud-collapsed-score {
+  color: var(--atlas-text-primary);
+}
+.light .scan-hud-collapsed-cancel {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: var(--risk-bad);
+}
+.light .scan-hud-mobile-toggle {
+  border-bottom-color: var(--atlas-border);
+  color: var(--atlas-text-primary);
+}
+.light .scan-hud-expanded-content::-webkit-scrollbar-track,
+.light .scan-hud-mobile-content::-webkit-scrollbar-track {
+  background: var(--atlas-bg-secondary);
+}
+.light .scan-hud-expanded-content::-webkit-scrollbar-thumb,
+.light .scan-hud-mobile-content::-webkit-scrollbar-thumb {
+  background: var(--atlas-border-strong);
+}
+.light .scan-hud-section-title {
+  color: var(--atlas-accent);
+}
+.light .scan-hud-extension-icon {
+  background: var(--atlas-bg-secondary);
+  border-color: var(--atlas-border);
+}
+.light .scan-hud-extension-name {
+  color: var(--atlas-text-primary);
+}
+.light .scan-hud-extension-id {
+  color: var(--atlas-text-muted);
+  background: var(--atlas-bg-secondary);
+}
+.light .scan-hud-copy-btn {
+  background: var(--atlas-accent-subtle);
+  border-color: var(--atlas-border-accent);
+  color: var(--atlas-accent);
+}
+.light .scan-hud-progress-bar {
+  background: var(--atlas-border);
+}
+.light .scan-hud-progress-fill {
+  background: linear-gradient(90deg, var(--atlas-accent) 0%, var(--atlas-accent-hover) 100%);
+  box-shadow: 0 0 6px var(--atlas-accent-subtle);
+}
+.light .scan-hud-progress-percentage,
+.light .scan-hud-progress-stage {
+  color: var(--atlas-accent);
+}
+.light .scan-hud-stat {
+  background: var(--atlas-bg-secondary);
+  border-color: var(--atlas-border);
+}
+.light .scan-hud-stat-label {
+  color: var(--atlas-text-muted);
+}
+.light .scan-hud-stat-value {
+  color: var(--atlas-text-primary);
+}
+.light .scan-hud-actions {
+  border-top-color: var(--atlas-border);
+}
+.light .scan-hud-action-btn.scan-hud-view-results-btn {
+  background: var(--atlas-accent-subtle);
+  border-color: var(--atlas-border-accent);
+  color: var(--atlas-accent);
+}
+.light .scan-hud-status-indicator {
+  color: var(--atlas-accent);
+}
+.light .scan-hud-status-dot {
+  background: var(--atlas-accent);
+}
+
 /* Responsive adjustments */
 @media (max-width: 1024px) {
   .scan-hud-desktop {

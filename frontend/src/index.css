@@ -2,10 +2,13 @@
 
 :root {
   /* ============================================================================
-     EXTENSIONSHIELD - Dark Theme (Default)
-     Original dark theme preserved from before light mode was added.
+     EXTENSIONSHIELD - Dark theme (applied only when user toggles to dark)
+     Site default is light mode; these variables apply when .light is not on <html>.
      Navy-blue backgrounds with emerald accents - WCAG AA compliant.
      ============================================================================ */
+
+  /* Dialog overlay (modal backdrop) – dark default */
+  --dialog-overlay-bg: rgba(0, 0, 0, 0.8);
 
   /* Background Colors - Softer Navy Dark Theme */
   --color-background: 222 47% 8%;
@@ -418,6 +421,11 @@ html.light {
 
 .light ::-webkit-scrollbar-thumb:hover {
   background: rgba(73, 70, 63, 0.35);
+}
+
+/* Light mode: dialog overlay (all modals – game mode, results, completion, etc.) */
+.light {
+  --dialog-overlay-bg: rgba(38, 35, 31, 0.4);
 }
 
 /* Light mode: glass surfaces – chalk/white with visible outline */

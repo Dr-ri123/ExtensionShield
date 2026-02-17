@@ -328,7 +328,31 @@ class ScoringResult(BaseModel):
         default="2.0.0",
         description="Version of the scoring engine used"
     )
-    
+    # Explicit gate/override breakdown for QA and enterprise audits (overall_score = final_overall)
+    base_overall: Optional[int] = Field(
+        default=None,
+        ge=0,
+        le=100,
+        description="Weighted layer sum before gate penalties (sec*0.5 + priv*0.3 + gov*0.2)"
+    )
+    gate_penalty: Optional[int] = Field(
+        default=None,
+        ge=0,
+        description="Points subtracted from base_overall by hard gate penalties (sum of layer penalties)"
+    )
+    gate_reasons: Optional[List[str]] = Field(
+        default=None,
+        description="Human-readable, auditable reasons for each triggered gate"
+    )
+    coverage_cap_applied: Optional[bool] = Field(
+        default=None,
+        description="True when overall was capped (e.g. SAST missing → cap at 80)"
+    )
+    coverage_cap_reason: Optional[str] = Field(
+        default=None,
+        description="Reason for coverage cap when coverage_cap_applied is True"
+    )
+
     @computed_field
     @property
     def risk_level(self) -> RiskLevel:
@@ -490,7 +514,7 @@ class ScoringResult(BaseModel):
     
     def model_dump_for_api(self) -> Dict[str, Any]:
         """Dump model for API response with computed fields."""
-        return {
+        out = {
             "scan_id": self.scan_id,
             "extension_id": self.extension_id,
             "security_score": self.security_score,
@@ -510,4 +534,15 @@ class ScoringResult(BaseModel):
             "created_at": self.created_at.isoformat(),
             "scoring_version": self.scoring_version,
         }
+        if self.base_overall is not None:
+            out["base_overall"] = self.base_overall
+        if self.gate_penalty is not None:
+            out["gate_penalty"] = self.gate_penalty
+        if self.gate_reasons is not None:
+            out["gate_reasons"] = self.gate_reasons
+        if self.coverage_cap_applied is not None:
+            out["coverage_cap_applied"] = self.coverage_cap_applied
+        if self.coverage_cap_reason is not None:
+            out["coverage_cap_reason"] = self.coverage_cap_reason
+        return out
 

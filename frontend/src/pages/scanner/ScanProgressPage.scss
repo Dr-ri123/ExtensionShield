@@ -27,6 +27,10 @@
   -webkit-overflow-scrolling: none;
 }
 
+.light .game-container-fullscreen {
+  background: var(--atlas-bg-primary);
+}
+
 /* Retro Style Header Overlay */
 .retro-header-overlay {
   padding-top: 100px;
@@ -151,6 +155,24 @@
   display: flex;
   justify-content: center;
   animation: fadeInUp 0.6s ease-out 0.3s both;
+}
+
+/* Light theme – RESULTS READY / Scan complete sign: site green, accessible (no neon) */
+.light .retro-text {
+  background: none;
+  background-clip: unset;
+  -webkit-background-clip: unset;
+  -webkit-text-fill-color: var(--atlas-accent);
+  color: var(--atlas-accent);
+  text-shadow: none;
+  filter: none;
+  animation: none;
+}
+.light .retro-text::before {
+  opacity: 0;
+}
+.light .retro-text::after {
+  opacity: 0;
 }
 
 .retro-exit-button {
@@ -953,5 +975,120 @@
   .no-scan-actions {
     flex-direction: column;
   }
+}
+
+/* ============================================================================
+   Light theme – progress page and modals (Results Available, error) match site
+   ============================================================================ */
+.light .scan-progress-page {
+  background: var(--atlas-bg-primary);
+  color: var(--atlas-text-primary);
+}
+
+.light .retro-header-overlay {
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.95) 0%,
+    rgba(255, 255, 255, 0.7) 50%,
+    transparent 100%
+  );
+}
+
+/* Completion modal (Results Available / Scan Complete!) – light */
+.light .completion-modal-content {
+  background: var(--atlas-bg-card) !important;
+  border: 2px solid var(--atlas-border) !important;
+  box-shadow: 0 12px 40px rgba(38, 35, 31, 0.15) !important;
+}
+
+.light .completion-modal-title {
+  color: var(--atlas-accent) !important;
+  text-shadow: none !important;
+}
+
+.light .completion-modal-description {
+  color: var(--atlas-text-primary) !important;
+}
+
+.light .completion-modal-content .dialog-footer {
+  border-top-color: var(--atlas-border) !important;
+}
+
+.light .completion-modal-content .dialog-footer button:first-child {
+  background: var(--atlas-bg-secondary) !important;
+  border-color: var(--atlas-border) !important;
+  color: var(--atlas-text-primary) !important;
+}
+
+.light .completion-modal-content .dialog-footer button:first-child:hover {
+  background: var(--atlas-bg-tertiary) !important;
+  border-color: var(--atlas-border) !important;
+  box-shadow: 0 4px 12px rgba(38, 35, 31, 0.08) !important;
+}
+
+.light .completion-modal-content .dialog-footer button:last-child {
+  background: var(--atlas-accent) !important;
+  border-color: var(--atlas-accent) !important;
+  color: #fff !important;
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.25) !important;
+}
+
+.light .completion-modal-content .dialog-footer button:last-child:hover {
+  background: var(--atlas-accent-hover) !important;
+  box-shadow: 0 6px 16px rgba(22, 163, 74, 0.3) !important;
+}
+
+.light .completion-modal-content button[aria-label="Close"] {
+  color: var(--atlas-text-muted) !important;
+}
+
+.light .completion-modal-content button[aria-label="Close"]:hover {
+  background: var(--atlas-bg-secondary) !important;
+  color: var(--atlas-text-primary) !important;
+}
+
+/* Error modal – light */
+.light .error-modal-content {
+  background: var(--atlas-bg-card) !important;
+  border: 2px solid var(--atlas-border) !important;
+  box-shadow: 0 12px 40px rgba(38, 35, 31, 0.15) !important;
+}
+
+.light .error-modal-title {
+  color: var(--atlas-accent) !important;
+  text-shadow: none !important;
+}
+
+.light .error-modal-description {
+  color: var(--atlas-text-primary) !important;
+}
+
+.light .error-modal-content .dialog-footer {
+  border-top-color: var(--atlas-border) !important;
+}
+
+.light .error-modal-content .dialog-footer button {
+  color: var(--atlas-text-primary) !important;
+}
+
+.light .error-modal-content .dialog-footer button:first-child {
+  background: var(--atlas-accent-subtle) !important;
+  border-color: var(--atlas-accent) !important;
+  color: var(--atlas-accent) !important;
+}
+
+.light .error-modal-content .dialog-footer button:last-child {
+  background: var(--atlas-bg-secondary) !important;
+  border-color: var(--atlas-border) !important;
+  color: var(--atlas-text-primary) !important;
+}
+
+.light .error-modal-content button[aria-label="Close"] {
+  color: var(--atlas-text-muted) !important;
+}
+
+.light .error-modal-content button[aria-label="Close"]:hover {
+  background: var(--atlas-bg-secondary) !important;
+  color: var(--atlas-text-primary) !important;
 }
 

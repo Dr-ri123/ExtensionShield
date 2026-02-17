@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import { getRiskHex, getInfoHex } from "../utils/riskColorUtils";
 import "./RocketGame.scss";
 
@@ -15,15 +15,9 @@ const RocketGame = ({
   const canvasRef = useRef(null);
   const rafRef = useRef(null);
   const keysRef = useRef(new Set());
-  // Cache gradient so we don't re-create it every frame
-  const bgCacheRef = useRef({ gradient: null, height: 0 });
+  // Cache gradient so we don't re-create it every frame (include theme for light/dark)
+  const bgCacheRef = useRef({ gradient: null, height: 0, isLight: null });
   const infoHexRef = useRef(null);
-  
-  const [ui, setUi] = useState({ 
-    score: 0, 
-    best: 0, 
-    gameOver: false,
-  });
 
   const gameRef = useRef({
     startedAt: 0,
@@ -176,10 +170,7 @@ const RocketGame = ({
     const step = (ts) => {
       const canvas = canvasRef.current;
       const ctx = canvas?.getContext("2d");
-      if (!canvas || !ctx) {
-        rafRef.current = requestAnimationFrame(step);
-        return;
-      }
+      if (!canvas || !ctx) return;
 
       const g = gameRef.current;
       
@@ -353,24 +344,31 @@ const RocketGame = ({
         }
       }
 
-      // Drawing
+      // Drawing — read theme and risk hex once per frame (avoids 4+ getRiskHex calls)
+      const isLight = document.documentElement.classList.contains("light");
+      const riskGood = getRiskHex("GOOD");
+      const riskBad = getRiskHex("BAD");
+
       ctx.clearRect(0, 0, w, h);
 
-      // Background — cache gradient to avoid per-frame allocation
-      const bgCache = bgCacheRef.current;
-      if (!bgCache.gradient || bgCache.height !== h) {
-        const grad = ctx.createLinearGradient(0, 0, 0, h);
-        grad.addColorStop(0, "#0d1424");
-        grad.addColorStop(0.5, "#1a1f2e");
-        grad.addColorStop(1, "#0f1419");
-        bgCache.gradient = grad;
-        bgCache.height = h;
+      // Background — light: transparent so frame CSS (gradient + dots) shows; dark: draw gradient
+      if (!isLight) {
+        const bgCache = bgCacheRef.current;
+        if (!bgCache.gradient || bgCache.height !== h) {
+          const grad = ctx.createLinearGradient(0, 0, 0, h);
+          grad.addColorStop(0, "#0d1424");
+          grad.addColorStop(0.5, "#1a1f2e");
+          grad.addColorStop(1, "#0f1419");
+          bgCache.gradient = grad;
+          bgCache.height = h;
+        }
+        ctx.fillStyle = bgCache.gradient;
+        ctx.fillRect(0, 0, w, h);
       }
-      ctx.fillStyle = bgCache.gradient;
-      ctx.fillRect(0, 0, w, h);
+      bgCacheRef.current.isLight = isLight;
 
-      // Stars
-      ctx.fillStyle = "rgba(255, 255, 255, 0.8)";
+      // Stars — light: subtle dots (match homepage); dark: bright white
+      ctx.fillStyle = isLight ? "rgba(73, 70, 63, 0.12)" : "rgba(255, 255, 255, 0.8)";
       for (let i = 0; i < 100; i++) {
         const x = (i * 37) % w;
         const y = (i * 73) % h;
@@ -473,49 +471,51 @@ const RocketGame = ({
       ctx.font = "bold 24px monospace";
       ctx.fillText(`Score: ${Math.floor(g.score)}`, 20, 40);
       
-      // Instructions (top right)
-      ctx.fillStyle = "rgba(255, 255, 255, 0.7)";
+      // Instructions (top right) — theme-aware
+      ctx.fillStyle = isLight ? "rgba(0, 0, 0, 0.65)" : "rgba(255, 255, 255, 0.7)";
       ctx.font = "14px monospace";
       ctx.textAlign = "right";
       ctx.fillText("SPACE to shoot", w - 20, 30);
       ctx.fillText("Arrow keys or WASD to move", w - 20, 50);
       ctx.textAlign = "left";
       
-      // Debug info (bottom)
+      // Debug info (bottom) — theme-aware
       const isFocused = document.activeElement === canvas;
-      ctx.fillStyle = isFocused ? getRiskHex("GOOD") : getRiskHex("BAD");
+      ctx.fillStyle = isFocused ? riskGood : riskBad;
       ctx.font = "14px monospace";
       ctx.fillText(`Focus: ${isFocused ? 'YES' : 'CLICK!'}`, 20, h - 60);
       
       if (keys.size > 0) {
-        ctx.fillStyle = getRiskHex("GOOD");
+        ctx.fillStyle = riskGood;
         ctx.fillText(`Keys: ${Array.from(keys).join(', ')}`, 20, h - 40);
       }
       
-      ctx.fillStyle = "rgba(255, 255, 255, 0.6)";
+      ctx.fillStyle = isLight ? "rgba(0, 0, 0, 0.5)" : "rgba(255, 255, 255, 0.6)";
       ctx.fillText(`Canvas: ${w}x${h}`, 20, h - 20);
       ctx.fillText(`Rocket: (${Math.round(rocket.x)}, ${Math.round(rocket.y)})`, 200, h - 20);
 
       // Game over
       if (g.gameOver) {
-        ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
+        ctx.fillStyle = isLight ? "rgba(255, 255, 255, 0.88)" : "rgba(0, 0, 0, 0.75)";
         ctx.fillRect(0, 0, w, h);
 
         ctx.textAlign = "center";
 
         // "GAME OVER" title
-        ctx.fillStyle = getRiskHex("BAD");
+        ctx.fillStyle = riskBad;
         ctx.font = "bold 48px monospace";
         ctx.fillText("GAME OVER", w / 2, h / 2 - 30);
 
         // Score
-        ctx.fillStyle = "rgba(255,255,255,0.7)";
+        ctx.fillStyle = isLight ? "rgba(0, 0, 0, 0.8)" : "rgba(255,255,255,0.7)";
         ctx.font = "20px monospace";
         ctx.fillText(`Score: ${Math.floor(g.score)}`, w / 2, h / 2 + 10);
 
         // Restart prompt - pulsing opacity
         const pulse = 0.5 + 0.5 * Math.sin(ts / 400);
-        ctx.fillStyle = `rgba(59, 130, 246, ${0.5 + pulse * 0.5})`;
+        ctx.fillStyle = isLight
+          ? `rgba(21, 128, 61, ${0.6 + pulse * 0.4})`
+          : `rgba(59, 130, 246, ${0.5 + pulse * 0.5})`;
         ctx.font = "18px monospace";
         ctx.fillText("Press ENTER to play again", w / 2, h / 2 + 55);
 
@@ -535,18 +535,15 @@ const RocketGame = ({
         }
       }
 
-      // Update UI
-      if (ts - g.lastUiUpdate > 100) {
+      // Throttled stats callback (no React state — score is canvas-only; avoids re-renders)
+      if (ts - g.lastUiUpdate > 100 && onStatsUpdate) {
         g.lastUiUpdate = ts;
-        setUi({ score: Math.floor(g.score), best: Math.floor(g.score), gameOver: g.gameOver });
-        if (onStatsUpdate) {
-          onStatsUpdate({
-            score: Math.floor(g.score),
-            best: Math.floor(g.score),
-            time: (ts - g.startedAt) / 1000,
-            gameOver: g.gameOver,
-          });
-        }
+        onStatsUpdate({
+          score: Math.floor(g.score),
+          best: Math.floor(g.score),
+          time: (ts - g.startedAt) / 1000,
+          gameOver: g.gameOver,
+        });
       }
 
       rafRef.current = requestAnimationFrame(step);
