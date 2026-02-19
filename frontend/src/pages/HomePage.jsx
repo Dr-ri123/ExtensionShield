@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
+import { ArrowRight } from "lucide-react";
 import { useScan } from "../context/ScanContext";
 import { useAuth } from "../context/AuthContext";
 import databaseService from "../services/databaseService";
@@ -8,6 +9,7 @@ import SEOHead from "../components/SEOHead";
 import { HeroOrbitalCarousel } from "../components/hero";
 import DemoModal from "../components/DemoModal";
 import OpenCoreEnginesSection from "../components/home/OpenCoreEnginesSection";
+import HowWeProtectYouSection from "../components/home/HowWeProtectYouSection";
 import "./HomePage.scss";
 
 // Real extension listings (Chrome Web Store style). logoUrl set to null to avoid
@@ -30,7 +32,6 @@ const HomePage = () => {
   const [isVisible, setIsVisible] = useState(false);
   const [scanInput, setScanInput] = useState("");
   const [revealedSections, setRevealedSections] = useState({});
-  const [extensionSlideIndex, setExtensionSlideIndex] = useState(0);
   // Hero stat: real cumulative usage is 100+ (DB was reset, so live count would show lower). Animation runs immediately on load.
   const EXTENSIONS_DISPLAY_TARGET = 100;
   const [extensionsScannedCount] = useState(EXTENSIONS_DISPLAY_TARGET);
@@ -39,8 +40,9 @@ const HomePage = () => {
   const rafRef = useRef(null);
   const [demoModalOpen, setDemoModalOpen] = useState(false);
   const demoTriggerRef = useRef(null);
+  const [reducedMotion, setReducedMotion] = useState(false);
 
-  // Animate display count from 0 to target (100+) immediately on page load
+  // Animate display count from current to target (incremental counter effect)
   useEffect(() => {
     const target = Math.max(0, extensionsScannedCount);
     const start = displayCountRef.current;
@@ -103,6 +105,14 @@ const HomePage = () => {
 
   useEffect(() => {
     setIsVisible(true);
+  }, []);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    setReducedMotion(mq.matches);
+    const handler = () => setReducedMotion(mq.matches);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
   }, []);
 
   const handleScan = useCallback(() => {
@@ -193,8 +203,8 @@ const HomePage = () => {
   return (
     <>
       <SEOHead
-        title="Chrome Extension Scanner"
-        description="Paste a Chrome Web Store URL or extension ID and get a safety report in seconds. Free Chrome extension scanner for malware, privacy, and compliance."
+        title="Chrome Extension Security Scanner | Browser Extension Security Scanner"
+        description="Free chrome extension security scanner: scan for malware, get a risk score, and audit extension security. Check if a Chrome extension is safe. Extension security analysis tool for privacy and compliance."
         pathname="/"
         ogType="website"
         schema={[organizationSchema, softwareAppSchema, faqSchema]}
@@ -381,160 +391,18 @@ const HomePage = () => {
       {/* Open-core engines / How we score – trust section (anchor: #how-we-score) */}
       <OpenCoreEnginesSection />
 
-      {/* =======================================================================
-          CARD 1 – Section id=proof: "How trusted extensions turn risky"
-          - Title: How trusted extensions turn risky
-          - Step 1: Earn trust — 5 stars, millions of installs, verified badge.
-          - Step 2: Ship an update — Malicious code slips in with a seemingly harmless update.
-          - Step 3: Abuse permissions — Data theft, injected ads, hijacked links.
-          - Footer: Many extensions don't start malicious — they become risky after they're trusted.
-          ======================================================================= */}
-      <section 
-        id="proof" 
-        className={`bridge-section reveal-section ${revealedSections['proof'] ? 'revealed' : ''}`}
-      >
-        <div className="bridge-gradient-top" />
-        <div className="bridge-container">
-          <h2 className="bridge-title">How trusted extensions turn risky</h2>
-          <div className="bridge-steps">
-            <div className="bridge-step">
-              <div className="step-number">1</div>
-              <div className="step-icon trust">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <path d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                </svg>
-              </div>
-              <h3>Earn trust</h3>
-              <p>5 stars, millions of installs, verified badge.</p>
-            </div>
+      {/* How we protect you – animated timeline (scroll-triggered, reduced-motion aware) */}
+      <HowWeProtectYouSection />
 
-            <div className="bridge-connector">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M5 12h14M12 5l7 7-7 7" />
-              </svg>
-            </div>
-
-            <div className="bridge-step">
-              <div className="step-number">2</div>
-              <div className="step-icon update">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                </svg>
-              </div>
-              <h3>Ship an update</h3>
-              <p>Malicious code slips in with a seemingly harmless update.</p>
-            </div>
-
-            <div className="bridge-connector">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M5 12h14M12 5l7 7-7 7" />
-              </svg>
-            </div>
-
-            <div className="bridge-step">
-              <div className="step-number">3</div>
-              <div className="step-icon abuse">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                  <path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-              </div>
-              <h3>Abuse permissions</h3>
-              <p>Data theft, injected ads, hijacked links.</p>
-            </div>
-          </div>
-          <p className="bridge-footer">
-            Many extensions don't start malicious — they become risky after they're trusted.
-          </p>
-        </div>
-      </section>
-
-      {/* =======================================================================
-          CARD 2 – Section id=deception: "Examples from the Chrome Web Store"
-          - Disclaimer: Examples from the Chrome Web Store
-          - Carousel of store-style extension cards (e.g. Session Buddy, Hover Zoom+, Stylus)
-            each with: name, stars, rating, users, Store badge: Featured
-          - Footer: Approved store listings aren't a guarantee of safety.
-                    Ratings and installs can change over time.
-          ======================================================================= */}
-      <section 
-        id="deception" 
-        className={`deception-section reveal-section ${revealedSections['deception'] ? 'revealed' : ''}`}
-      >
-        <div className="deception-container">
-          <p className="deception-disclaimer">Examples from the Chrome Web Store</p>
-          <div className="deception-carousel-wrapper">
-            <button
-              type="button"
-              className="deception-carousel-btn deception-carousel-prev"
-              onClick={() => setExtensionSlideIndex((i) => (i <= 0 ? 2 : i - 1))}
-              aria-label="View previous extensions"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M15 18l-6-6 6-6" />
-              </svg>
-            </button>
-            <div className={`deception-cards-grid ${EXTENSION_CARDS.slice(extensionSlideIndex * 3, extensionSlideIndex * 3 + 3).length === 2 ? 'two-cards' : ''}`}>
-              {EXTENSION_CARDS.slice(extensionSlideIndex * 3, extensionSlideIndex * 3 + 3).map((ext) => (
-                <div key={ext.id} className="deception-card surface-card">
-                  <div className="card-trust-layer">
-                    <div className={`ext-icon ${ext.iconClass}`}>
-                      {ext.logoUrl ? (
-                        <>
-                          <img 
-                            src={ext.logoUrl} 
-                            alt="" 
-                            className="ext-logo-img"
-                            onError={(e) => {
-                              e.target.style.display = "none";
-                              const parent = e.target.closest(".ext-icon");
-                              const fallback = parent?.querySelector(".ext-logo-fallback");
-                              if (fallback) fallback.classList.add("show");
-                            }}
-                          />
-                          <span className="ext-logo-fallback">{ext.iconSvg}</span>
-                        </>
-                      ) : (
-                        <span className="ext-logo-fallback show">{ext.iconSvg}</span>
-                      )}
-                    </div>
-                    <h4 className="ext-name">{ext.name}</h4>
-                    <div className="ext-rating">
-                      <div className="stars">{ext.stars}</div>
-                      <span className="rating-score">{ext.rating}</span>
-                    </div>
-                    <div className="ext-users">{ext.users}</div>
-                    <div className="ext-verified">
-                      <svg viewBox="0 0 24 24" fill="currentColor">
-                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
-                      <span>Store badge: {ext.badge}</span>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-            
-            <button
-              type="button"
-              className="deception-carousel-btn deception-carousel-next"
-              onClick={() => setExtensionSlideIndex((i) => (i >= 2 ? 0 : i + 1))}
-              aria-label="View next extensions"
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M9 18l6-6-6-6" />
-              </svg>
-            </button>
-          </div>
-          <div className="deception-footer-block">
-            <p className="deception-footer">Approved store listings aren't a guarantee of safety.</p>
-            <p className="deception-footer">Ratings and installs can change over time.</p>
-          </div>
-        </div>
-      </section>
-
-      {/* Honey Case Study Section */}
+      {/* Honey Case Study Section – scroll-reveal for landing consistency */}
       <section className="honey-case-study">
-        <div className="case-study-container">
+        <motion.div
+          className="case-study-container"
+          initial={reducedMotion ? false : { opacity: 0, y: 20 }}
+          whileInView={reducedMotion ? {} : { opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.12 }}
+          transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
+        >
           {/* Header */}
           <div className="case-study-header">
             <span className="case-study-badge">CASE STUDY</span>
@@ -544,72 +412,9 @@ const HomePage = () => {
             </h2>
           </div>
 
-          {/* Main Content Grid */}
+          {/* Main Content Grid: content left, honey icon section right (match site layout) */}
           <div className="case-study-content">
-            {/* Left: Honey Icon */}
-            <div className="honey-icon-section">
-              <div className="honey-icon-wrapper">
-                {/* Animated color rings */}
-                <div className="honey-ring honey-ring-1" />
-                <div className="honey-ring honey-ring-2" />
-                
-                {/* Honey Logo - Hexagon with honeycomb pattern */}
-                <div className="honey-logo">
-                  <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    {/* Hexagon background */}
-                    <path 
-                      d="M50 5L93.3 27.5V72.5L50 95L6.7 72.5V27.5L50 5Z" 
-                      fill="url(#honeyGradient)" 
-                      stroke="url(#honeyStroke)"
-                      strokeWidth="2"
-                    />
-                    {/* Honeycomb cells */}
-                    <path d="M50 30L62 38V54L50 62L38 54V38L50 30Z" fill="rgba(255,255,255,0.15)" />
-                    <path d="M35 45L47 53V69L35 77L23 69V53L35 45Z" fill="rgba(255,255,255,0.1)" />
-                    <path d="M65 45L77 53V69L65 77L53 69V53L65 45Z" fill="rgba(255,255,255,0.1)" />
-                    {/* Letter H */}
-                    <text x="50" y="58" textAnchor="middle" fill="white" fontSize="28" fontWeight="bold" fontFamily="Arial">h</text>
-                    <defs>
-                      <linearGradient id="honeyGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#FF9500" />
-                        <stop offset="50%" stopColor="#FF6B00" />
-                        <stop offset="100%" stopColor="#E85D04" />
-                      </linearGradient>
-                      <linearGradient id="honeyStroke" x1="0%" y1="0%" x2="100%" y2="100%">
-                        <stop offset="0%" stopColor="#FFB347" />
-                        <stop offset="100%" stopColor="#FF8C00" />
-                      </linearGradient>
-                    </defs>
-                  </svg>
-                </div>
-                
-                {/* Warning badge */}
-                <div className="warning-badge">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
-                    <line x1="12" y1="9" x2="12" y2="13" />
-                    <line x1="12" y1="17" x2="12.01" y2="17" />
-                  </svg>
-                </div>
-              </div>
-              
-              <div className="honey-stats">
-                <div className="honey-stat">
-                  <span className="stat-number">17M+</span>
-                  <span className="stat-desc">Reported Users</span>
-                </div>
-                <div className="honey-stat">
-                  <span className="stat-number">$4B</span>
-                  <span className="stat-desc">Acquisition</span>
-                </div>
-                <div className="honey-stat">
-                  <span className="stat-number danger">—</span>
-                  <span className="stat-desc">Savings Not Guaranteed</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Right: Scam Details */}
+            {/* Left: Case study content */}
             <div className="scam-details">
               <div className="scam-intro">
                 <p>
@@ -670,20 +475,79 @@ const HomePage = () => {
                 </div>
               </div>
 
-              <div className="scam-footer">
+              <Link to="/research/case-studies" className="scam-footer scam-footer-link">
                 <div className="exposed-by">
                   <span>Exposed by</span>
                   <strong>MegaLag</strong>
                   <span className="date">• December 2024</span>
                 </div>
-                <div className="verdict">
-                  <span className="verdict-label">VERDICT</span>
-                  <span className="verdict-value">DECEPTIVE PRACTICES</span>
+                <span className="scam-footer-read-more">
+                  <span>Read case study</span>
+                  <ArrowRight size={16} strokeWidth={2} aria-hidden />
+                </span>
+              </Link>
+            </div>
+
+            {/* Right: Honey Icon section */}
+            <div className="honey-icon-section">
+              <div className="honey-icon-wrapper">
+                {/* Honey Logo - Hexagon with honeycomb pattern */}
+                <div className="honey-logo">
+                  <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    {/* Hexagon background */}
+                    <path 
+                      d="M50 5L93.3 27.5V72.5L50 95L6.7 72.5V27.5L50 5Z" 
+                      fill="url(#honeyGradient)" 
+                      stroke="url(#honeyStroke)"
+                      strokeWidth="2"
+                    />
+                    {/* Honeycomb cells */}
+                    <path d="M50 30L62 38V54L50 62L38 54V38L50 30Z" fill="rgba(255,255,255,0.15)" />
+                    <path d="M35 45L47 53V69L35 77L23 69V53L35 45Z" fill="rgba(255,255,255,0.1)" />
+                    <path d="M65 45L77 53V69L65 77L53 69V53L65 45Z" fill="rgba(255,255,255,0.1)" />
+                    {/* Letter H */}
+                    <text x="50" y="58" textAnchor="middle" fill="white" fontSize="28" fontWeight="bold" fontFamily="Arial">h</text>
+                    <defs>
+                      <linearGradient id="honeyGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#FF9500" />
+                        <stop offset="50%" stopColor="#FF6B00" />
+                        <stop offset="100%" stopColor="#E85D04" />
+                      </linearGradient>
+                      <linearGradient id="honeyStroke" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" stopColor="#FFB347" />
+                        <stop offset="100%" stopColor="#FF8C00" />
+                      </linearGradient>
+                    </defs>
+                  </svg>
+                </div>
+                
+                {/* Warning badge */}
+                <div className="warning-badge">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+                    <line x1="12" y1="9" x2="12" y2="13" />
+                    <line x1="12" y1="17" x2="12.01" y2="17" />
+                  </svg>
+                </div>
+              </div>
+              
+              <div className="honey-stats">
+                <div className="honey-stat">
+                  <span className="stat-number">17M+</span>
+                  <span className="stat-desc">Reported Users</span>
+                </div>
+                <div className="honey-stat">
+                  <span className="stat-number">$4B</span>
+                  <span className="stat-desc">Acquisition</span>
+                </div>
+                <div className="honey-stat">
+                  <span className="stat-number danger">—</span>
+                  <span className="stat-desc">Savings Not Guaranteed</span>
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        </motion.div>
       </section>
       </div>
     </>

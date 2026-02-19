@@ -210,6 +210,11 @@
     line-height: 1.6;
     margin-bottom: 1rem;
   }
+
+  p.pipeline-enterprise-note {
+    font-size: 0.875rem;
+    color: var(--atlas-text-muted, #64748b);
+  }
 }
 
 .pipeline-badge {

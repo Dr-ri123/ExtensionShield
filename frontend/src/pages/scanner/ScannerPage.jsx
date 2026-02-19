@@ -544,8 +544,8 @@ const ScannerPage = () => {
   return (
     <>
       <SEOHead
-        title="Scan Chrome Extension Security & Risk Score"
-        description="Scan any Chrome extension for security vulnerabilities, privacy risks, and compliance issues. Get instant risk scores and detailed security analysis before installing."
+        title="Scan Chrome Extension for Malware | Extension Risk Score & Permissions Checker"
+        description="Scan chrome extension for malware, get chrome extension risk score, and use our chrome extension permissions checker. Audit chrome extension security and check if a Chrome extension is safe."
         pathname="/scan"
         ogType="website"
         schema={[faqSchema, softwareAppSchema]}

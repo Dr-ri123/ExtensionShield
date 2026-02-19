@@ -1,0 +1,128 @@
+.compare-page {
+  min-height: 100vh;
+  background: transparent;
+  color: var(--theme-text-primary);
+  font-family: var(--font-sans);
+  position: relative;
+}
+
+.compare-container {
+  position: relative;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem 4rem;
+}
+
+.compare-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: none;
+  border: none;
+  color: var(--theme-text-secondary);
+  font-size: 0.9rem;
+  cursor: pointer;
+  margin-bottom: 1.5rem;
+  padding: 0.25rem 0;
+  transition: color 0.15s ease;
+  font-family: inherit;
+}
+
+.compare-back:hover {
+  color: var(--theme-text-primary);
+}
+
+.compare-header h1 {
+  font-size: clamp(1.5rem, 4vw, 1.85rem);
+  font-weight: 700;
+  line-height: 1.25;
+  margin-bottom: 0.75rem;
+  color: var(--theme-text-primary);
+}
+
+.compare-header p {
+  color: var(--theme-text-secondary);
+  font-size: 1rem;
+  line-height: 1.55;
+  margin-bottom: 1.5rem;
+}
+
+.compare-prose {
+  font-size: 0.95rem;
+  line-height: 1.65;
+  color: var(--theme-text-primary);
+}
+
+.compare-prose p {
+  margin-bottom: 1rem;
+}
+
+.compare-prose ul {
+  margin: 0.75rem 0 1rem 1.25rem;
+  padding: 0;
+}
+
+.compare-prose li {
+  margin-bottom: 0.4rem;
+}
+
+.compare-cta {
+  margin-top: 2rem;
+}
+
+.compare-cta a,
+.compare-cta button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.65rem 1.25rem;
+  background: var(--theme-accent, #6366f1);
+  color: #fff;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.95rem;
+  text-decoration: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  transition: opacity 0.2s ease, transform 0.15s ease;
+}
+
+.compare-cta a:hover,
+.compare-cta button:hover {
+  opacity: 0.95;
+  transform: translateY(-1px);
+}
+
+.compare-links {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--theme-border, rgba(148, 163, 184, 0.2));
+}
+
+.compare-links h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  color: var(--theme-text-primary);
+}
+
+.compare-links ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.compare-links li {
+  margin-bottom: 0.5rem;
+}
+
+.compare-links a {
+  color: var(--theme-accent, #6366f1);
+  text-decoration: none;
+  font-size: 0.95rem;
+}
+
+.compare-links a:hover {
+  text-decoration: underline;
+}

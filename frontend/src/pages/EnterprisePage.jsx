@@ -94,8 +94,8 @@ const EnterprisePage = () => {
   return (
     <>
       <SEOHead
-        title="Enterprise Extension Security & Governance Platform"
-        description="Enterprise-grade Chrome extension security with monitoring, governance, and compliance. Policy enforcement, automated alerting, and audit-ready exports for IT and security teams."
+        title="Enterprise Extension Security | Browser Extension Allowlist & Compliance"
+        description="Chrome enterprise extension security: browser extension allowlist policy, extension governance, compliance monitoring, and zero trust browser extension security. Manage chrome extensions in enterprise."
         pathname="/enterprise"
         ogType="website"
         schema={faqSchema}

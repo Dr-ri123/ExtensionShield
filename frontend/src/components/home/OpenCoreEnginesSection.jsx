@@ -137,7 +137,7 @@ const OpenCoreEnginesSection = () => {
                     style={{ opacity: reduced ? 1 : nodeOpacities[i], scale: reduced ? 1 : nodeOpacities[i] }}
                   >
                     <div className={`workflow-node-box workflow-node-card--${step.variant} open-core-flow-card`}>
-                      <step.Icon size={22} strokeWidth={1.5} aria-hidden />
+                      <step.Icon size={22} strokeWidth={2} aria-hidden />
                       <div className="open-core-flow-card-text">
                         <span className="open-core-flow-label">
                           {step.label}
@@ -148,15 +148,23 @@ const OpenCoreEnginesSection = () => {
                     </div>
                   </motion.div>
                   {i < STEPS.length - 1 && (
-                    <div className="workflow-connector workflow-connector-v workflow-connector-green workflow-connector-tall">
-                      <svg viewBox="0 0 2 40" preserveAspectRatio="none" aria-hidden>
+                    <div
+                      className={`workflow-connector workflow-connector-v workflow-connector-green workflow-connector-tall${activeStep > i ? " workflow-connector-active" : ""}`}
+                    >
+                      <svg viewBox="0 0 12 60" preserveAspectRatio="xMidYMid meet" aria-hidden>
                         <motion.path
-                          d="M1 0 v40"
+                          d="M6 0 L6 20 M6 40 L6 60"
                           fill="none"
-                          strokeWidth="2"
+                          strokeWidth="1.5"
                           strokeLinecap="round"
                           className="workflow-line-green"
                           style={{ pathLength: reduced ? 1 : [line1, line2, line3, line4][i] }}
+                        />
+                        <circle
+                          className="workflow-connector-hole"
+                          cx="6"
+                          cy="30"
+                          r="5"
                         />
                       </svg>
                     </div>

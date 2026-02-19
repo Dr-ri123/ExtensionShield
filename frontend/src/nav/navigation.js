@@ -131,6 +131,14 @@ export const footerConfig = {
       path: "/research/methodology"
     },
     {
+      label: "Compare Scanners",
+      path: "/compare"
+    },
+    {
+      label: "Blog",
+      path: "/blog"
+    },
+    {
       label: "Privacy Policy",
       path: "/privacy-policy"
     },

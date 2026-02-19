@@ -616,7 +616,7 @@ function getRouteSegment(pathname) {
   if (pathname === "/") return "home";
   if (pathname.startsWith("/scan")) return "scan";
   if (pathname.startsWith("/research")) return "research";
-  if (pathname.startsWith("/open-source") || pathname.startsWith("/contribute") || pathname.startsWith("/glossary") || pathname.startsWith("/gsoc") || pathname.startsWith("/community") || pathname.startsWith("/about")) return "resources";
+  if (pathname.startsWith("/open-source") || pathname.startsWith("/contribute") || pathname.startsWith("/glossary") || pathname.startsWith("/gsoc") || pathname.startsWith("/community") || pathname.startsWith("/about") || pathname.startsWith("/blog") || pathname.startsWith("/compare")) return "resources";
   return "default";
 }
 

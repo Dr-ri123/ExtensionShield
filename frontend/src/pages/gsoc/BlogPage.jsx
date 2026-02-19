@@ -18,8 +18,8 @@ const BlogPage = () => {
   return (
     <>
       <SEOHead
-        title="Blog | ExtensionShield"
-        description="ExtensionShield blog: updates, tutorials, security research, and deep dives on browser extension threats."
+        title="Chrome Extension Security Blog | How to Audit & Check Extension Safety"
+        description="How to check chrome extension permissions safely, detect malicious chrome extensions, and audit a chrome extension before installing. Extension security research and guides."
         pathname="/gsoc/blog"
       />
 
@@ -46,18 +46,13 @@ const BlogPage = () => {
           </div>
 
           <div className="blog-empty-cta">
-            <h3>More content coming soon!</h3>
+            <h3>Chrome extension security guides</h3>
             <p>
-              We're just getting started. Follow us on GitHub for updates.
+              Read our SEO blog for how to check chrome extension permissions safely, audit a chrome extension before installing, and enterprise browser extension risk management.
             </p>
-            <a 
-              href="https://github.com/Stanzin7/ExtensionScanner" 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="cta-button"
-            >
-              Follow on GitHub
-            </a>
+            <Link to="/blog" className="cta-button">
+              Extension security blog →
+            </Link>
           </div>
         </div>
       </div>

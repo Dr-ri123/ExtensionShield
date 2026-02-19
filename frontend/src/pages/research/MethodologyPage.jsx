@@ -179,7 +179,9 @@ const MethodologyPage = () => {
                     </div>
                     <h3>Compliance</h3>
                     <h4 className="tech-credit">Policy Engine (Enterprise)</h4>
-                    <p>Permission justification, regulatory alignment (GDPR, SOC2), developer reputation, and custom policy enforcement.</p>
+                    <p className="pipeline-enterprise-note">
+                      Enterprises get this pipeline in their reports; it is not open source. From a regulation standpoint, reports include permission justification, alignment with GDPR and SOC2, developer reputation signals, and custom policy enforcement so you can prove due diligence and enforce your own rules.
+                    </p>
                     
                     <div className="pipeline-features">
                       <div className="feature-tag">Permission Audit</div>

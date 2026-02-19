@@ -33,6 +33,16 @@ const OpenSourcePage = React.lazy(() => import("../pages/open-source/OpenSourceP
 const CommunityLandingPage = React.lazy(() => import("../pages/community/CommunityLandingPage"));
 const AboutUsPage = React.lazy(() => import("../pages/AboutUsPage"));
 
+// Compare pages (SEO: best scanner, CRXcavator alternatives)
+const CompareIndexPage = React.lazy(() => import("../pages/compare/CompareIndexPage"));
+const CompareCrxcavatorPage = React.lazy(() => import("../pages/compare/CompareCrxcavatorPage"));
+const CompareCrxplorerPage = React.lazy(() => import("../pages/compare/CompareCrxplorerPage"));
+const CompareExtensionAuditorPage = React.lazy(() => import("../pages/compare/CompareExtensionAuditorPage"));
+
+// Blog (SEO long-tail)
+const BlogIndexPage = React.lazy(() => import("../pages/blog/BlogIndexPage"));
+const BlogPostPage = React.lazy(() => import("../pages/blog/BlogPostPage"));
+
 // Redirect /extension/:id to /scan/results/:id (extension route removed)
 const RedirectExtensionToScanResults = () => {
   const { extensionId } = useParams();
@@ -61,8 +71,8 @@ export const routes = [
     path: "/",
     element: <HomePage />,
     seo: {
-      title: "Chrome Extension Scanner",
-      description: "Analyze Chrome extensions for hidden threats, malware, and privacy risks. Free security scanning powered by AI and static analysis.",
+      title: "Chrome Extension Security Scanner | Browser Extension Security Scanner",
+      description: "Free chrome extension security scanner: scan for malware, get a risk score, and audit extension security. Check if a Chrome extension is safe. Extension security analysis tool for privacy and compliance.",
       canonical: "/"
     },
     priority: 1.0,
@@ -74,8 +84,8 @@ export const routes = [
     path: "/scan",
     element: <ScannerPage />,
     seo: {
-      title: "Scan Chrome Extension | ExtensionShield",
-      description: "Scan any Chrome extension for security vulnerabilities, privacy risks, and compliance issues.",
+      title: "Scan Chrome Extension for Malware | Extension Risk Score & Permissions Checker",
+      description: "Scan chrome extension for malware, get chrome extension risk score, and use our chrome extension permissions checker. Audit chrome extension security and check if a Chrome extension is safe.",
       canonical: "/scan"
     },
     priority: 0.9,
@@ -85,8 +95,8 @@ export const routes = [
     path: "/scan/history",
     element: <ScanHistoryPage />,
     seo: {
-      title: "Scan History | ExtensionShield",
-      description: "View your Chrome extension scan history and past security reports.",
+      title: "Chrome Extension Scan History | ExtensionShield",
+      description: "View your Chrome extension scan history and past security reports. Track extension risk assessments and security audits.",
       canonical: "/scan/history"
     },
     priority: 0.7,
@@ -175,8 +185,8 @@ export const routes = [
     path: "/research/methodology",
     element: <MethodologyPage />,
     seo: {
-      title: "How We Score: ExtensionShield Risk Analysis | ExtensionShield",
-      description: "Learn how ExtensionShield analyzes Chrome extensions using static analysis, threat intelligence, and evidence chain-of-custody.",
+      title: "Chrome Extension Risk Score & Security Analysis Methodology | ExtensionShield",
+      description: "How we calculate chrome extension risk score: static analysis, threat intelligence, and extension security analysis. Transparent methodology for auditing chrome extension security.",
       canonical: "/research/methodology"
     },
     priority: 0.7,
@@ -194,13 +204,116 @@ export const routes = [
     changefreq: "monthly"
   },
 
+  // ============ COMPARE ROUTES (SEO: best scanner, alternatives) ============
+  {
+    path: "/compare",
+    element: <CompareIndexPage />,
+    seo: {
+      title: "Best Chrome Extension Security Scanner | CRXcavator Alternatives",
+      description: "Compare the best chrome extension security scanner tools. ExtensionShield vs CRXcavator, CRXplorer, ExtensionAuditor. Chrome extension risk score tool with security, privacy, and governance.",
+      canonical: "/compare"
+    },
+    priority: 0.8,
+    changefreq: "monthly"
+  },
+  {
+    path: "/compare/crxcavator",
+    element: <CompareCrxcavatorPage />,
+    seo: {
+      title: "ExtensionShield vs CRXcavator | Best CRXcavator Alternative",
+      description: "Compare ExtensionShield vs CRXcavator: chrome extension risk score, security audit, and governance. CRXcavator alternatives with transparent scoring and enterprise extension security.",
+      canonical: "/compare/crxcavator"
+    },
+    priority: 0.7,
+    changefreq: "monthly"
+  },
+  {
+    path: "/compare/crxplorer",
+    element: <CompareCrxplorerPage />,
+    seo: {
+      title: "ExtensionShield vs CRXplorer | Chrome Extension Security Scanner Comparison",
+      description: "ExtensionShield vs CRXplorer: compare chrome extension security scanners. Transparent risk score, SAST, VirusTotal, and extension governance vs AI-only scoring.",
+      canonical: "/compare/crxplorer"
+    },
+    priority: 0.7,
+    changefreq: "monthly"
+  },
+  {
+    path: "/compare/extension-auditor",
+    element: <CompareExtensionAuditorPage />,
+    seo: {
+      title: "ExtensionShield vs ExtensionAuditor | Chrome Extension Security Comparison",
+      description: "ExtensionShield vs ExtensionAuditor: compare chrome extension security scanners. Risk score, permissions checker, governance, and audit chrome extension security for enterprise.",
+      canonical: "/compare/extension-auditor"
+    },
+    priority: 0.7,
+    changefreq: "monthly"
+  },
+
+  // ============ BLOG ROUTES (SEO long-tail) ============
+  {
+    path: "/blog",
+    element: <BlogIndexPage />,
+    seo: {
+      title: "Chrome Extension Security Blog | How to Audit & Check Extension Safety",
+      description: "How to check chrome extension permissions safely, detect malicious chrome extensions, and audit a chrome extension before installing. Extension security research and guides.",
+      canonical: "/blog"
+    },
+    priority: 0.75,
+    changefreq: "weekly"
+  },
+  {
+    path: "/blog/how-to-check-chrome-extension-permissions",
+    element: <BlogPostPage />,
+    seo: {
+      title: "How to Check Chrome Extension Permissions Safely | ExtensionShield",
+      description: "Learn how to check chrome extension permissions safely before installing. What to look for, which permissions are risky, and how ExtensionShield helps you audit extension security.",
+      canonical: "/blog/how-to-check-chrome-extension-permissions"
+    },
+    priority: 0.6,
+    changefreq: "monthly"
+  },
+  {
+    path: "/blog/how-to-audit-chrome-extension-before-installing",
+    element: <BlogPostPage />,
+    seo: {
+      title: "How to Audit a Chrome Extension Before Installing | ExtensionShield",
+      description: "Step-by-step guide to audit a chrome extension before installing: permissions, risk score, and how to check if a Chrome extension is safe using a browser extension security scanner.",
+      canonical: "/blog/how-to-audit-chrome-extension-before-installing"
+    },
+    priority: 0.6,
+    changefreq: "monthly"
+  },
+  {
+    path: "/blog/enterprise-browser-extension-risk-management",
+    element: <BlogPostPage />,
+    seo: {
+      title: "Enterprise Browser Extension Risk Management | ExtensionShield",
+      description: "How to run a browser extension risk management program: allowlist policy, compliance monitoring, shadow IT browser extensions, and chrome enterprise extension security.",
+      canonical: "/blog/enterprise-browser-extension-risk-management"
+    },
+    priority: 0.6,
+    changefreq: "monthly"
+  },
+  {
+    path: "/blog/how-to-detect-malicious-chrome-extensions",
+    element: <BlogPostPage />,
+    seo: {
+      title: "How to Detect Malicious Chrome Extensions | ExtensionShield",
+      description: "Signs of malicious chrome extensions, browser extension spyware, and how to detect data exfiltration and extension hijacking. Use a chrome extension security scanner to check if an extension is safe.",
+      canonical: "/blog/how-to-detect-malicious-chrome-extensions"
+    },
+    priority: 0.6,
+    changefreq: "monthly"
+  },
+
   // ============ ENTERPRISE ROUTES ============
   {
     path: "/enterprise",
     element: <EnterprisePage />,
     seo: {
-      title: "Enterprise Extension Security | ExtensionShield",
-      description: "Enterprise-grade Chrome extension security with monitoring, governance, and compliance.",
+      title: "Enterprise Extension Security | Browser Extension Allowlist & Compliance",
+      description: "Chrome enterprise extension security: browser extension allowlist policy, extension governance, compliance monitoring, and zero trust browser extension security. Manage chrome extensions in enterprise.",
       canonical: "/enterprise"
     },
     priority: 0.8,
@@ -282,8 +395,8 @@ export const routes = [
     path: "/gsoc/blog",
     element: <BlogPage />,
     seo: {
-      title: "Blog | ExtensionShield",
-      description: "ExtensionShield blog: updates, tutorials, and research on browser extension security.",
+      title: "Chrome Extension Security Blog | How to Audit & Check Extension Safety",
+      description: "How to check chrome extension permissions safely, detect malicious chrome extensions, and audit a chrome extension before installing. Extension security research and guides.",
       canonical: "/gsoc/blog"
     },
     priority: 0.5,
@@ -330,8 +443,8 @@ export const routes = [
     path: "/glossary",
     element: <GlossaryPage />,
     seo: {
-      title: "Browser Extension Security Glossary | ExtensionShield",
-      description: "Learn extension security terms: permissions, MV3, service workers, risk scores, governance, SAST, threat intelligence, privacy signals, and compliance.",
+      title: "Chrome Extension Permissions & Security Glossary | ExtensionShield",
+      description: "Chrome extension permissions checker guide: what permissions are dangerous, MV3, content security policy, web accessible resources, and extension risk assessment terms.",
       canonical: "/glossary"
     },
     priority: 0.7,
