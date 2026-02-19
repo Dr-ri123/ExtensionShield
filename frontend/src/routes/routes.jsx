@@ -39,6 +39,13 @@ const CompareCrxcavatorPage = React.lazy(() => import("../pages/compare/CompareC
 const CompareCrxplorerPage = React.lazy(() => import("../pages/compare/CompareCrxplorerPage"));
 const CompareExtensionAuditorPage = React.lazy(() => import("../pages/compare/CompareExtensionAuditorPage"));
 
+// SEO keyword landing pages (high-intent) + educational hub
+const IsThisChromeExtensionSafePage = React.lazy(() => import("../pages/landing/IsThisChromeExtensionSafePage"));
+const ChromeExtensionPermissionsPage = React.lazy(() => import("../pages/landing/ChromeExtensionPermissionsPage"));
+const ChromeExtensionSecurityScannerPage = React.lazy(() => import("../pages/landing/ChromeExtensionSecurityScannerPage"));
+const BrowserExtensionRiskAssessmentPage = React.lazy(() => import("../pages/landing/BrowserExtensionRiskAssessmentPage"));
+const CrxcavatorAlternativePage = React.lazy(() => import("../pages/landing/CrxcavatorAlternativePage"));
+
 // Blog (SEO long-tail)
 const BlogIndexPage = React.lazy(() => import("../pages/blog/BlogIndexPage"));
 const BlogPostPage = React.lazy(() => import("../pages/blog/BlogPostPage"));
@@ -71,8 +78,8 @@ export const routes = [
     path: "/",
     element: <HomePage />,
     seo: {
-      title: "Chrome Extension Security Scanner | Browser Extension Security Scanner",
-      description: "Free chrome extension security scanner: scan for malware, get a risk score, and audit extension security. Check if a Chrome extension is safe. Extension security analysis tool for privacy and compliance.",
+      title: "Is This Chrome Extension Safe? Scanner | ExtensionShield",
+      description: "Chrome extension safety scanner: paste a Web Store link to see if it's safe—permissions, network domains, version changes, and a risk score with evidence.",
       canonical: "/"
     },
     priority: 1.0,
@@ -204,6 +211,63 @@ export const routes = [
     changefreq: "monthly"
   },
 
+  // ============ SEO KEYWORD LANDING PAGES + EDUCATIONAL HUB ============
+  {
+    path: "/is-this-chrome-extension-safe",
+    element: <IsThisChromeExtensionSafePage />,
+    seo: {
+      title: "Is This Chrome Extension Safe? | ExtensionShield",
+      description: "How to tell if a Chrome extension is safe: check permissions, network access, and updates. A simple guide and free scanner to see risk before you install.",
+      canonical: "/is-this-chrome-extension-safe"
+    },
+    priority: 0.9,
+    changefreq: "monthly"
+  },
+  {
+    path: "/chrome-extension-permissions",
+    element: <ChromeExtensionPermissionsPage />,
+    seo: {
+      title: "Chrome Extension Permissions Explained | What to Allow | ExtensionShield",
+      description: "Understand Chrome extension permissions: which are risky, red flags to watch, and how to review before you install. Plus a free scanner to check any extension.",
+      canonical: "/chrome-extension-permissions"
+    },
+    priority: 0.85,
+    changefreq: "monthly"
+  },
+  {
+    path: "/chrome-extension-security-scanner",
+    element: <ChromeExtensionSecurityScannerPage />,
+    seo: {
+      title: "Chrome Extension Security Scanner | Free Scan & Risk Score | ExtensionShield",
+      description: "Free chrome extension security scanner. Scan any extension for malware, get a risk score, and see permissions and threats in under 60 seconds. Check if a Chrome extension is safe.",
+      canonical: "/chrome-extension-security-scanner"
+    },
+    priority: 0.85,
+    changefreq: "monthly"
+  },
+  {
+    path: "/browser-extension-risk-assessment",
+    element: <BrowserExtensionRiskAssessmentPage />,
+    seo: {
+      title: "Browser Extension Risk Assessment | Enterprise Extension Security | ExtensionShield",
+      description: "Browser extension risk assessment for enterprises: govern extensions, enforce allowlists, and get audit-ready reports. Extension security and compliance monitoring at scale.",
+      canonical: "/browser-extension-risk-assessment"
+    },
+    priority: 0.8,
+    changefreq: "monthly"
+  },
+  {
+    path: "/crxcavator-alternative",
+    element: <CrxcavatorAlternativePage />,
+    seo: {
+      title: "CRXcavator Alternative | Chrome Extension Risk Score & Security | ExtensionShield",
+      description: "Looking for a CRXcavator alternative? ExtensionShield offers transparent chrome extension risk scoring, SAST, VirusTotal, and governance. Compare features and try free scans.",
+      canonical: "/crxcavator-alternative"
+    },
+    priority: 0.8,
+    changefreq: "monthly"
+  },
+
   // ============ COMPARE ROUTES (SEO: best scanner, alternatives) ============
   {
     path: "/compare",
@@ -264,14 +328,7 @@ export const routes = [
   },
   {
     path: "/blog/how-to-check-chrome-extension-permissions",
-    element: <BlogPostPage />,
-    seo: {
-      title: "How to Check Chrome Extension Permissions Safely | ExtensionShield",
-      description: "Learn how to check chrome extension permissions safely before installing. What to look for, which permissions are risky, and how ExtensionShield helps you audit extension security.",
-      canonical: "/blog/how-to-check-chrome-extension-permissions"
-    },
-    priority: 0.6,
-    changefreq: "monthly"
+    element: <Navigate to="/chrome-extension-permissions" replace />,
   },
   {
     path: "/blog/how-to-audit-chrome-extension-before-installing",
