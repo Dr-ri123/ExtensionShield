@@ -29,6 +29,8 @@ dependencies = [
     "supabase>=2.0.0",
     # Required for Supabase migrations runner
     "psycopg[binary]>=3.2.2",
+    # Optional: send enterprise pilot confirmation emails (when RESEND_API_KEY is set)
+    "resend>=2.0.0",
 ]
 
 [dependency-groups]

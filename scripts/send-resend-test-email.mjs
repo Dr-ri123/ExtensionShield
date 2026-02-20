@@ -1,8 +1,13 @@
 /**
  * Send a test email via Resend using RESEND_API_KEY from .env.
- * Run from project root: node scripts/send-resend-test-email.mjs
  *
- * Ensure .env contains: RESEND_API_KEY=re_your_actual_key
+ * Usage (from project root):
+ *   node scripts/send-resend-test-email.mjs                    → sends to RESEND_TEST_TO or Gmail default
+ *   node scripts/send-resend-test-email.mjs you@hostinger.com   → sends to that address
+ *
+ * .env:
+ *   RESEND_API_KEY=re_your_actual_key   (required)
+ *   RESEND_TEST_TO=you@example.com     (optional fallback when no CLI arg)
  */
 
 import dotenv from 'dotenv';
@@ -20,14 +25,21 @@ if (!apiKey || apiKey === 're_xxxxxxxxx') {
   process.exit(1);
 }
 
+const to = process.argv[2] || process.env.RESEND_TEST_TO || 'support@extensionshield.com';
+console.log('Sending test email to:', to);
+
 const resend = new Resend(apiKey);
 
 async function main() {
   const { data, error } = await resend.emails.send({
-    from: 'onboarding@resend.dev',
-    to: 'snorzang65@gmail.com',
-    subject: 'Hello World',
-    html: '<p>Congrats on sending your <strong>first email</strong>!</p>',
+    from: 'ExtensionShield <onboarding@resend.dev>',
+    to,
+    subject: 'ExtensionShield – test email',
+    html: `
+      <p>This is a test email from ExtensionShield (Resend).</p>
+      <p>If you received this in your Hostinger inbox, email delivery is working.</p>
+      <p><strong>Time:</strong> ${new Date().toISOString()}</p>
+    `,
   });
 
   if (error) {

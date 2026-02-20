@@ -40,7 +40,22 @@ const EnterprisePage = () => {
 
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        throw new Error(data.detail || "Failed to submit request");
+        const detail = data.detail;
+        const message =
+          typeof detail === "string"
+            ? detail
+            : Array.isArray(detail) && detail[0]?.msg
+              ? detail[0].msg
+              : null;
+        // 405 Method Not Allowed or other server/network errors: show friendly message
+        if (res.status === 405 || res.status >= 500 || !message) {
+          setSubmitState("error");
+          setSubmitMessage("Something went wrong. Please try again.");
+          return;
+        }
+        setSubmitState("error");
+        setSubmitMessage(message || "Something went wrong. Please try again.");
+        return;
       }
 
       setSubmitState("success");
@@ -48,7 +63,7 @@ const EnterprisePage = () => {
       setForm({ name: "", email: "", company: "", notes: "" });
     } catch (err) {
       setSubmitState("error");
-      setSubmitMessage(err?.message || "Failed to submit request");
+      setSubmitMessage(err?.message || "Something went wrong. Please try again.");
     }
   };
 

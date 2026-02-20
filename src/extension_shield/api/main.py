@@ -2127,9 +2127,50 @@ async def get_deep_scan_limit(http_request: Request):
     return _deep_scan_limit_status(rate_limit_key)
 
 
+def _send_enterprise_pilot_emails(item: Dict[str, Any]) -> None:
+    """Send confirmation email to the user (and optional notify team) via Resend. No-op if RESEND_API_KEY unset."""
+    api_key = os.getenv("RESEND_API_KEY", "").strip()
+    if not api_key or api_key.startswith("re_xxxx"):
+        return
+    from_email = os.getenv("ENTERPRISE_FROM_EMAIL", "ExtensionShield <onboarding@resend.dev>").strip()
+    try:
+        import resend
+        resend.api_key = api_key
+        to_email = item.get("email")
+        name = item.get("name", "")
+        company = item.get("company", "")
+        notes = item.get("notes") or ""
+        subject = "We received your Enterprise Pilot request"
+        html = f"""
+        <p>Hi{(' ' + name) if name else ''},</p>
+        <p>Thanks for your interest in ExtensionShield Enterprise. We've received your pilot request for <strong>{company or 'your organization'}</strong>.</p>
+        <p>We'll review it and reach out to you soon.</p>
+        <p>— The ExtensionShield team</p>
+        """
+        if notes:
+            html += f"<p><em>Your note: {notes}</em></p>"
+        resend.Emails.send({
+            "from": from_email,
+            "to": [to_email],
+            "subject": subject,
+            "html": html,
+        })
+        notify_email = os.getenv("ENTERPRISE_NOTIFY_EMAIL", "").strip()
+        if notify_email and notify_email != to_email:
+            resend.Emails.send({
+                "from": from_email,
+                "to": [notify_email],
+                "subject": f"New Enterprise Pilot: {company} ({name})",
+                "html": f"<p>New pilot request from {name} &lt;{to_email}&gt;, company: {company}.</p><p>Notes: {notes or '—'}</p>",
+            })
+    except Exception as e:
+        logger.warning("Enterprise pilot email send failed: %s", e)
+        # Do not fail the request; submission is already stored
+
+
 @app.post("/api/enterprise/pilot-request")
 async def create_enterprise_pilot_request(request: EnterprisePilotRequest, http_request: Request):
-    """Capture an Enterprise pilot request (placeholder, no outbound email)."""
+    """Capture an Enterprise pilot request; optionally send confirmation email via Resend."""
     user_id = _get_user_id(http_request)
     now = datetime.now(timezone.utc).isoformat()
     item = {
@@ -2141,6 +2182,7 @@ async def create_enterprise_pilot_request(request: EnterprisePilotRequest, http_
         "notes": (request.notes or "").strip() or None,
     }
     enterprise_pilot_requests.append(item)
+    _send_enterprise_pilot_emails(item)
     return {"ok": True, "received_at": now}
 
 
