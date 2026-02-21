@@ -180,46 +180,6 @@ class DatabaseService {
   }
 
   /**
-   * Get scan statistics for a specific extension
-   */
-  async getExtensionStats(extensionId) {
-    const result = await this.getScanResult(extensionId);
-    if (!result) return null;
-
-    return {
-      extensionId: result.extension_id,
-      extensionName: result.extension_name,
-      timestamp: result.timestamp,
-      securityScore: result.security_score,
-      riskLevel: result.risk_level,
-      totalFindings: result.total_findings,
-      totalFiles: result.total_files,
-      highRiskCount: result.high_risk_count,
-      mediumRiskCount: result.medium_risk_count,
-      lowRiskCount: result.low_risk_count
-    };
-  }
-
-  /**
-   * Get URLs from recent scans for autocomplete (requires auth; no request when unauthenticated)
-   */
-  async getRecentUrls(limit = 5) {
-    if (!this.accessToken) return [];
-    const history = await this.getScanHistory(limit, this.accessToken);
-    return history
-      .map(item => item.url)
-      .filter(url => url && url.trim() !== "");
-  }
-
-  /**
-   * Get risk distribution across all scans
-   */
-  async getRiskDistribution() {
-    const stats = await this.getStatistics();
-    return stats.risk_distribution || { high: 0, medium: 0, low: 0 };
-  }
-
-  /**
    * Get aggregated metrics for dashboard widgets (history only when authenticated to avoid 401)
    */
   async getDashboardMetrics() {
