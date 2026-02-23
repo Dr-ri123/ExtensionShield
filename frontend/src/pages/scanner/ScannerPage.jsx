@@ -136,38 +136,6 @@ const RiskBadge = ({ level, score }) => {
   );
 };
 
-// Row hover actions
-const RowActions = ({ scan, onViewReport, onMonitor, onCopyLink, showActions }) => {
-  const actionsRef = useRef(null);
-
-  if (!showActions) return null;
-
-  return (
-    <div className="row-hover-actions" ref={actionsRef}>
-      <button className="hover-action-btn primary" onClick={() => onViewReport(scan)} title="View Report">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-          <circle cx="12" cy="12" r="3" />
-        </svg>
-        <span>View</span>
-      </button>
-      <button className="hover-action-btn pro" onClick={onMonitor} title="Monitor (Enterprise)">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
-        </svg>
-        <span>Monitor</span>
-        <span className="pro-badge">ENTERPRISE</span>
-      </button>
-      <button className="hover-action-btn" onClick={() => onCopyLink(scan)} title="Copy Share Link">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
-          <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
-        </svg>
-      </button>
-    </div>
-  );
-};
-
 // Pure formatters — stable references, no re-creation per render
 const formatUserCount = (count) => {
   if (!count) return "—";
@@ -731,6 +699,15 @@ const ScannerPage = () => {
                         className={hoveredRow === scan.extension_id ? "row-hovered" : ""}
                         onMouseEnter={() => setHoveredRow(scan.extension_id)}
                         onMouseLeave={() => setHoveredRow(null)}
+                        onClick={() => handleViewReport(scan)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            handleViewReport(scan);
+                          }
+                        }}
+                        role="button"
+                        tabIndex={0}
                       >
                         <td className="extension-cell">
                           <div className="extension-info">
@@ -786,7 +763,10 @@ const ScannerPage = () => {
                             </span>
                             <button
                               className="view-report-btn"
-                              onClick={() => handleViewReport(scan)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleViewReport(scan);
+                              }}
                             >
                               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                 <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
@@ -795,13 +775,6 @@ const ScannerPage = () => {
                               View
                             </button>
                           </div>
-                          <RowActions
-                            scan={scan}
-                            showActions={hoveredRow === scan.extension_id}
-                            onViewReport={handleViewReport}
-                            onMonitor={handleMonitor}
-                            onCopyLink={handleCopyLink}
-                          />
                           {copiedId === scan.extension_id && (
                             <span className="copied-toast">Copied!</span>
                           )}

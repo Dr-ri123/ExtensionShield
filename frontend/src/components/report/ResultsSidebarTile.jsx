@@ -65,7 +65,6 @@ const ResultsSidebarTile = ({
       <div className="tile-header">
         <span className="tile-icon">{getLayerIcon()}</span>
         <h3 className="tile-title">{title}</h3>
-        {onClick && <span className="tile-click-hint" aria-hidden>Click for details</span>}
       </div>
       {/* Row 2: Big percentage + findings (right) */}
       <div className="tile-percent-row">

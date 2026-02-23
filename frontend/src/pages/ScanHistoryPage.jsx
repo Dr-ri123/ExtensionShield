@@ -558,6 +558,15 @@ const ScanHistoryPage = () => {
                       className={hoveredRow === scan.extension_id ? "row-hovered" : ""}
                       onMouseEnter={() => setHoveredRow(scan.extension_id)}
                       onMouseLeave={() => setHoveredRow(null)}
+                      onClick={() => handleViewReport(scan)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          handleViewReport(scan);
+                        }
+                      }}
+                      role="button"
+                      tabIndex={0}
                     >
                       <td className="extension-cell">
                         <div className="extension-info">
@@ -612,7 +621,10 @@ const ScanHistoryPage = () => {
                           </span>
                           <button
                             className="view-report-btn"
-                            onClick={() => handleViewReport(scan)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleViewReport(scan);
+                            }}
                           >
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                               <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
@@ -622,8 +634,11 @@ const ScanHistoryPage = () => {
                           </button>
                           <button
                             className="copy-link-btn"
-                            onClick={() => handleCopyLink(scan)}
-                            title="Copy share link"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleCopyLink(scan);
+                            }}
+                            aria-label="Copy share link"
                           >
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                               <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />

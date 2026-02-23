@@ -11,7 +11,7 @@
   color: var(--theme-text-primary);
 }
 
-/* Centered extension scan status (replaces right sidebar / ScanHUD) */
+/* Minimal centered scan progress – icon, name, bar, status */
 .scan-progress-center {
   position: fixed;
   inset: 0;
@@ -28,138 +28,88 @@
   background: var(--atlas-bg-primary);
 }
 
-.scan-progress-status-card {
+.scan-progress-minimal-card {
   width: 100%;
-  max-width: 420px;
-  padding: 1.5rem;
+  max-width: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 2rem 1.5rem;
   background: var(--atlas-bg-secondary);
   border: 1px solid var(--atlas-border);
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.25);
 }
 
-.light .scan-progress-status-card {
+.light .scan-progress-minimal-card {
   background: var(--atlas-bg-card);
   border-color: var(--atlas-border);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
 }
 
-.scan-progress-status-section {
-  margin-bottom: 1.25rem;
-
-  &:last-of-type {
-    margin-bottom: 0;
-  }
-}
-
-.scan-progress-status-section-title {
-  font-size: 0.6875rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  color: var(--atlas-accent);
-  margin-bottom: 0.5rem;
-}
-
-.scan-progress-status-extension {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.scan-progress-status-icon {
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
+.scan-progress-minimal-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 14px;
   object-fit: contain;
   background: var(--atlas-bg-tertiary);
-  flex-shrink: 0;
+  margin-bottom: 1rem;
 }
 
-.scan-progress-status-extension-details {
-  min-width: 0;
-}
-
-.scan-progress-status-name {
-  font-size: 0.9375rem;
+.scan-progress-minimal-name {
+  margin: 0 0 1.5rem;
+  font-size: 1rem;
   font-weight: 600;
   color: var(--atlas-text-primary);
-  margin-bottom: 0.25rem;
-}
-
-.scan-progress-status-id-row {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.scan-progress-status-id {
-  font-size: 0.75rem;
-  color: var(--atlas-text-muted);
-  background: var(--atlas-bg-tertiary);
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 220px;
+  white-space: nowrap;
 }
 
-.scan-progress-status-copy {
-  flex-shrink: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: none;
-  border-radius: 6px;
-  background: transparent;
-  color: var(--atlas-accent);
-  cursor: pointer;
-  transition: background 0.2s, color 0.2s;
-
-  &:hover {
-    background: rgba(34, 197, 94, 0.1);
-  }
+.light .scan-progress-minimal-name {
+  color: var(--atlas-text-primary);
 }
 
-.scan-progress-status-bar-wrap {
-  margin-top: 0.25rem;
+.scan-progress-minimal-bar-wrap {
+  width: 100%;
 }
 
-.scan-progress-status-bar {
-  height: 8px;
+.scan-progress-minimal-bar {
+  height: 6px;
   background: var(--atlas-bg-tertiary);
-  border-radius: 4px;
+  border-radius: 3px;
   overflow: hidden;
   margin-bottom: 0.5rem;
 }
 
-.scan-progress-status-fill {
+.scan-progress-minimal-fill {
   height: 100%;
   background: var(--atlas-accent);
-  border-radius: 4px;
-  transition: width 0.3s ease;
+  border-radius: 3px;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 
   &.already-scanned {
     background: var(--atlas-accent);
   }
 }
 
-.scan-progress-status-meta {
+.scan-progress-minimal-meta {
   display: flex;
   justify-content: space-between;
   align-items: center;
   font-size: 0.8125rem;
 }
 
-.scan-progress-status-pct {
+.scan-progress-minimal-pct {
   font-weight: 600;
   color: var(--atlas-accent);
 }
 
-.scan-progress-status-label {
+.scan-progress-minimal-label {
   color: var(--atlas-text-muted);
 }
 

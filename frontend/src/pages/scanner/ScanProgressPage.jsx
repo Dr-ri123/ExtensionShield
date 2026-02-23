@@ -1,6 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useParams, useNavigate, useLocation, Link } from "react-router-dom";
-import { Copy, Check } from "lucide-react";
 import { Button } from "../../components/ui/button";
 import { useScan } from "../../context/ScanContext";
 import { EXTENSION_ICON_PLACEHOLDER, getExtensionIconUrl } from "../../utils/constants";
@@ -49,7 +48,6 @@ const ScanProgressPage = () => {
   const [errorMessage, setErrorMessage] = useState("");
   const [scanProgress, setScanProgress] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
-  const [copiedId, setCopiedId] = useState(false);
   const hasSeenInProgressRef = useRef(false);
   
   // Detect mobile
@@ -296,16 +294,7 @@ const ScanProgressPage = () => {
     setErrorMessage("");
   }, [setError]);
 
-  const handleCopyId = useCallback(async () => {
-    if (!scanId) return;
-    try {
-      await navigator.clipboard.writeText(scanId);
-      setCopiedId(true);
-      setTimeout(() => setCopiedId(false), 2000);
-    } catch (_e) {}
-  }, [scanId]);
-
-  // Status label for centered card: Completed | In progress | Not complete
+  // Status label: Completed | In progress | Not complete
   const getScanStatusLabel = () => {
     if (scanComplete) return alreadyScanned ? "Previously scanned" : "Completed";
     if (scanProgress > 0 || scanStage) return "In progress";
@@ -351,53 +340,30 @@ const ScanProgressPage = () => {
       <div className="scan-progress-page">
       {showLoadingScreen ? (
         <>
-          {/* Centered extension scan status (no right sidebar) */}
+          {/* Minimal centered: icon, name, progress bar, status */}
           <div className="scan-progress-center">
-            <div className="scan-progress-status-card">
-              <div className="scan-progress-status-section">
-                <div className="scan-progress-status-section-title">Extension</div>
-                <div className="scan-progress-status-extension">
-                  <img
-                    src={extensionLogo}
-                    alt=""
-                    className="scan-progress-status-icon"
-                    onError={(e) => { e.target.style.display = "none"; }}
+            <div className="scan-progress-minimal-card">
+              <img
+                src={extensionLogo}
+                alt=""
+                className="scan-progress-minimal-icon"
+                onError={(e) => { e.target.style.display = "none"; }}
+              />
+              <p className="scan-progress-minimal-name">
+                {extensionName || `Extension ${scanId?.substring(0, 8)}...`}
+              </p>
+              <div className="scan-progress-minimal-bar-wrap">
+                <div className="scan-progress-minimal-bar">
+                  <div
+                    className={`scan-progress-minimal-fill${alreadyScanned ? " already-scanned" : ""}`}
+                    style={{ width: `${alreadyScanned ? 100 : scanProgress}%` }}
                   />
-                  <div className="scan-progress-status-extension-details">
-                    <div className="scan-progress-status-name">
-                      {extensionName || `Extension ${scanId?.substring(0, 8)}...`}
-                    </div>
-                    <div className="scan-progress-status-id-row">
-                      <code className="scan-progress-status-id">
-                        {scanId?.length > 20 ? `${scanId.substring(0, 20)}...` : scanId}
-                      </code>
-                      <button
-                        type="button"
-                        onClick={handleCopyId}
-                        className="scan-progress-status-copy"
-                        title="Copy ID"
-                      >
-                        {copiedId ? <Check size={14} /> : <Copy size={14} />}
-                      </button>
-                    </div>
-                  </div>
                 </div>
-              </div>
-              <div className="scan-progress-status-section">
-                <div className="scan-progress-status-section-title">Scan status</div>
-                <div className="scan-progress-status-bar-wrap">
-                  <div className="scan-progress-status-bar">
-                    <div
-                      className={`scan-progress-status-fill${alreadyScanned ? " already-scanned" : ""}`}
-                      style={{ width: `${alreadyScanned ? 100 : scanProgress}%` }}
-                    />
-                  </div>
-                  <div className="scan-progress-status-meta">
-                    <span className="scan-progress-status-pct">
-                      {alreadyScanned ? "100" : Math.round(scanProgress)}%
-                    </span>
-                    <span className="scan-progress-status-label">{getScanStatusLabel()}</span>
-                  </div>
+                <div className="scan-progress-minimal-meta">
+                  <span className="scan-progress-minimal-pct">
+                    {alreadyScanned ? "100" : Math.round(scanProgress)}%
+                  </span>
+                  <span className="scan-progress-minimal-label">{getScanStatusLabel()}</span>
                 </div>
               </div>
             </div>

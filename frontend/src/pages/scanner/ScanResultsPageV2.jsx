@@ -419,9 +419,10 @@ const ScanResultsPageV2 = () => {
     .slice(0, 3)
     .map(f => ({ title: f.title, summary: f.summary }));
 
-  const securityFindingsCount = dedupeFindings(allSecurityFindings).length;
-  const privacyFindingsCount = dedupeFindings(allPrivacyFindings).length;
-  const governanceFindingsCount = dedupeFindings(allGovernanceFindings).length;
+  // Use factorsByLayer so sidebar counts match actual report (Layer modal shows these factors)
+  const securityFindingsCount = (factorsByLayer?.security?.length ?? 0);
+  const privacyFindingsCount = (factorsByLayer?.privacy?.length ?? 0);
+  const governanceFindingsCount = (factorsByLayer?.governance?.length ?? 0);
 
   // Brief transition: scanResults loaded but viewModel not yet set
   if (!viewModel && scanResults && !normalizationError) {
