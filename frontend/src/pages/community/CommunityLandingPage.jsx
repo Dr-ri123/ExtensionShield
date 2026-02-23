@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import SEOHead from "../../components/SEOHead";
 import RainfallDroplets from "../../components/RainfallDroplets";
+import MemberCounter from "../../components/MemberCounter";
 import "./CommunityLandingPage.scss";
 
 const TAGLINE = "Came to scan. Stayed for community.";
@@ -59,6 +60,8 @@ const CommunityLandingPage = () => {
               Join the community
             </Link>
           </div>
+
+          <MemberCounter />
 
           <p className="community-footnote">
             As we grow, we&apos;ll surface trusted extensions and community notes here.
