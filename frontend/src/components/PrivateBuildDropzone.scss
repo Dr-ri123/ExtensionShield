@@ -110,10 +110,11 @@
   gap: 0.5rem;
   margin-top: 1rem;
   padding: 0.5rem 1.25rem;
+  font-family: var(--font-sans, system-ui, sans-serif);
   font-size: 0.9375rem;
   font-weight: 500;
   color: #fff;
-  background: var(--atlas-accent);
+  background: #22c55e;
   border: none;
   border-radius: 10px;
   cursor: pointer;
@@ -121,12 +122,12 @@
 
   &:hover:not(:disabled) {
     opacity: 0.95;
-    box-shadow: 0 4px 12px var(--atlas-accent-glow);
+    box-shadow: 0 4px 12px rgba(34, 197, 94, 0.35);
   }
 
   &:focus-visible {
     outline: none;
-    box-shadow: 0 0 0 2px var(--atlas-accent);
+    box-shadow: 0 0 0 2px #22c55e;
   }
 
   &:disabled {
