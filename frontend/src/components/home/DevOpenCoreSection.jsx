@@ -50,7 +50,7 @@ export default function DevOpenCoreSection({ reducedMotion = false }) {
                 Private by default — share only if you choose.
               </p>
               <div className="dev-open-core-cta-wrap">
-                <Link to="/scan/upload" className="dev-open-core-cta-btn">Upload CRX/ZIP</Link>
+                <Link to="/scan/upload" className="dev-open-core-cta-btn">Upload for audit</Link>
               </div>
             </motion.div>
           </div>

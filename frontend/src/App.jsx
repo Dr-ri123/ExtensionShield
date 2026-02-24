@@ -1,12 +1,11 @@
 import React, { Suspense } from "react";
 import { createPortal } from "react-dom";
-import { motion } from "framer-motion";
 import { BrowserRouter as Router, Routes, Route, NavLink, useLocation } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { useTheme, ThemeProvider } from "./context/ThemeContext";
 import { ScanProvider } from "./context/ScanContext";
 import routes from "./routes/routes";
-import { topNavItems, megaMenuConfig, userMenuItems, getMobileNavSections } from "./nav/navigation";
+import { topNavItems, userMenuItems, getMobileNavSections } from "./nav/navigation";
 import SignInModal from "./components/SignInModal";
 import ShieldLogo from "./components/ShieldLogo";
 import Footer from "./components/Footer";
@@ -231,7 +230,8 @@ function NavItemDropdown({ item, location }) {
     return icon;
   };
 
-  if (!item.dropdownItems || item.dropdownItems.length === 0) {
+  const hasDropdown = item.dropdownSections?.length > 0 || (item.dropdownItems && item.dropdownItems.length > 0);
+  if (!hasDropdown) {
     return (
       <NavLink
         to={item.path}
@@ -278,143 +278,73 @@ function NavItemDropdown({ item, location }) {
 
       {isOpen && (
         <div 
-          className="nav-dropdown-menu"
+          className={`nav-dropdown-menu ${item.dropdownSections ? "nav-dropdown-menu--sections" : ""}`}
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
         >
-          {item.category && (
-            <div className="nav-dropdown-category" aria-hidden="true">{item.category}</div>
-          )}
-          {item.dropdownItems.map((dropdownItem, idx) => {
-            const Element = dropdownItem.external ? "a" : NavLink;
-            const linkProps = dropdownItem.external 
-              ? { href: dropdownItem.href, target: "_blank", rel: "noopener noreferrer" }
-              : { to: dropdownItem.path };
-
-            return (
-              <Element 
-                key={idx} 
-                {...linkProps} 
-                className="nav-dropdown-item" 
-                onClick={() => setIsOpen(false)}
-              >
-                <div className="nav-dropdown-icon">{renderIcon(dropdownItem.icon)}</div>
-                <div className="nav-dropdown-content">
-                  <div className="nav-dropdown-label-row">
-                    <div className="nav-dropdown-label">{dropdownItem.label}</div>
-                    {dropdownItem.badge && (
-                      <span className="nav-dropdown-badge" aria-hidden="true">{dropdownItem.badge}</span>
-                    )}
+          {item.dropdownSections ? (
+            <>
+              {item.dropdownSections.map((section, sectionIdx) => (
+                <div key={sectionIdx} className="nav-dropdown-section">
+                  <div className="nav-dropdown-category" aria-hidden="true">{section.heading}</div>
+                  <div className="megamenu-items-list">
+                    {section.items.map((dropdownItem, idx) => {
+                      const Element = dropdownItem.external ? "a" : NavLink;
+                      const linkProps = dropdownItem.external
+                        ? { href: dropdownItem.href, target: "_blank", rel: "noopener noreferrer" }
+                        : { to: dropdownItem.path };
+                      return (
+                        <Element
+                          key={idx}
+                          {...linkProps}
+                          className="megamenu-item"
+                          onClick={() => setIsOpen(false)}
+                        >
+                          <div className="megamenu-icon">{renderIcon(dropdownItem.icon)}</div>
+                          <div className="megamenu-content">
+                            <div className="megamenu-label">{dropdownItem.label}</div>
+                            <div className="megamenu-desc">{dropdownItem.description}</div>
+                          </div>
+                        </Element>
+                      );
+                    })}
                   </div>
-                  <div className="nav-dropdown-desc">{dropdownItem.description}</div>
                 </div>
-              </Element>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
+              ))}
+            </>
+          ) : (
+            <>
+              {item.category && (
+                <div className="nav-dropdown-category" aria-hidden="true">{item.category}</div>
+              )}
+              {item.dropdownItems.map((dropdownItem, idx) => {
+                const Element = dropdownItem.external ? "a" : NavLink;
+                const linkProps = dropdownItem.external 
+                  ? { href: dropdownItem.href, target: "_blank", rel: "noopener noreferrer" }
+                  : { to: dropdownItem.path };
 
-// Mega Menu Component (Resources - Open Source only)
-function MainMegamenu() {
-  const location = useLocation();
-  const [isOpen, setIsOpen] = React.useState(false);
-  const menuRef = React.useRef(null);
-  const timeoutRef = React.useRef(null);
-  
-  const isActive = megaMenuConfig.trigger.matchPaths.some(path => 
-    location.pathname.startsWith(path)
-  );
-
-  React.useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (menuRef.current && !menuRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
-    };
-    if (isOpen) {
-      document.addEventListener("mousedown", handleClickOutside);
-    }
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [isOpen]);
-
-  // Cleanup timeout on unmount
-  React.useEffect(() => {
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
-  }, []);
-
-  const handleMouseEnter = () => {
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-      timeoutRef.current = null;
-    }
-    setIsOpen(true);
-  };
-
-  const handleMouseLeave = () => {
-    timeoutRef.current = setTimeout(() => {
-      setIsOpen(false);
-    }, 150); // Small delay to allow moving to dropdown
-  };
-
-  const renderIcon = (icon) => {
-    if (icon === "github") {
-      return (
-        <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20">
-          <path d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z" />
-        </svg>
-      );
-    }
-    return icon;
-  };
-
-  return (
-    <div 
-      className="megamenu-container" 
-      ref={menuRef}
-      onMouseEnter={handleMouseEnter}
-      onMouseLeave={handleMouseLeave}
-    >
-      <button className={`nav-item megamenu-trigger ${isActive ? "active" : ""} ${isOpen ? "open" : ""}`} onClick={() => setIsOpen(!isOpen)}>
-        {megaMenuConfig.trigger.label}
-        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d={isOpen ? "M3 9l3-3 3 3" : "M3 3l3 3 3-3"} />
-        </svg>
-      </button>
-
-      {isOpen && (
-        <div 
-          className="megamenu-dropdown"
-          onMouseEnter={handleMouseEnter}
-          onMouseLeave={handleMouseLeave}
-        >
-          {megaMenuConfig.category && (
-            <div className="megamenu-category" aria-hidden="true">{megaMenuConfig.category}</div>
+                return (
+                  <Element 
+                    key={idx} 
+                    {...linkProps} 
+                    className="nav-dropdown-item" 
+                    onClick={() => setIsOpen(false)}
+                  >
+                    <div className="nav-dropdown-icon">{renderIcon(dropdownItem.icon)}</div>
+                    <div className="nav-dropdown-content">
+                      <div className="nav-dropdown-label-row">
+                        <div className="nav-dropdown-label">{dropdownItem.label}</div>
+                        {dropdownItem.badge && (
+                          <span className="nav-dropdown-badge" aria-hidden="true">{dropdownItem.badge}</span>
+                        )}
+                      </div>
+                      <div className="nav-dropdown-desc">{dropdownItem.description}</div>
+                    </div>
+                  </Element>
+                );
+              })}
+            </>
           )}
-          <div className="megamenu-items-list">
-            {megaMenuConfig.items.map((item, idx) => {
-              const Element = item.external ? "a" : NavLink;
-              const linkProps = item.external 
-                ? { href: item.href, target: "_blank", rel: "noopener noreferrer" }
-                : { to: item.path };
-
-              return (
-                <Element key={idx} {...linkProps} className="megamenu-item" onClick={() => setIsOpen(false)}>
-                  <div className="megamenu-icon">{renderIcon(item.icon)}</div>
-                  <div className="megamenu-content">
-                    <div className="megamenu-label">{item.label}</div>
-                    <div className="megamenu-desc">{item.description}</div>
-                  </div>
-                </Element>
-              );
-            })}
-          </div>
         </div>
       )}
     </div>
@@ -432,26 +362,14 @@ function AuthLoadingDots() {
   );
 }
 
-// Scroll threshold (px) after which homepage header transitions to solid pill
-const HEADER_SCROLL_THRESHOLD = 100;
-
 // App Header Component
 function AppHeader() {
   const location = useLocation();
   const { theme } = useTheme();
   const { user, isAuthenticated, openSignInModal, isLoading } = useAuth();
   const isHomePage = location.pathname === "/";
-  const isLight = theme === "light";
-  const [scrolled, setScrolled] = React.useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = React.useState(false);
   const mobileMenuRef = React.useRef(null);
-
-  React.useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > HEADER_SCROLL_THRESHOLD);
-    handleScroll();
-    window.addEventListener("scroll", handleScroll, { passive: true });
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, []);
 
   React.useEffect(() => {
     setMobileMenuOpen(false);
@@ -473,49 +391,11 @@ function AppHeader() {
     };
   }, [mobileMenuOpen]);
 
-  const headerSolid = scrolled;
-  const headerClass = headerSolid ? "solid" : "transparent";
-
-  const containerVariants = {
-    transparent: {
-      borderRadius: 0,
-      maxWidth: "1600px",
-      margin: "0 auto",
-      background: "transparent",
-      backdropFilter: "none",
-      WebkitBackdropFilter: "none",
-      boxShadow: "none",
-      border: "1px solid transparent",
-    },
-    solid: {
-      borderRadius: 9999,
-      maxWidth: "1600px",
-      margin: "0 auto",
-      background: isLight ? "rgba(250, 248, 244, 0.78)" : "transparent",
-      backdropFilter: "blur(24px)",
-      WebkitBackdropFilter: "blur(24px)",
-      boxShadow: isLight
-        ? "0 4px 24px rgba(38, 35, 31, 0.1), 0 0 0 1px rgba(38, 35, 31, 0.08)"
-        : "0 0 24px rgba(34, 197, 94, 0.08), 0 4px 24px rgba(0, 0, 0, 0.25)",
-      border: isLight ? "1px solid rgba(38, 35, 31, 0.14)" : "1px solid rgba(34, 197, 94, 0.2)",
-    },
-  };
-
   const mobileSections = getMobileNavSections();
 
   return (
-    <header className={`atlas-header ${headerClass}`}>
-      <motion.div
-        className="header-container"
-        animate={headerSolid ? "solid" : "transparent"}
-        variants={containerVariants}
-        transition={{
-          type: "spring",
-          stiffness: 260,
-          damping: 30,
-          mass: 0.8,
-        }}
-      >
+    <header className="atlas-header solid">
+      <div className="header-container">
         <NavLink to="/" className="header-logo" onClick={() => setMobileMenuOpen(false)}>
           <div className="header-logo-shield" aria-hidden="true">
             <ShieldLogo size={48} />
@@ -527,7 +407,6 @@ function AppHeader() {
           {topNavItems.map((item) => (
             <NavItemDropdown key={item.path} item={item} location={location} />
           ))}
-          <MainMegamenu />
         </nav>
 
         <div className="header-actions header-actions-desktop">
@@ -559,7 +438,7 @@ function AppHeader() {
           <span className="hamburger-bar" />
           <span className="hamburger-bar" />
         </button>
-      </motion.div>
+      </div>
 
       {createPortal(
         <div

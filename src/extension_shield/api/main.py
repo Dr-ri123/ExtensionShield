@@ -572,6 +572,18 @@ class FeedbackRequest(BaseModel):
         return self
 
 
+class ReviewQueueClaimRequest(BaseModel):
+    """Request body for claiming a review queue item."""
+    queue_item_id: str
+
+
+class ReviewQueueVoteRequest(BaseModel):
+    """Request body for voting (thumbs up/down) on a review queue item."""
+    queue_item_id: str
+    vote: str  # 'up' | 'down'
+    note: Optional[str] = Field(None, max_length=500)
+
+
 # Load existing results from database on startup
 def load_existing_results():
     """Load existing scan results from database into memory cache."""
@@ -2265,6 +2277,46 @@ async def submit_feedback(feedback: FeedbackRequest, http_request: Request):
         ruleset_version=None,  # TODO: Extract from scan result metadata
     )
     
+    return {"ok": True}
+
+
+# -----------------------------------------------------------------------------
+# Community review queue (Supabase only)
+# -----------------------------------------------------------------------------
+
+@app.get("/api/community/review-queue")
+async def get_community_review_queue():
+    """List review queue items with extension names and vote counts. Sorted: open, in_review, then by newest."""
+    if not isinstance(db, SupabaseDatabase):
+        return []
+    return db.get_review_queue()
+
+
+@app.post("/api/community/review-queue/claim")
+async def claim_community_review_item(body: ReviewQueueClaimRequest, http_request: Request):
+    """Claim a queue item (set status=in_review, optional assigned_to_user_id)."""
+    if not isinstance(db, SupabaseDatabase):
+        raise HTTPException(status_code=501, detail="Review queue is not available")
+    user_id = _get_user_id(http_request)
+    ok = db.claim_review_queue_item(body.queue_item_id, user_id)
+    if not ok:
+        raise HTTPException(status_code=400, detail="Claim failed")
+    return {"ok": True}
+
+
+@app.post("/api/community/review-queue/vote")
+async def vote_community_review_item(body: ReviewQueueVoteRequest, http_request: Request):
+    """Upsert a vote (up/down) and optional note. Requires authenticated user."""
+    if not isinstance(db, SupabaseDatabase):
+        raise HTTPException(status_code=501, detail="Review queue is not available")
+    if body.vote not in ("up", "down"):
+        raise HTTPException(status_code=400, detail="vote must be 'up' or 'down'")
+    user_id = _get_user_id(http_request)
+    if user_id in (None, "", "anon"):
+        raise HTTPException(status_code=401, detail="Sign in to vote")
+    ok = db.upsert_review_vote(body.queue_item_id, user_id, body.vote, body.note)
+    if not ok:
+        raise HTTPException(status_code=400, detail="Vote failed")
     return {"ok": True}
 
 

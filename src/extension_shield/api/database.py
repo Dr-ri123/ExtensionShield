@@ -1852,6 +1852,131 @@ class SupabaseDatabase:
                 "rows": [],
             }
 
+    # ---------- Community review queue ----------
+
+    def get_review_queue(self) -> List[Dict[str, Any]]:
+        """
+        Fetch review queue items with extension names from scan_results and aggregate vote counts.
+        Sort: open first, then in_review, then verified/dismissed; newest first within status.
+        """
+        try:
+            queue_resp = (
+                self.client.table("extension_review_queue")
+                .select("id, extension_id, finding_type, severity, status, assigned_to_user_id, created_at")
+                .order("created_at", desc=True)
+                .execute()
+            )
+            queue_rows = getattr(queue_resp, "data", None) or []
+            if not queue_rows:
+                return []
+
+            queue_ids = [r["id"] for r in queue_rows]
+            votes_resp = (
+                self.client.table("extension_review_votes")
+                .select("queue_item_id, vote")
+                .in_("queue_item_id", queue_ids)
+                .execute()
+            )
+            votes_rows = getattr(votes_resp, "data", None) or []
+            vote_counts: Dict[str, Dict[str, int]] = {}
+            for v in votes_rows:
+                qid = v.get("queue_item_id")
+                if not qid:
+                    continue
+                if qid not in vote_counts:
+                    vote_counts[qid] = {"up": 0, "down": 0}
+                vote_counts[qid][v.get("vote") or "up"] = vote_counts[qid].get(v.get("vote") or "up", 0) + 1
+
+            ext_ids = list({r["extension_id"] for r in queue_rows})
+            scan_resp = (
+                self.client.table(self.table_scan_results)
+                .select("extension_id, extension_name")
+                .in_("extension_id", ext_ids)
+                .execute()
+            )
+            scans = getattr(scan_resp, "data", None) or []
+            names_by_id = {s["extension_id"]: (s.get("extension_name") or s["extension_id"]) for s in scans}
+
+            status_order = {"open": 0, "in_review": 1, "verified": 2, "dismissed": 3}
+
+            def _created_ts(c: str):
+                if not c:
+                    return 0.0
+                try:
+                    s = (c or "").replace("Z", "+00:00")
+                    return datetime.fromisoformat(s).timestamp()
+                except Exception:
+                    return 0.0
+
+            out = []
+            for r in queue_rows:
+                qid = r.get("id")
+                ext_id = r.get("extension_id") or ""
+                counts = vote_counts.get(qid, {"up": 0, "down": 0})
+                status = (r.get("status") or "open").lower()
+                created_at = r.get("created_at") or ""
+                out.append({
+                    "id": qid,
+                    "extension_id": ext_id,
+                    "extension_name": names_by_id.get(ext_id, ext_id or "Unknown"),
+                    "finding_type": r.get("finding_type") or "Security scan",
+                    "severity": (r.get("severity") or "medium").lower(),
+                    "status": status,
+                    "assigned_to_user_id": r.get("assigned_to_user_id"),
+                    "created_at": created_at,
+                    "votes_up": counts.get("up", 0),
+                    "votes_down": counts.get("down", 0),
+                    "_sort": (status_order.get(status, 99), -_created_ts(created_at)),
+                })
+            out.sort(key=lambda x: x["_sort"])
+            for o in out:
+                o.pop("_sort", None)
+            return out
+        except Exception as e:
+            print(f"Error get_review_queue (Supabase): {e}")
+            return []
+
+    def claim_review_queue_item(self, queue_item_id: str, user_id: Optional[str] = None) -> bool:
+        """Set status=in_review and optionally assigned_to_user_id. user_id may be None (anon claim)."""
+        try:
+            payload = {"status": "in_review", "updated_at": datetime.now(timezone.utc).isoformat()}
+            if user_id and user_id != "anon":
+                payload["assigned_to_user_id"] = user_id
+            self.client.table("extension_review_queue").update(payload).eq("id", queue_item_id).execute()
+            return True
+        except Exception as e:
+            print(f"Error claim_review_queue_item (Supabase): {e}")
+            return False
+
+    def upsert_review_vote(
+        self, queue_item_id: str, user_id: str, vote: str, note: Optional[str] = None
+    ) -> bool:
+        """Upsert a vote (up/down) and optional note. user_id must be authenticated (not anon)."""
+        if user_id in (None, "", "anon"):
+            return False
+        if vote not in ("up", "down"):
+            return False
+        try:
+            # Check existing vote for this user + item
+            existing = (
+                self.client.table("extension_review_votes")
+                .select("id")
+                .eq("queue_item_id", queue_item_id)
+                .eq("user_id", user_id)
+                .limit(1)
+                .execute()
+            )
+            data = getattr(existing, "data", None) or []
+            row = {"queue_item_id": queue_item_id, "user_id": user_id, "vote": vote, "note": (note or "")[:500] or None}
+            if data:
+                self.client.table("extension_review_votes").update(row).eq("id", data[0]["id"]).execute()
+            else:
+                self.client.table("extension_review_votes").insert(row).execute()
+            return True
+        except Exception as e:
+            print(f"Error upsert_review_vote (Supabase): {e}")
+            return False
+
 
 def _create_db():
     """

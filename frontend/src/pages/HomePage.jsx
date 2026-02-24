@@ -200,7 +200,7 @@ const HomePage = () => {
                   onClick={() => setHeroAudience("users")}
                   aria-pressed={heroAudience === "users"}
                 >
-                  Users (Free scan)
+                  Users
                 </button>
                 <button
                   type="button"
@@ -208,7 +208,7 @@ const HomePage = () => {
                   onClick={() => setHeroAudience("developers")}
                   aria-pressed={heroAudience === "developers"}
                 >
-                  Developers (Pro build audit)
+                  Developers
                 </button>
               </div>
 

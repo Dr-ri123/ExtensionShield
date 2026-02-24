@@ -1,72 +1,71 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import { Link } from "react-router-dom";
 import SEOHead from "../../components/SEOHead";
 import RainfallDroplets from "../../components/RainfallDroplets";
-import MemberCounter from "../../components/MemberCounter";
+import CommunitySpotlightCarousel from "./CommunitySpotlightCarousel";
+import { useAuth } from "../../context/AuthContext";
 import "./CommunityLandingPage.scss";
-
-const TAGLINE = "Came to scan. Stayed for community.";
-const TAGLINE_SPEED = 60;
-
-function TypewriterTagline() {
-  const [display, setDisplay] = useState("");
-  const [done, setDone] = useState(false);
-
-  useEffect(() => {
-    if (display.length < TAGLINE.length) {
-      const t = setTimeout(() => {
-        setDisplay(TAGLINE.slice(0, display.length + 1));
-      }, TAGLINE_SPEED);
-      return () => clearTimeout(t);
-    }
-    setDone(true);
-  }, [display]);
-
-  return (
-    <h1 className="community-tagline" aria-live="polite">
-      <span className="tagline-text">{display}</span>
-      {!done && <span className="tagline-cursor" aria-hidden />}
-    </h1>
-  );
-}
 
 /**
  * Community landing page at /community
- * Welcoming hero with tagline and CTA to join.
+ * Hero-grid layout: left = headline + subtext + CTA button; right = carousel.
+ * Second row: action buttons that open sign-in.
  */
 const CommunityLandingPage = () => {
+  const { openSignInModal } = useAuth();
   return (
     <>
       <SEOHead
         title="Community | ExtensionShield"
-        description="Came to scan, stayed for community. Trusted extensions and shared insights from the ExtensionShield community."
+        description="Community reports that improve every scan. Contributors review extensions, reproduce findings, and publish evidence-backed notes. Join the review program."
         pathname="/community"
       />
 
-      <div className="community-landing-page">
+      <div className="community-landing-page home-page">
         <RainfallDroplets />
 
-        <div className="community-landing-content">
-          <header className="community-landing-header">
-            <TypewriterTagline />
-            <p className="community-landing-message">
-              Trusted extensions, shared insights, and people who care about safer browsing.
-              We&apos;re building this together.
-            </p>
-          </header>
+        <section className="hero-section" aria-label="Community">
+          <div className="hero-grid">
+            {/* Left: headline, subtext, CTA (same as homepage hero) */}
+            <div className="hero-left">
+              <h1 className="hero-title">
+                Community reports
+                <br />
+                that improve every scan
+              </h1>
+              <p className="hero-dev-body">
+                Contributors review extensions, reproduce findings, and publish
+                <br />
+                evidence-backed notes. This reduces false positives and
+                <br />
+                strengthens every result.
+              </p>
+              <div className="hero-developers-cta">
+                <Link to="/gsoc/community" className="hero-pro-upload-btn">
+                  Join the review program
+                </Link>
+              </div>
+            </div>
 
-          <div className="community-ctas">
-            <Link to="/gsoc/community" className="community-cta primary">
-              Join the community
-            </Link>
+            {/* Right: Community Spotlight carousel only */}
+            <div className="hero-right community-hero-right-wrap">
+              <CommunitySpotlightCarousel />
+            </div>
           </div>
 
-          <MemberCounter />
-
-          <p className="community-footnote">
-            As we grow, we&apos;ll surface trusted extensions and community notes here.
-          </p>
-        </div>
+          {/* Second row: action buttons in one row – each opens sign-in */}
+          <div className="community-hero-links">
+            <button type="button" className="community-hero-link" onClick={openSignInModal}>
+              Submit a finding
+            </button>
+            <button type="button" className="community-hero-link" onClick={openSignInModal}>
+              Verify a scan
+            </button>
+            <button type="button" className="community-hero-link" onClick={openSignInModal}>
+              Suggest a rule
+            </button>
+          </div>
+        </section>
       </div>
     </>
   );

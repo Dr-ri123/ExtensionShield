@@ -82,7 +82,7 @@ body {
 }
 
 /* ============================================================================
-   HEADER - Clarity-style: transparent initially, pill+glass on scroll
+   HEADER - Fixed pill + glass style (no scroll animation)
    ============================================================================ */
 .atlas-header {
   position: fixed;
@@ -104,16 +104,23 @@ body {
     pointer-events: auto; /* restore clicks on header content */
   }
 
-  &.transparent {
-    /* Outer wrapper stays transparent; inner container handles state */
-  }
-
-  &.solid {
-    /* Inner .header-container (motion.div) handles glass/pill via JS animation */
+  &.solid .header-container {
+    max-width: calc(100% - 10vw);
+    margin: 0 auto;
+    border-radius: 9999px;
+    background: transparent;
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    box-shadow: 0 0 24px rgba(34, 197, 94, 0.08), 0 4px 24px rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(34, 197, 94, 0.2);
   }
 }
 
-/* Light mode solid state handled via motion variants in App.jsx */
+.light .atlas-header.solid .header-container {
+  background: rgba(250, 248, 244, 0.78);
+  box-shadow: 0 4px 24px rgba(38, 35, 31, 0.1), 0 0 0 1px rgba(38, 35, 31, 0.08);
+  border: 1px solid rgba(38, 35, 31, 0.14);
+}
 
 .light .action-signin {
   color: #fff;
@@ -278,6 +285,7 @@ body {
   border-bottom: 1px solid var(--atlas-border-subtle);
   margin-bottom: 0.5rem;
   padding-bottom: 0.5rem;
+  text-align: center;
 }
 
 @keyframes megamenuEnter {
@@ -288,6 +296,17 @@ body {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes megamenuEnterCentered {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
   }
 }
 
@@ -563,6 +582,44 @@ body {
   flex-direction: column;
   gap: 0.5rem;
   margin-top: 0.25rem;
+
+  /* Categorized dropdown (e.g. Research = Research + Resources) – centered on viewport */
+  &--sections {
+    position: fixed;
+    left: 50%;
+    top: calc(var(--atlas-header-height) + 0.5rem);
+    transform: translateX(-50%);
+    animation: megamenuEnterCentered 0.2s ease;
+    min-width: 320px;
+    width: max-content;
+    max-width: min(560px, calc(100vw - 2rem));
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 1rem;
+    padding: 0.75rem 1rem;
+
+    @media (max-width: 420px) {
+      grid-template-columns: 1fr;
+      min-width: 280px;
+    }
+  }
+}
+
+.nav-dropdown-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  min-width: 0;
+
+  .nav-dropdown-category {
+    margin-bottom: 0.25rem;
+  }
+
+  .megamenu-items-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+  }
 }
 
 .nav-dropdown-category {
@@ -576,6 +633,7 @@ body {
   border-bottom: 1px solid var(--atlas-border-subtle);
   margin-bottom: 0.5rem;
   padding-bottom: 0.5rem;
+  text-align: center;
 }
 
 .nav-dropdown-item {
@@ -1301,8 +1359,8 @@ body {
   }
 }
 
-/* Below 900px: all menu items (incl. megamenu) move into hamburger; theme toggler stays next to hamburger for one-tap access */
-@media (max-width: 900px) {
+/* Below 860px: all menu items (incl. megamenu) move into hamburger; theme toggler stays next to hamburger for one-tap access */
+@media (max-width: 860px) {
   :root {
     --atlas-header-height: 64px;
   }
