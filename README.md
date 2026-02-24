@@ -109,11 +109,9 @@ make lint           # Lint code
 
 ## Acknowledgments
 
-**Note**: ExtensionShield is built on top of the **[ThreatXtension](https://github.com/barvhaim/ThreatXtension)** codebase and is under active solo development. I've taken the original extension-focused codebase and am building significant enhancements on top of it. My original custom rulesets remain private, but the modified code and enhanced privacy rulesets are public here.
+**Note**: ExtensionShield is an audit/compliance-focused scanner, and we intentionally chose not to reinvent the security foundation from scratch. Instead, we started from the excellent ThreatXtension **[ThreatXtension](https://github.com/barvhaim/ThreatXtension)** project and built on top of it—reworking the frontend, extending the engine, and adding compliance- and evidence-oriented layers.
+This is a work in progress—thanks for your patience! For questions or issues, open a GitHub issue or contact **support@extensionshield.com**.
 
-This is a work in progress—thanks for your patience! For questions or issues, open a GitHub issue or contact **snorzang65@gmail.com**.
-
-See [ACKNOWLEDGMENTS.md](ACKNOWLEDGMENTS.md) for detailed attribution and information about our enhancements over the ThreatXtension foundation.
 
 ## License
 

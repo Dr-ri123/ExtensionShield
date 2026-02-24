@@ -925,6 +925,25 @@
     opacity: 0.6;
   }
 
+  .empty-state-hint {
+    margin-top: 1rem;
+    font-size: 0.875rem;
+    color: var(--theme-text-muted, rgba(148, 163, 184, 0.8));
+    max-width: 420px;
+
+    code {
+      font-size: 0.8em;
+      padding: 0.15em 0.4em;
+      background: rgba(0, 0, 0, 0.2);
+      border-radius: 4px;
+    }
+
+    &.empty-state-error {
+      color: var(--theme-error, #f87171);
+      font-weight: 500;
+    }
+  }
+
   h3 {
     font-size: 1.25rem;
     font-weight: 600;

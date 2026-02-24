@@ -6,9 +6,12 @@ import SEOHead from "../../components/SEOHead";
 import ShieldLogo from "../../components/ShieldLogo";
 import "./AuthCallbackPage.scss";
 
+// Module-level guard: only one code exchange per page load (survives StrictMode remount)
+let _callbackExchangeStarted = false;
+
 /**
  * Auth Callback Page
- * 
+ *
  * Handles OAuth callback with PKCE flow:
  * 1. Receives code from URL query params
  * 2. Exchanges code for session using exchangeCodeForSession()
@@ -21,89 +24,68 @@ const AuthCallbackPage = () => {
   const [searchParams] = useSearchParams();
   const [error, setError] = useState(null);
   const [status, setStatus] = useState("processing"); // processing, success, error
-  
-  // Guard against React 18 StrictMode double-run in dev
-  const hasExchangedRef = useRef(false);
+
   const redirectTimeoutRef = useRef(null);
   const fallbackTimeoutRef = useRef(null);
   const authStateListenerRef = useRef(null);
 
   useEffect(() => {
-    // Prevent double execution in React 18 StrictMode
-    if (hasExchangedRef.current) {
-      // Never log sensitive values
-      return;
-    }
+    if (_callbackExchangeStarted) return;
+
+    const goToReturnWithError = (errorMessage) => {
+      const returnTo = validateReturnTo(sessionStorage.getItem("auth:returnTo"));
+      sessionStorage.removeItem("auth:returnTo");
+      navigate(`${returnTo}?authError=${encodeURIComponent(errorMessage || "auth_failed")}`, { replace: true });
+    };
 
     const handleCallback = async () => {
       try {
-        // Get code from URL query params
         const code = searchParams.get("code");
         const errorParam = searchParams.get("error");
         const errorDescription = searchParams.get("error_description");
 
-        // Handle OAuth errors from provider
-        // Never log sensitive values (codes, tokens, verifiers)
         if (errorParam) {
-          // Only log error type, not full error details that might contain sensitive info
-          // console.error("OAuth error from provider:", errorParam); // prod: no console
           setError(errorDescription || errorParam || "Authentication failed");
           setStatus("error");
-          
-          // Redirect to validated return URL with error after a delay
-          redirectTimeoutRef.current = setTimeout(() => {
-            const returnTo = validateReturnTo(sessionStorage.getItem("auth:returnTo"));
-            sessionStorage.removeItem("auth:returnTo");
-            navigate(`${returnTo}?authError=${encodeURIComponent(errorDescription || errorParam)}`, { replace: true });
-          }, 2000);
+          redirectTimeoutRef.current = setTimeout(() => goToReturnWithError(errorDescription || errorParam), 2000);
           return;
         }
 
-        // Validate code is present (user might land here manually or with invalid URL)
-        // Never log the code value
         if (!code) {
-          // console.error("No authorization code in callback URL"); // prod: no console
           setError("Missing authorization code. Please try signing in again.");
           setStatus("error");
-          
-          redirectTimeoutRef.current = setTimeout(() => {
-            const returnTo = validateReturnTo(sessionStorage.getItem("auth:returnTo"));
-            sessionStorage.removeItem("auth:returnTo");
-            navigate(`${returnTo}?authError=missing_code`, { replace: true });
-          }, 2000);
+          redirectTimeoutRef.current = setTimeout(() => goToReturnWithError("missing_code"), 2000);
           return;
         }
 
-        // Mark as processing to prevent double-run
-        hasExchangedRef.current = true;
+        _callbackExchangeStarted = true;
 
-        // Exchange code for session (PKCE flow)
-        // Note: Never log the code or any sensitive values
-        // console.log("Exchanging authorization code for session..."); // prod: no console
-        const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+        const doExchange = () => supabase.auth.exchangeCodeForSession(code);
+        let result = await doExchange();
+        let { data, error: exchangeError } = result;
+
+        // Retry once on PKCE/code_verifier errors (can be timing or storage race in production)
+        const isPKCEError = (msg) =>
+          msg?.includes("code verifier") || msg?.includes("both auth code and code verifier");
+        if (exchangeError && isPKCEError(exchangeError.message)) {
+          await new Promise((r) => setTimeout(r, 500));
+          result = await doExchange();
+          exchangeError = result.error;
+          data = result.data;
+        }
 
         if (exchangeError) {
-          // Never log the actual error message as it might contain sensitive info
-          // Only log error type
-          // console.error("Failed to exchange code for session:", exchangeError.message); // prod: no console
-          
-          // Handle specific PKCE verifier missing error
-          const isPKCEError = exchangeError.message?.includes("code verifier") || 
-                             exchangeError.message?.includes("both auth code and code verifier");
-          
-          if (isPKCEError) {
-            setError("Authentication session expired. Please retry sign-in.");
-          } else {
-            setError(exchangeError.message || "Failed to complete sign in");
-          }
-          
+          const isPkce = isPKCEError(exchangeError.message);
+          setError(
+            isPkce
+              ? "Sign-in couldn't be completed. The sign-in link may have expired or was opened in a different browser. Please try again."
+              : exchangeError.message || "Failed to complete sign in"
+          );
           setStatus("error");
-          
-          redirectTimeoutRef.current = setTimeout(() => {
-            const returnTo = validateReturnTo(sessionStorage.getItem("auth:returnTo"));
-            sessionStorage.removeItem("auth:returnTo");
-            navigate(`${returnTo}?authError=${encodeURIComponent(exchangeError.message || "auth_failed")}`, { replace: true });
-          }, 2000);
+          redirectTimeoutRef.current = setTimeout(
+            () => goToReturnWithError(exchangeError.message || "auth_failed"),
+            4000
+          );
           return;
         }
 
@@ -175,32 +157,21 @@ const AuthCallbackPage = () => {
             }
           }, 2000);
         } else {
-          // console.error("No session returned from exchangeCodeForSession"); // prod: no console
           setError("Session creation failed");
           setStatus("error");
-          
-          redirectTimeoutRef.current = setTimeout(() => {
-            const returnTo = validateReturnTo(sessionStorage.getItem("auth:returnTo"));
-            sessionStorage.removeItem("auth:returnTo");
-            navigate(`${returnTo}?authError=session_failed`, { replace: true });
-          }, 2000);
+          redirectTimeoutRef.current = setTimeout(() => goToReturnWithError("session_failed"), 2000);
         }
       } catch (err) {
-        // console.error("Unexpected error in auth callback:", err); // prod: no console
         setError(err.message || "An unexpected error occurred");
         setStatus("error");
-        
-        redirectTimeoutRef.current = setTimeout(() => {
-          const returnTo = validateReturnTo(sessionStorage.getItem("auth:returnTo"));
-          sessionStorage.removeItem("auth:returnTo");
-          navigate(`${returnTo}?authError=unexpected_error`, { replace: true });
-        }, 2000);
+        redirectTimeoutRef.current = setTimeout(() => goToReturnWithError("unexpected_error"), 2000);
       }
     };
 
     handleCallback();
 
-    // Cleanup function
+    // Cleanup: clear timeouts and unsubscribe. Reset guard after delay so StrictMode remount
+    // doesn't run exchange again, but a later navigation back to this page can.
     return () => {
       if (redirectTimeoutRef.current) {
         clearTimeout(redirectTimeoutRef.current);
@@ -211,6 +182,9 @@ const AuthCallbackPage = () => {
       if (authStateListenerRef.current?.subscription) {
         authStateListenerRef.current.subscription.unsubscribe();
       }
+      setTimeout(() => {
+        _callbackExchangeStarted = false;
+      }, 100);
     };
   }, [searchParams, navigate]);
 
@@ -259,7 +233,19 @@ const AuthCallbackPage = () => {
                 </svg>
               </div>
               <p className="auth-callback-message error">{error || "Authentication failed"}</p>
-              <p className="auth-callback-submessage">Redirecting to home page...</p>
+              <p className="auth-callback-submessage">Redirecting shortly, or click below to go now.</p>
+              <button
+                type="button"
+                className="auth-callback-try-again"
+                onClick={() => {
+                  if (redirectTimeoutRef.current) clearTimeout(redirectTimeoutRef.current);
+                  const returnTo = validateReturnTo(sessionStorage.getItem("auth:returnTo"));
+                  sessionStorage.removeItem("auth:returnTo");
+                  navigate(returnTo || "/", { replace: true });
+                }}
+              >
+                Try again
+              </button>
             </>
           )}
         </div>

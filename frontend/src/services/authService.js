@@ -39,7 +39,8 @@ const signInWithGoogle = async () => {
   );
   sessionStorage.setItem("auth:returnTo", returnTo);
 
-  // Redirect to dedicated callback route (PKCE flow)
+  // Callback must use current origin so PKCE code_verifier (stored here) is available on return.
+  // In production, ensure a single canonical domain (e.g. redirect www to non-www) so OAuth matches.
   const callbackUrl = `${window.location.origin}/auth/callback`;
 
   const { data, error } = await supabase.auth.signInWithOAuth({
@@ -73,7 +74,6 @@ const signInWithGitHub = async () => {
   );
   sessionStorage.setItem("auth:returnTo", returnTo);
 
-  // Redirect to dedicated callback route (PKCE flow)
   const callbackUrl = `${window.location.origin}/auth/callback`;
 
   const { data, error } = await supabase.auth.signInWithOAuth({

@@ -175,6 +175,7 @@ const ScannerPage = () => {
 
   const [allScans, setAllScans] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null); // e.g. API unreachable
   const [sortConfig, setSortConfig] = useState({ key: "timestamp", direction: "desc" });
   const [hoveredRow, setHoveredRow] = useState(null);
   const [copiedId, setCopiedId] = useState(null);
@@ -197,6 +198,7 @@ const ScannerPage = () => {
   // Shared load so we can refetch for live updates (visibility + polling)
   const loadScans = React.useCallback(async (showLoading = true) => {
     if (showLoading) setLoading(true);
+    setLoadError(null);
     try {
       const timeoutPromise = new Promise((_, reject) =>
         setTimeout(() => reject(new Error("Request timeout")), 10000)
@@ -216,9 +218,9 @@ const ScannerPage = () => {
         const fallbackScans = await enrichScans(history, { skipFullFetch: false });
         setAllScans(fallbackScans.length > 0 ? fallbackScans : []);
       }
-    } catch (error) {
-      // console.error("Failed to load scans:", error); // prod: no console
+    } catch (err) {
       setAllScans([]);
+      setLoadError(err?.message || "Failed to load recent scans");
     } finally {
       setLoading(false);
     }
@@ -822,6 +824,27 @@ const ScannerPage = () => {
               <div className="empty-icon">🛡️</div>
               <h3>No extensions scanned yet</h3>
               <p>Start by scanning your first Chrome extension above</p>
+              {loadError ? (
+                <>
+                  <p className="empty-state-hint empty-state-error">
+                    Could not load recent scans: {loadError}
+                  </p>
+                  <p className="empty-state-hint">
+                    Make sure the API is running: run <code>make api</code> in a separate terminal (port 8007). If using a custom API URL, set <code>VITE_API_URL</code> in <code>frontend/.env</code> and restart the frontend.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="empty-state-hint">
+                    Only <strong>Chrome Web Store URL</strong> scans appear here. Uploaded extensions are private and do not show in this list. Paste a Web Store URL above, run the scan, and wait for it to complete—then the list will update.
+                  </p>
+                  {import.meta.env.DEV && (
+                    <p className="empty-state-hint">
+                      Local dev: ensure the API is running (<code>make api</code>) and <code>VITE_API_URL=http://localhost:8007</code> in <code>frontend/.env</code>, then restart the frontend.
+                    </p>
+                  )}
+                </>
+              )}
             </div>
           )}
         </div>

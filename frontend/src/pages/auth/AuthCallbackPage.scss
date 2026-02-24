@@ -90,6 +90,26 @@
   margin-top: 0.5rem;
 }
 
+.auth-callback-try-again {
+  margin-top: 1.25rem;
+  padding: 0.6rem 1.25rem;
+  font-size: 0.9375rem;
+  font-weight: 600;
+  color: #fff;
+  background: var(--risk-bad, #e53e3e);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+.auth-callback-try-again:hover {
+  opacity: 0.9;
+}
+.auth-callback-try-again:focus {
+  outline: 2px solid var(--risk-bad, #e53e3e);
+  outline-offset: 2px;
+}
+
 // Dark mode support
 @media (prefers-color-scheme: dark) {
   .auth-callback-content {

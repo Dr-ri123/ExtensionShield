@@ -168,7 +168,7 @@ describe('AuthCallbackPage', () => {
       renderComponent('?code=abc123');
 
       await waitFor(() => {
-        expect(screen.getByText(/please retry sign-in/i)).toBeInTheDocument();
+        expect(screen.getByText(/try again/i)).toBeInTheDocument();
       });
     });
 
@@ -182,7 +182,7 @@ describe('AuthCallbackPage', () => {
       renderComponent('?code=abc123');
 
       await waitFor(() => {
-        expect(screen.getByText(/please retry sign-in/i)).toBeInTheDocument();
+        expect(screen.getByText(/try again/i)).toBeInTheDocument();
       });
     });
   });
