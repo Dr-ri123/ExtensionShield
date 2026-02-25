@@ -51,15 +51,29 @@
       gap: 6px;
       padding: 6px 14px;
       border-radius: 8px;
-      color: white;
+      color: var(--theme-text-primary);
       font-size: 12px;
       font-weight: 700;
       text-transform: uppercase;
       letter-spacing: 0.05em;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+      border: 1px solid transparent;
 
       .badge-icon {
         font-size: 14px;
+      }
+
+      &.decision-badge--allow {
+        background: var(--risk-good-bg);
+        border-color: var(--risk-good-border);
+      }
+      &.decision-badge--warn {
+        background: var(--risk-warn-bg);
+        border-color: var(--risk-warn-border);
+      }
+      &.decision-badge--block {
+        background: var(--risk-bad-bg);
+        border-color: var(--risk-bad-border);
       }
     }
   }
@@ -406,5 +420,19 @@
         margin-bottom: 0;
       }
     }
+  }
+}
+
+// Light theme: decision-badge text WCAG-compliant, matches risk colors on light bg
+.light .summary-panel .decision-badge {
+  &.decision-badge--allow {
+    color: var(--risk-good);
+  }
+  &.decision-badge--warn {
+    color: var(--risk-warn);
+    font-weight: 500;
+  }
+  &.decision-badge--block {
+    color: var(--risk-bad);
   }
 }

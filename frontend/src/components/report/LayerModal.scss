@@ -114,14 +114,6 @@
   flex-shrink: 0;
 }
 
-.lm-header-right {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  flex-shrink: 0;
-  margin-left: auto;
-}
-
 .lm-header-inner .lm-icon {
   font-size: 20px;
   line-height: 1;
@@ -241,17 +233,20 @@
   gap: 6px;
 }
 
-// Check card: compact pill-like row
+// Check card: full width row — label + info left, status right
 .lm-check-card {
-  display: inline-flex;
+  display: flex;
   align-items: center;
-  gap: 6px;
+  justify-content: space-between;
+  width: 100%;
+  gap: 10px;
   padding: 7px 10px;
   border-radius: var(--radius, 8px);
   background: var(--theme-bg-secondary);
   border: 1px solid var(--theme-border-subtle);
   transition: background 0.15s ease, border-color 0.15s ease;
   animation: lmFadeUp 0.25s var(--lm-ease) both;
+  box-sizing: border-box;
 
   &:hover {
     background: var(--theme-bg-tertiary);
@@ -268,21 +263,30 @@
   }
 }
 
+.lm-check-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+
 .lm-check-card .lm-check-name {
   font-size: 0.8125rem;
   font-weight: 500;
   color: var(--theme-text-primary);
   line-height: 1.3;
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-// Status: icon + short label
+// Status: icon + short label (right-aligned in card)
 .lm-status-wrap {
   display: inline-flex;
   align-items: center;
   gap: 4px;
   flex-shrink: 0;
-  margin-left: auto;
 }
 
 .lm-status-icon {
@@ -300,16 +304,17 @@
   border-radius: 5px;
   border: 1px solid;
   white-space: nowrap;
+  color: var(--theme-text-primary);
 }
 
 .lm-status-clear {
-  color: var(--risk-good);
+  color: var(--theme-text-primary);
   border-color: var(--risk-good-border);
   background: var(--risk-good-bg);
 }
 
 .lm-status-issues {
-  color: var(--risk-warn);
+  color: var(--theme-text-primary);
   border-color: var(--risk-warn-border);
   background: var(--risk-warn-bg);
 }

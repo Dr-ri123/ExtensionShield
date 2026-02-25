@@ -60,13 +60,14 @@ const SummaryPanel = ({
     const decision = scores?.decision;
     if (!decision) return null;
     const badges = {
-      'ALLOW': { label: 'SAFE', color: 'var(--risk-good)', icon: '✓' },
-      'WARN': { label: 'REVIEW', color: 'var(--risk-warn)', icon: '⚡' },
-      'BLOCK': { label: 'BLOCKED', color: 'var(--risk-bad)', icon: '✕' },
+      'ALLOW': { label: 'SAFE', icon: '✓' },
+      'WARN': { label: 'REVIEW', icon: '⚡' },
+      'BLOCK': { label: 'BLOCKED', icon: '✕' },
     };
     const badge = badges[decision] || badges['WARN'];
+    const modifier = decision.toLowerCase();
     return (
-      <span className="decision-badge" style={{ backgroundColor: badge.color }}>
+      <span className={`decision-badge decision-badge--${modifier}`}>
         <span className="badge-icon">{badge.icon}</span>
         <span className="badge-text">{badge.label}</span>
       </span>

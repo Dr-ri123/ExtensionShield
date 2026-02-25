@@ -126,7 +126,6 @@ const LayerModal = ({
   onViewEvidence = null,
 }) => {
   const config = LAYER_CONFIG[layer] || LAYER_CONFIG.security;
-  const bl = bandLabel(band);
 
   const humanised = factors.map(humanizeFactor);
   const grouped = groupByCategory(humanised);
@@ -140,13 +139,6 @@ const LayerModal = ({
               <div className="lm-header-left">
                 <span className="lm-icon" aria-hidden>{config.icon}</span>
                 <span className="lm-title">{config.title}</span>
-              </div>
-              <div className="lm-header-right">
-                {bl && (
-                  <span className={`lm-verdict-pill lm-verdict-${band.toLowerCase()}`}>
-                    {bl}
-                  </span>
-                )}
               </div>
             </div>
           </DialogTitle>
@@ -166,8 +158,10 @@ const LayerModal = ({
                         style={{ animationDelay: `${(catIdx * 40 + (idx + 1) * 25)}ms` }}
                         role="listitem"
                       >
-                        <span className="lm-check-name">{item.label}</span>
-                        {item.desc && <InfoTooltip text={item.desc} />}
+                        <div className="lm-check-left">
+                          <span className="lm-check-name">{item.label}</span>
+                          {item.desc && <InfoTooltip text={item.desc} />}
+                        </div>
                         <span className="lm-status-wrap">
                           {item.statusType === 'clear' ? (
                             <CheckCircle className="lm-status-icon" size={14} strokeWidth={2} aria-hidden />
