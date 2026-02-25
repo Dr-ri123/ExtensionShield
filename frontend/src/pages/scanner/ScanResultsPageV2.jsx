@@ -419,10 +419,14 @@ const ScanResultsPageV2 = () => {
     .slice(0, 3)
     .map(f => ({ title: f.title, summary: f.summary }));
 
-  // Use factorsByLayer so sidebar counts match actual report (Layer modal shows these factors)
-  const securityFindingsCount = (factorsByLayer?.security?.length ?? 0);
-  const privacyFindingsCount = (factorsByLayer?.privacy?.length ?? 0);
-  const governanceFindingsCount = (factorsByLayer?.governance?.length ?? 0);
+  // Use factorsByLayer: issue count = factors with severity >= 0.4 (same as LayerModal)
+  const getIssueCount = (layerFactors) =>
+    (layerFactors || []).filter((f) => (f.severity ?? 0) >= 0.4).length;
+
+  const securityIssueCount = getIssueCount(factorsByLayer?.security);
+  const privacyIssueCount = getIssueCount(factorsByLayer?.privacy);
+  const governanceIssueCount = getIssueCount(factorsByLayer?.governance);
+  const totalFindingsCount = securityIssueCount + privacyIssueCount + governanceIssueCount;
 
   // Brief transition: scanResults loaded but viewModel not yet set
   if (!viewModel && scanResults && !normalizationError) {
@@ -731,26 +735,34 @@ const ScanResultsPageV2 = () => {
 
           {/* Right Column: Security/Privacy/Governance cards */}
           <div className="results-v2-right">
+            {totalFindingsCount > 0 && (
+              <div className="results-v2-findings-count" aria-live="polite">
+                <span className="results-v2-findings-count-num">{totalFindingsCount}</span>
+                <span className="results-v2-findings-count-label">
+                  {totalFindingsCount === 1 ? 'finding' : 'findings'}
+                </span>
+              </div>
+            )}
             <div className="results-v2-sidebar">
             <ResultsSidebarTile
               title="Security"
               score={scores?.security?.score}
               band={scores?.security?.band || 'NA'}
-              findingsCount={securityFindingsCount}
+              findingsCount={securityIssueCount}
               onClick={() => openLayerModal('security')}
             />
             <ResultsSidebarTile
               title="Privacy"
               score={scores?.privacy?.score ?? null}
               band={scores?.privacy?.band || 'NA'}
-              findingsCount={privacyFindingsCount}
+              findingsCount={privacyIssueCount}
               onClick={() => openLayerModal('privacy')}
             />
             <ResultsSidebarTile
               title="Governance"
               score={scores?.governance?.score ?? null}
               band={scores?.governance?.band || 'NA'}
-              findingsCount={governanceFindingsCount}
+              findingsCount={governanceIssueCount}
               onClick={() => openLayerModal('governance')}
             />
             </div>

@@ -206,8 +206,8 @@
   &.tile-pill-warn {
     background: var(--risk-warn-bg);
     border: 1px solid var(--risk-warn-border);
-    color: #92400e;
-    font-weight: 700;
+    color: var(--atlas-text-primary);
+    font-weight: 500;
   }
   &.tile-pill-bad {
     background: var(--risk-bad-bg);

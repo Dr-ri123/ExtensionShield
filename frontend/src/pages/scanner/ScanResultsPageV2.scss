@@ -126,6 +126,26 @@
   min-width: 0;
 }
 
+/* Summed findings count (Security + Privacy + Governance issues) */
+.results-v2-findings-count {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--theme-text-secondary, rgba(248, 250, 252, 0.75));
+}
+
+.results-v2-findings-count-num {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--risk-warn, #f59e0b);
+}
+
+.results-v2-findings-count-label {
+  font-weight: 500;
+}
+
 .results-v2-sidebar {
   display: flex;
   flex-direction: column;

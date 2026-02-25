@@ -128,52 +128,31 @@ const LayerModal = ({
   const config = LAYER_CONFIG[layer] || LAYER_CONFIG.security;
   const bl = bandLabel(band);
 
-  const ld = layerDetails?.[layer] || {};
-  const oneLiner = ld.one_liner || '';
-
   const humanised = factors.map(humanizeFactor);
   const grouped = groupByCategory(humanised);
 
-  const issueCount = humanised.filter(f => f.statusType === 'issues').length;
-  const totalCount = humanised.length;
-
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="lm-content lm-dialog-smooth" aria-describedby="lm-summary-or-checks">
-        <DialogHeader>
+      <DialogContent className="lm-content lm-dialog-smooth" aria-describedby="lm-checks" aria-label={`${config.title} details`} data-layer={layer}>
+        <DialogHeader className="lm-header-wrap">
           <DialogTitle className="lm-header">
-            <div className="lm-header-left">
-              <span className="lm-icon" aria-hidden>{config.icon}</span>
-              <span className="lm-title">{config.title}</span>
-            </div>
-            <div className="lm-header-right">
-              {bl && (
-                <span className={`lm-verdict-pill lm-verdict-${band.toLowerCase()}`}>
-                  {bl}
-                </span>
-              )}
+            <div className="lm-header-inner">
+              <div className="lm-header-left">
+                <span className="lm-icon" aria-hidden>{config.icon}</span>
+                <span className="lm-title">{config.title}</span>
+              </div>
+              <div className="lm-header-right">
+                {bl && (
+                  <span className={`lm-verdict-pill lm-verdict-${band.toLowerCase()}`}>
+                    {bl}
+                  </span>
+                )}
+              </div>
             </div>
           </DialogTitle>
         </DialogHeader>
 
-        <div className="lm-body" id="lm-summary-or-checks">
-          {oneLiner && (
-            <p className="lm-summary">{oneLiner}</p>
-          )}
-
-          <div className="lm-stats-row" aria-live="polite">
-            <span className="lm-stat">
-              <span className="lm-stat-num">{totalCount}</span> checks
-            </span>
-            {issueCount > 0 ? (
-              <span className="lm-stat lm-stat-issues">
-                <span className="lm-stat-num">{issueCount}</span> {issueCount === 1 ? 'issue' : 'issues'}
-              </span>
-            ) : (
-              <span className="lm-stat lm-stat-clear">All clear</span>
-            )}
-          </div>
-
+        <div className="lm-body" id="lm-checks">
           {grouped.length > 0 && (
             <div className="lm-checks" role="list" aria-label={`${config.title} checks`}>
               {grouped.map(([cat, items], catIdx) => (
