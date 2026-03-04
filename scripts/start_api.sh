@@ -26,7 +26,12 @@ if [ -f ".env" ]; then
 fi
 
 echo "PORT: ${PORT:-8007}"
-echo "SUPABASE_URL: ${SUPABASE_URL:-not set}"
+# Redact Supabase URL (project ref) in logs for security
+if [ -n "${SUPABASE_URL:-}" ]; then
+  echo "SUPABASE_URL: set (https://***.supabase.co)"
+else
+  echo "SUPABASE_URL: not set"
+fi
 echo "LLM_PROVIDER: ${LLM_PROVIDER:-ollama (from .env)}"
 if [ -n "${LLM_FALLBACK_CHAIN:-}" ]; then
   echo "LLM_FALLBACK_CHAIN: ${LLM_FALLBACK_CHAIN}"

@@ -1980,12 +1980,12 @@ class SupabaseDatabase:
 
 def _create_db():
     """
-    Choose storage backend based on EXTSHIELD_MODE and DB_BACKEND.
+    Choose storage backend based on environment and mode.
 
-    OSS mode (default):
-      - Always uses SQLite. Supabase is never initialized so no cloud clients at import time.
-    Cloud mode:
-      - Uses Supabase when configured; falls back to SQLite.
+    - Production (ENV=prod): Use Supabase when configured, so results and connection
+      match the hosted app. Fall back to SQLite only on init failure.
+    - Local (ENV=local/dev): In OSS mode use SQLite so people can run without Supabase.
+      With EXTSHIELD_MODE=cloud and Supabase configured, use Supabase for parity.
     """
     import logging
     _logger = logging.getLogger(__name__)
@@ -1994,11 +1994,29 @@ def _create_db():
 
     flags = get_feature_flags()
     settings = get_settings()
+    is_prod = settings.env == "prod"
 
-    # OSS mode: never create Supabase or any cloud client at import time.
-    if flags.mode == "oss":
+    # Production: use Supabase when configured (same as commit edb5e36 — results from Supabase).
+    if is_prod and settings.db_backend == "supabase":
+        try:
+            _db = SupabaseDatabase()
+            _logger.info("DB backend: supabase (production)")
+            print(f"✓ DB backend: supabase  |  mode={flags.mode}  |  env=prod")
+            return _db
+        except Exception as e:
+            _logger.warning(
+                "Supabase init failed in production, falling back to SQLite. Error: %s", e
+            )
+            print(f"⚠️  Supabase init failed, falling back to SQLite. Error: {e}")
+            _db = Database()
+            _logger.info("DB backend: sqlite (fallback)")
+            print(f"✓ DB backend: sqlite (fallback)  |  mode={flags.mode}")
+            return _db
+
+    # Local OSS: use SQLite so people can run without any cloud setup.
+    if not is_prod and flags.mode == "oss":
         _db = Database()
-        _logger.info("DB backend: sqlite (OSS mode, cloud clients not initialized)")
+        _logger.info("DB backend: sqlite (OSS mode, local)")
         print(f"✓ DB backend: sqlite  |  mode={flags.mode}")
         return _db
 

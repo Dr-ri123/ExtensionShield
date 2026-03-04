@@ -62,7 +62,7 @@ def _parse_env_name(value: Optional[str]) -> EnvName:
         return "dev" if v in ("development", "dev") else "local"
     if v in ("prod", "production"):
         return "prod"
-    # Unknown values fall back to local to preserve current behavior.
+    # Unknown values fall back to local so production must set ENV=prod or ENVIRONMENT=production.
     return "local"
 
 
@@ -186,6 +186,7 @@ def get_settings() -> Settings:
         os.environ.get("EXTENSION_SHIELD_ENV")
         or os.environ.get("APP_ENV")
         or os.environ.get("ENV")
+        or os.environ.get("ENVIRONMENT")
     )
 
     extension_storage_path = os.environ.get("EXTENSION_STORAGE_PATH", "extensions_storage")
