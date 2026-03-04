@@ -32,14 +32,14 @@ if [ -n "${LLM_FALLBACK_CHAIN:-}" ]; then
   echo "LLM_FALLBACK_CHAIN: ${LLM_FALLBACK_CHAIN}"
 fi
 
-# Run migrations if Supabase is configured
+# Run migrations if Supabase is configured (non-blocking: start API first so healthcheck passes)
 if [ -n "${DB_BACKEND:-}" ] && [ "${DB_BACKEND:-}" != "supabase" ]; then
   echo "⏭️  Skipping Supabase migrations: DB_BACKEND=${DB_BACKEND}"
 elif [ -n "${SUPABASE_URL:-}" ] && [ -n "${SUPABASE_SERVICE_ROLE_KEY:-}" ]; then
-  echo "🔄 Running Supabase migrations..."
-  python scripts/cloud_only/run_supabase_migrations.py || {
-    echo "❌ Migration failed, but continuing startup..."
-  }
+  echo "🔄 Running Supabase migrations in background (API will start immediately)..."
+  (
+    python scripts/cloud_only/run_supabase_migrations.py && echo "✅ Migrations completed."
+  ) || echo "❌ Migrations failed (app is running; retry on next deploy or run manually)." &
 else
   echo "⏭️  Skipping Supabase migrations: Supabase env not set"
 fi
