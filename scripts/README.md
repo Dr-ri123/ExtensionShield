@@ -50,6 +50,8 @@ Use these when you need to run something outside the usual `make` targets (e.g. 
 - **generate_hero_snapshot.js** — Regenerates the hero carousel data from the API. Run from root: `node scripts/generate_hero_snapshot.js`. Frontend reads from `frontend/src/data/heroSnapshot.js`.
 - **benchmark_scanners.py** — Benchmarks the scanner against a list of extensions. For performance tuning.
 - **export_qa_scoring_excel.py** — Exports scan results to Excel for QA. From root: `uv run python scripts/export_qa_scoring_excel.py`.
+- **qa_verify_scoring_from_excel.py** — Reads the QA export Excel, fetches each extension’s Chrome Web Store listing, and produces a verification report (name check, our score vs store rating/users). From root: `uv run python scripts/qa_verify_scoring_from_excel.py` (optional: `--limit 5`, `--out docs/qa_extensionshield/qa_scoring_verification_report.md`).
+- **qa_regression_scoring.py** — Compares a baseline list (CSV or Excel) to the current export to detect missing extensions or score/decision changes. From root: `uv run python scripts/qa_regression_scoring.py --baseline docs/qa_extensionshield/qa_scoring_verification_report.csv --current docs/qa_extensionshield/qa_scoring_export.xlsx` (add `--strict` to fail on score/decision changes).
 
 ---
 
